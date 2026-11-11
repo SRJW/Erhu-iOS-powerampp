@@ -23,14 +23,29 @@ final class LibraryInteractionTests: XCTestCase {
         let title = app.staticTexts["nowPlayingTitle"]
         let transport = app.buttons["nowPlayingPlayPause"]
         let close = app.buttons["closeNowPlaying"]
-        func waitUntilHittable(_ element: XCUIElement) {
+        func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval = 10) {
             let visible = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
                 element.exists && element.isHittable
             }, object: nil)
-            XCTAssertEqual(XCTWaiter.wait(for: [visible], timeout: 10), .completed)
+            let result = XCTWaiter.wait(for: [visible], timeout: timeout)
+            if result != .completed {
+                let hierarchy = XCTAttachment(string: app.debugDescription)
+                hierarchy.name = page + "-unavailable-control"
+                hierarchy.lifetime = .keepAlways
+                add(hierarchy)
+                let screenshot = XCTAttachment(screenshot: app.screenshot())
+                screenshot.name = page + "-unavailable-control"
+                screenshot.lifetime = .keepAlways
+                add(screenshot)
+            }
+            XCTAssertEqual(result, .completed,
+                           "Timed out waiting for \(element.identifier) to become hittable on \(page)")
         }
-        for _ in 0..<2 {
-            waitUntilHittable(mini)
+        for cycle in 0..<2 {
+            // On a cold simulator the mini player can enter accessibility before
+            // launch and initial library layout finish. Later presentation checks
+            // retain their shorter deadline to catch close/reopen regressions.
+            waitUntilHittable(mini, timeout: cycle == 0 ? 30 : 10)
             mini.tap()
             waitUntilHittable(title)
             XCTAssertEqual(title.label, "Player presentation regression")
