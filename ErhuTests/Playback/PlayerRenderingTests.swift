@@ -20,7 +20,10 @@ final class PlayerRenderingTests: XCTestCase {
         try TagWriter.write(edit, to: url)
         ArtworkLoader.shared.forget(path: url.path)
         _ = await ArtworkLoader.shared.image(for: url, maxPixels: 600)
-        let backdrop = PlayerArtworkBackground(dominant: .blue) {
+        // Match the fixture's UIColor.blue (pure RGB blue). SwiftUI Color.blue
+        // is a system colour containing green, so it cannot satisfy the pure-blue
+        // channel assertions below after the darkening gradient is applied.
+        let backdrop = PlayerArtworkBackground(dominant: Color(.sRGB, red: 0, green: 0, blue: 1)) {
             SongArtworkView(url: url, maxPixels: 1200, contentMode: .fit)
         }
         let rendered = try pixels(backdrop, size: CGSize(width: 200, height: 500))
