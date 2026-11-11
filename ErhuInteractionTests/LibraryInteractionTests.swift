@@ -277,19 +277,34 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Enable transitions for this album"].exists)
         let wrapper = app.switches.matching(identifier: "collectionTransitionToggle").firstMatch
         XCTAssertTrue(wrapper.exists)
-        // SwiftUI exposes a wrapper around the native switch. Its value need not
-        // reflect the binding, so verify the visible collection summary instead.
-        // Tap inside the trailing switch area rather than the wrapper's centre.
-        XCTAssertTrue(wrapper.isHittable)
+        // SwiftUI exposes both a wrapper and the underlying UISwitch. Use the
+        // smallest hittable switch with a native binary value, rather than a
+        // coordinate in the wrapper, whose frame can include non-control space.
+        let candidates = app.switches.allElementsBoundByIndex.filter {
+            ["0", "1"].contains($0.value as? String ?? "") && $0.isHittable
+        }
+        guard let toggle = candidates.min(by: {
+            $0.frame.width * $0.frame.height < $1.frame.width * $1.frame.height
+        }), let initialValue = toggle.value as? String else {
+            XCTFail("The transition row must expose a hittable native switch: \(app.debugDescription)")
+            return
+        }
         let row = app.buttons["transitionStudioOpen"]
-        let wasOff = row.label.contains("Off for this album")
-        for expectedOff in [!wasOff, wasOff] {
-            wrapper.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap()
-            let changed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-                row.label.contains("Off for this album") == expectedOff
-            }, object: nil)
-            XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 10), .completed,
-                           "The collection summary must reflect the switch: \(row.label)")
+        for expectedValue in [initialValue == "1" ? "0" : "1", initialValue] {
+            toggle.tap()
+            let changed = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "value == %@", expectedValue), object: toggle)
+            guard XCTWaiter.wait(for: [changed], timeout: 10) == .completed else {
+                XCTFail("The native switch must change to \(expectedValue): \(toggle.debugDescription)")
+                return
+            }
+            let summary = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: expectedValue == "0" ? "label CONTAINS %@" : "NOT (label CONTAINS %@)",
+                                       "Off for this album"), object: row)
+            guard XCTWaiter.wait(for: [summary], timeout: 10) == .completed else {
+                XCTFail("The collection summary must reflect switch value \(expectedValue): \(row.label)")
+                return
+            }
         }
     }
 }
