@@ -262,17 +262,19 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertFalse(app.staticTexts["Enable transitions for this album"].exists)
         let wrapper = app.switches.matching(identifier: "collectionTransitionToggle").firstMatch
         XCTAssertTrue(wrapper.exists)
-        // SwiftUI puts the identifier on an accessibility wrapper around the platform switch (the
-        // inner element is reported as "not actually a child"). Tap and read the control itself:
-        // a tap at the wrapper's centre can miss the switch, leaving its value unchanged.
-        let inner = wrapper.switches.firstMatch
-        let toggle = inner.exists ? inner : wrapper
-        XCTAssertTrue(toggle.isHittable)
-        let before = toggle.value as? String
-        toggle.tap()
-        let changed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            (toggle.value as? String) != before
-        }, object: nil)
-        XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 3), .completed)
+        // SwiftUI exposes a wrapper around the native switch. Its value need not
+        // reflect the binding, so verify the visible collection summary instead.
+        // Tap inside the trailing switch area rather than the wrapper's centre.
+        XCTAssertTrue(wrapper.isHittable)
+        let row = app.buttons["transitionStudioOpen"]
+        let wasOff = row.label.contains("Off for this album")
+        for expectedOff in [!wasOff, wasOff] {
+            wrapper.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.5)).tap()
+            let changed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                row.label.contains("Off for this album") == expectedOff
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 10), .completed,
+                           "The collection summary must reflect the switch: \(row.label)")
+        }
     }
 }
