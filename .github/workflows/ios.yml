@@ -37,6 +37,18 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
     - uses: actions/checkout@v5
+    - name: Reserve the release tag at the source revision
+      env:
+        RELEASE_TAG: v0.1.0-amp.${{ github.run_number }}
+      run: |
+        set -euo pipefail
+        if git ls-remote --exit-code --tags origin "refs/tags/$RELEASE_TAG" >/dev/null; then
+          git fetch origin "refs/tags/$RELEASE_TAG:refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse "$RELEASE_TAG")" = "$GITHUB_SHA"
+        else
+          git tag "$RELEASE_TAG" "$GITHUB_SHA"
+          git push origin "refs/tags/$RELEASE_TAG"
+        fi
     - uses: ./.github/actions/setup-ios
       id: setup
       with:
@@ -88,19 +100,6 @@ jobs:
         path: dist/amp.ipa
         compression-level: 0
         if-no-files-found: error
-    - name: Publish a direct IPA download
-      env:
-        GH_TOKEN: ${{ github.token }}
-        GH_REPO: ${{ github.repository }}
-      run: |
-        set -euo pipefail
-        tag="v0.1.0-amp.${GITHUB_RUN_NUMBER}"
-        if ! gh release view "$tag" >/dev/null 2>&1; then
-          gh release create "$tag" dist/amp.ipa --target "$GITHUB_SHA" --prerelease \
-            --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" \
-            --notes "Unsigned development IPA with static artwork. File deletion boundary checks, scrolling waveform checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
-        fi
-        printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
     - name: Save compiled products and module caches
       if: steps.setup.outputs.build-cache-hit != 'true'
       uses: actions/cache/save@v4
@@ -110,6 +109,19 @@ jobs:
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
         key: ${{ steps.setup.outputs.build-cache-key }}
+    - name: Publish a direct IPA download
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        tag="v0.1.0-amp.${GITHUB_RUN_NUMBER}"
+        if ! gh release view "$tag" >/dev/null 2>&1; then
+          gh release create "$tag" dist/amp.ipa --verify-tag --prerelease \
+            --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" \
+            --notes "Unsigned development IPA with static artwork. File deletion boundary checks, scrolling waveform checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
+        fi
+        printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
     - name: Upload device build diagnostics
       if: always()
       uses: actions/upload-artifact@v4
