@@ -13,6 +13,7 @@ final class LibraryActions {
         let suggested: Set<Int64>
     }
 
+    var songPendingDeletion: Song?
     var message: String?
     private(set) var messageID = UUID()
     private(set) var radio: RadioSession?
@@ -30,6 +31,24 @@ final class LibraryActions {
     func show(_ text: String) {
         messageID = UUID()
         message = text
+    }
+
+    func deleteFromDevice(_ song: Song) {
+        do {
+            try LibraryFileDeletion.remove(relativePath: song.path, in: LibraryPaths.musicFolder)
+        } catch {
+            show("Couldn't delete the file: \(error.localizedDescription)")
+            return
+        }
+        player.removeDeletedSong(song.id)
+        ArtworkLoader.shared.forget(path: song.url.path)
+        do {
+            try database.deleteSong(song)
+            show("Deleted from device")
+        } catch {
+            show("File deleted. Refreshing the library: \(error.localizedDescription)")
+        }
+        AppServices.shared.library.scan()
     }
 
     func fixTags(_ songs: [Song]) {

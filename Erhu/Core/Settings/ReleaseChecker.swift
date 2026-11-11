@@ -47,13 +47,14 @@ struct AppRelease: Codable, Equatable, Sendable, Identifiable {
 
     func download(animated: Bool) -> URL? {
         assets.first {
-            $0.name.lowercased().hasSuffix(animated ? "-animated.ipa" : "-static.ipa")
+            ($0.name.lowercased().hasSuffix(animated ? "-animated.ipa" : "-static.ipa")
+                || (!animated && $0.name.lowercased() == "amp.ipa"))
                 && Self.official($0.browser_download_url)
         }?.browser_download_url
     }
     static func official(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com"
-            && url.path.hasPrefix("/MeezaUni/Erhu-iOS/releases/")
+            && url.path.hasPrefix("/SRJW/Erhu-iOS-powerampp/releases/")
     }
 }
 
@@ -97,7 +98,7 @@ final class ReleaseChecker {
         }
         prompt = nil
     }
-    private static let prefix = "erhu.releases."
+    private static let prefix = "amp.releases."
 
     init(client: any HTTPClient = URLSessionHTTPClient(cachePolicy: .reloadIgnoringLocalCacheData),
          installed: String = Bundle.main.object(forInfoDictionaryKey: "ErhuReleaseTag") as? String ?? "v1.0-beta",
@@ -127,10 +128,10 @@ final class ReleaseChecker {
         }
         if !manual, let checkedAt, now.timeIntervalSince(checkedAt) < Self.interval { return }
         state = .checking
-        var headers = ["Accept": "application/vnd.github+json", "User-Agent": "Erhu-iOS", "X-GitHub-Api-Version": "2022-11-28"]
+        var headers = ["Accept": "application/vnd.github+json", "User-Agent": "amp-iOS", "X-GitHub-Api-Version": "2022-11-28"]
         if let etag = defaults.string(forKey: Self.prefix + "etag") { headers["If-None-Match"] = etag }
         do {
-            let (data, response) = try await client.get(URL(string: "https://api.github.com/repos/MeezaUni/Erhu-iOS/releases?per_page=30")!, headers: headers)
+            let (data, response) = try await client.get(URL(string: "https://api.github.com/repos/SRJW/Erhu-iOS-powerampp/releases?per_page=30")!, headers: headers)
             if response.statusCode == 403 || response.statusCode == 429 {
                 let retry = response.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init) ?? 3600
                 cooldown = response.value(forHTTPHeaderField: "X-RateLimit-Reset").flatMap(TimeInterval.init).map(Date.init(timeIntervalSince1970:)) ?? now.addingTimeInterval(retry)

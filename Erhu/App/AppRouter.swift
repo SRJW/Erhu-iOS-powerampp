@@ -160,7 +160,8 @@ final class AppRouter {
             viewDetails: { [weak self] song in self?.songForDetails = song },
             editTags: { [weak self] song in self?.songForTagEdit = song },
             fixTags: { song in actions.fixTags([song]) },
-            hideFromMixes: hideFromMixes
+            hideFromMixes: hideFromMixes,
+            deleteFromDevice: { actions.songPendingDeletion = $0 }
         )
     }
 }

@@ -446,7 +446,7 @@ private struct AboutSettingsView: View {
                     SettingsActionLabel(title: "Introduction & tool guide", icon: "book.closed")
                 }
                 Divider().padding(.leading, Spacing.lg)
-                Link(destination: URL(string: "https://github.com/MeezaUni/Erhu-iOS")!) {
+                Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp")!) {
                     SettingsActionLabel(title: "Source code on GitHub", icon: "chevron.left.forwardslash.chevron.right", accessory: "arrow.up.right")
                 }
             }

@@ -14,7 +14,7 @@ struct ReleaseCheckView: View {
                 case .available(let release):
                     Label("\(release.tag_name) is available", systemImage: "arrow.down.circle").font(.headline)
                     if let notes = release.body?.nonBlank { Text(notes).font(.subheadline).lineLimit(8) }
-                    Text("Install the IPA using SideStore or AltStore. Erhu cannot install itself.").font(.footnote).foregroundStyle(.secondary)
+                    Text("Install the IPA using SideStore or AltStore. amp cannot install itself.").font(.footnote).foregroundStyle(.secondary)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -40,7 +40,7 @@ struct ReleaseCheckView: View {
                 SettingsActionLabel(title: "Check for updates", icon: "arrow.clockwise")
             }.disabled(checker.state == .checking)
             Divider().padding(.leading, Spacing.lg)
-            Link(destination: URL(string: "https://github.com/MeezaUni/Erhu-iOS/releases")!) {
+            Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases")!) {
                 SettingsActionLabel(title: "All releases", icon: "shippingbox", accessory: "arrow.up.right")
             }
             if let checkedAt = checker.checkedAt {

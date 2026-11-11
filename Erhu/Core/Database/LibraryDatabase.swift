@@ -130,6 +130,20 @@ final class LibraryDatabase: @unchecked Sendable {
     );
     """
 
+    /// The file has already been removed. Remove its references atomically; the scanner
+    /// rebuilds album/artist aggregates after this immediate library update.
+    func deleteSong(_ song: Song) throws {
+        try db.transaction {
+            for table in ["playlist_song_cross_ref", "song_artist_cross_ref", "unverified_credit_segment",
+                          "listening_stats", "track_bookmarks", "waveform_cache", "library_imports"] {
+                try db.execute("DELETE FROM \(table) WHERE song_id = ?", [song.id])
+            }
+            try db.execute("DELETE FROM recently_played WHERE kind = 'SONG' AND item_id = ?", [song.id])
+            try db.execute("DELETE FROM metadata_processing WHERE file_path = ?", [song.path])
+            try db.execute("DELETE FROM songs WHERE id = ?", [song.id])
+        }
+    }
+
     // MARK: Row mapping
 
     static func song(_ r: Row) -> Song {

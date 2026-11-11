@@ -101,11 +101,25 @@ final class ReleaseAndDiscoveryTests: XCTestCase {
         XCTAssertNil(current.prompt)
     }
 
+    func testAmpReleaseOffersDirectIPAAndComparesBuildNumbers() throws {
+        let tag = "v0.1.0-amp.25"
+        let url = try XCTUnwrap(URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases/download/\(tag)/amp.ipa"))
+        let update = AppRelease(id: 25, tag_name: tag, name: "amp", body: nil,
+                                html_url: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases/tag/\(tag)")!,
+                                draft: false, prerelease: true,
+                                assets: [.init(name: "amp.ipa", browser_download_url: url)])
+        XCTAssertEqual(update.download(animated: false), url)
+        XCTAssertNil(update.download(animated: true))
+        XCTAssertEqual(ReleaseChecker.result([update], installed: "v0.1.0-amp.24", animated: false), .available(update))
+        XCTAssertEqual(ReleaseChecker.result([update], installed: tag, animated: false), .current)
+        XCTAssertFalse(AppRelease.official(URL(string: "https://github.com/another/repo/releases/download/v1/amp.ipa")!))
+    }
+
     private func release(_ tag: String, draft: Bool = false) -> AppRelease {
         AppRelease(id: 1, tag_name: tag, name: tag, body: "Notes",
-                   html_url: URL(string: "https://github.com/MeezaUni/Erhu-iOS/releases/tag/\(tag)")!, draft: draft, prerelease: true,
+                   html_url: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases/tag/\(tag)")!, draft: draft, prerelease: true,
                    assets: ["static", "animated"].map { name in
-                       AppRelease.Asset(name: "Erhu-\(tag)-\(name).ipa", browser_download_url: URL(string: "https://github.com/MeezaUni/Erhu-iOS/releases/download/\(tag)/Erhu-\(tag)-\(name).ipa")!)
+                       AppRelease.Asset(name: "Erhu-\(tag)-\(name).ipa", browser_download_url: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases/download/\(tag)/Erhu-\(tag)-\(name).ipa")!)
                    })
     }
 }

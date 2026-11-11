@@ -1,140 +1,72 @@
-<h1><img src="docs/branding/erhu-cube.png" alt="erhu app icon" width="64"> <img src="docs/branding/erhu-wordmark-on-dark.png#gh-dark-mode-only" alt="erhu" width="95"><img src="docs/branding/erhu-wordmark-on-light.png#gh-light-mode-only" alt="erhu" width="95"> <sub>for iOS</sub></h1>
+<h1><img src="Erhu/Assets.xcassets/AppIcon.appiconset/AppIcon.png" alt="amp" width="64"> amp</h1>
 
-An iPhone music player for your own collection.
+Tu música, en tu iPhone. **amp** es un reproductor de audio local para iOS 17 o posterior, con una biblioteca propia, un reproductor a pantalla completa y carátulas estáticas.
 
-<a href="https://github.com/MeezaUni/Erhu-iOS/releases"><img src="docs/badges/download-ios.svg" alt="Download erhu for iOS"></a>
-<a href="https://github.com/lochanpthakke/erhu/releases"><img src="docs/badges/download-android.svg" alt="Download erhu for Android"></a>
-<a href="https://ko-fi.com/erhu"><img src="docs/badges/support-ko-fi.svg" alt="Support erhu on Ko-fi"></a>
+[Descargar amp · Releases](https://github.com/SRJW/Erhu-iOS-powerampp/releases) · [Compilaciones](https://github.com/SRJW/Erhu-iOS-powerampp/actions/workflows/ios.yml) · [Reportar un problema](https://github.com/SRJW/Erhu-iOS-powerampp/issues)
 
-<img src="images/showcase/hero.png#gh-dark-mode-only" alt="erhu Home and Now Playing on an iPhone" width="1200"><img src="images/showcase/light/hero.png#gh-light-mode-only" alt="erhu Home and Now Playing on an iPhone" width="1200">
+## Descargar e instalar
 
-## Beta 2
+1. Abre **[Releases](https://github.com/SRJW/Erhu-iOS-powerampp/releases)** y elige la publicación más reciente de amp. Las compilaciones de desarrollo se identifican como *Pre-release*.
+2. En **Assets**, descarga **`amp.ipa`** directamente. No necesitas abrir la página de artefactos de GitHub Actions.
+3. Firma e instala la IPA con [SideStore](https://sidestore.io/) o [AltStore Classic](https://altstore.io/), usando tu cuenta de Apple.
+4. Añade música con **+**, desde **Archivos → En mi iPhone → amp**, o mediante la transferencia por Wi-Fi.
 
-The second beta is available as an unsigned IPA for iOS 17 and newer, installed with your own Apple ID through a sideloading tool. Compatibility with other iPhones and iOS versions is still being tested.
+Las IPAs publicadas son compilaciones de desarrollo **sin firma**; no se instalan directamente desde Safari. Con una cuenta gratuita de Apple normalmente debes renovar la firma cada siete días. Para conservar tu biblioteca al actualizar, instala la nueva versión sobre la anterior con la misma identidad de firma e identificador de aplicación.
 
-It comes in two variants:
+Esta rama, **`without-animated-art`**, publica la versión con carátulas estáticas. Cada compilación correcta crea una publicación propia en Releases con su IPA y revisión de origen. La versión anterior recuperada también está disponible allí.
 
-| Build | What it adds | Download |
-| --- | --- | --- |
-| **Static artwork** | The full app with still album covers | [Download IPA](https://github.com/MeezaUni/Erhu-iOS/releases/download/v1.0-beta.2/Erhu-v1.0-beta.2-static.ipa) |
-| **Animated artwork** | Everything above, plus downloaded animated album covers in the app and on the Lock Screen | [Download IPA](https://github.com/MeezaUni/Erhu-iOS/releases/download/v1.0-beta.2/Erhu-v1.0-beta.2-animated.ipa) |
+## Funciones
 
-[Release notes](https://github.com/MeezaUni/Erhu-iOS/releases/tag/v1.0-beta.2) · Newer development builds: [Static](https://github.com/MeezaUni/Erhu-iOS/actions?query=workflow%3AiOS+branch%3Awithout-animated-art) · [Animated](https://github.com/MeezaUni/Erhu-iOS/actions?query=workflow%3AiOS+branch%3Awith-animated-art) (open a successful run and download **Erhu-ipa**)
+- Biblioteca de canciones, álbumes, artistas, favoritos y playlists, con pestañas reordenables.
+- Reproductor con portada de borde a borde, fondo basado en sus colores, degradados suaves, waveform y controles de reproducción.
+- Cola, reproducción aleatoria, repetición, búsqueda dentro de la pista, marcadores y bucles A–B.
+- Letras sincronizadas, archivos LRC y búsqueda de letras en línea.
+- Ecualizador, visualizador y Transition Studio para configurar transiciones entre canciones.
+- Edición y reparación de etiquetas, gestión de carátulas y transferencia de archivos por Wi-Fi.
+- Temas claros y oscuros, minirreproductor de cristal e iconos de amp para ambas apariencias.
+- Widget **amp Player** para la pantalla de inicio.
+- Comprobación de actualizaciones desde las publicaciones de este repositorio.
 
-Install the IPA with [SideStore](https://sidestore.io/) or [AltStore Classic](https://altstore.io/), then add music with **+**, the Files app or **Wi-Fi Transfer**. erhu plays music stored on your iPhone; radio stations and smart playlists select tracks from your own library.
+MP3, AAC, ALAC, FLAC, WAV, AIFF, CAF y Ogg Vorbis/Opus, con contenedores compatibles como M4A, M4B y MP4. No reproduce archivos protegidos mediante DRM.
 
-With a free Apple ID, refresh the app within **7 days**; the usual limit of **3 active apps** includes your installer. Installing a newer IPA over the existing app keeps your library, settings, favourites and listening history. See the [installation guide](docs/INSTALLING.md).
+## Eliminar canciones del teléfono
 
-## Features
+En el menú **…** de una canción o mediante una pulsación prolongada, elige **Delete from device** y confirma.
 
-- Albums, artists, playlists, favourites, listening history and listening stats.
-- Smart playlists and radio stations generated from your library.
-- Songs filtered by genre and mood: Chill, High energy, Late night, Feel-good, Party, Love songs, Sad & reflective, Dark, Focus and Throwback.
-- On-device VYBE search by mood, artist or song, built into the app.
-- Synced lyrics from embedded lyrics, LRC files, cached results and LRCLIB, with offline downloads.
-- Queue management, A–B loops, bookmarks, Auto Fix Tags with review and Revert, and online or local artwork.
-- Higher-resolution cover and artist-photo upgrades, checked against your current image before saving.
-- Transition Studio with album, playlist and track-pair crossfades and editable curves.
-- 8-band equalizer with presets, and a visualizer.
-- Artwork-coloured themes, light, dark and system appearance, and imported theme packages.
-- Swipeable cover carousel in Now Playing and a floating glass mini-player.
-- Animated album covers in the app and on the Lock Screen (animated-artwork build only).
-- Wi-Fi Transfer from a computer's browser, and manual and automatic update checks for new releases.
+Esto borra permanentemente el archivo de la carpeta de amp visible en **Archivos**, elimina la canción de la biblioteca y las playlists y retira sus apariciones en la cola. **No se puede deshacer.** Si la canción tiene otra copia en una carpeta distinta, esa copia permanece. Quitar una canción de una playlist sigue siendo una acción independiente y conserva el archivo.
 
-MP3, AAC, ALAC, FLAC, WAV, AIFF, CAF and Ogg Vorbis/Opus are supported, in M4A, M4B and MP4 containers where applicable. Protected (DRM) files are not.
+amp solo elimina archivos propios de su carpeta de música. Si iOS impide borrar un archivo, muestra el error y conserva su entrada en la biblioteca.
 
-## Screenshots
+## Widget y controles de iOS
 
-Captured on an iPhone from the current build. They show the real interfaces.
+Añade **amp Player** desde la galería de widgets de iOS. El widget muestra la canción actual y permite abrir el reproductor; los enlaces de control abren amp para ejecutar la acción.
 
-### Home and discovery
+La instalación debe conservar la extensión y un App Group compartido correctamente provisionado. La aparición del widget y su acceso a los datos dependen de la firma utilizada. Más detalles: [reproductor y widget](docs/PLAYER_AND_WIDGET.md).
 
-<p>
-  <a href="images/showcase/home.png#gh-dark-mode-only"><img src="images/showcase/home.png#gh-dark-mode-only" alt="erhu Home with a smart playlist and featured radio stations, captured on an iPhone" width="270"></a><a href="images/showcase/light/home.png#gh-light-mode-only"><img src="images/showcase/light/home.png#gh-light-mode-only" alt="erhu Home with a smart playlist and featured radio stations, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/radio.png#gh-dark-mode-only"><img src="images/showcase/radio.png#gh-dark-mode-only" alt="An erhu radio station built from A Sky Full of Stars, captured on an iPhone" width="270"></a><a href="images/showcase/light/radio.png#gh-light-mode-only"><img src="images/showcase/light/radio.png#gh-light-mode-only" alt="An erhu radio station built from A Sky Full of Stars, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/vybe.png#gh-dark-mode-only"><img src="images/showcase/vybe.png#gh-dark-mode-only" alt="erhu VYBE search for late night, with the closest songs in the library, captured on an iPhone" width="270"></a><a href="images/showcase/light/vybe.png#gh-light-mode-only"><img src="images/showcase/light/vybe.png#gh-light-mode-only" alt="erhu VYBE search for late night, with the closest songs in the library, captured on an iPhone" width="270"></a>
-</p>
+El indicador de salida del reproductor usa la ruta y frecuencia de la sesión de audio. La línea técnica del archivo muestra sus propios datos; no son la misma medición.
 
-### The listening experience
+## Compilar y validar
 
-<p>
-  <a href="images/showcase/now-playing.png#gh-dark-mode-only"><img src="images/showcase/now-playing.png#gh-dark-mode-only" alt="erhu Now Playing, captured on an iPhone" width="270"></a><a href="images/showcase/light/now-playing.png#gh-light-mode-only"><img src="images/showcase/light/now-playing.png#gh-light-mode-only" alt="erhu Now Playing, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/lyrics.png#gh-dark-mode-only"><img src="images/showcase/lyrics.png#gh-dark-mode-only" alt="erhu synced lyrics, captured on an iPhone" width="270"></a><a href="images/showcase/light/lyrics.png#gh-light-mode-only"><img src="images/showcase/light/lyrics.png#gh-light-mode-only" alt="erhu synced lyrics, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/queue.png#gh-dark-mode-only"><img src="images/showcase/queue.png#gh-dark-mode-only" alt="erhu queue, captured on an iPhone" width="270"></a><a href="images/showcase/light/queue.png#gh-light-mode-only"><img src="images/showcase/light/queue.png#gh-light-mode-only" alt="erhu queue, captured on an iPhone" width="270"></a>
-</p>
-
-### Your library
-
-<p>
-  <a href="images/showcase/library.png#gh-dark-mode-only"><img src="images/showcase/library.png#gh-dark-mode-only" alt="erhu library with playlists, favourites and artists, captured on an iPhone" width="270"></a><a href="images/showcase/light/library.png#gh-light-mode-only"><img src="images/showcase/light/library.png#gh-light-mode-only" alt="erhu library with playlists, favourites and artists, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/albums.png#gh-dark-mode-only"><img src="images/showcase/albums.png#gh-dark-mode-only" alt="erhu albums sorted by recently played, captured on an iPhone" width="270"></a><a href="images/showcase/light/albums.png#gh-light-mode-only"><img src="images/showcase/light/albums.png#gh-light-mode-only" alt="erhu albums sorted by recently played, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/songs-moods.png#gh-dark-mode-only"><img src="images/showcase/songs-moods.png#gh-dark-mode-only" alt="erhu songs filtered by the Late night mood, captured on an iPhone" width="270"></a><a href="images/showcase/light/songs-moods.png#gh-light-mode-only"><img src="images/showcase/light/songs-moods.png#gh-light-mode-only" alt="erhu songs filtered by the Late night mood, captured on an iPhone" width="270"></a>
-</p>
-
-### Library tools
-
-<p>
-  <a href="images/showcase/artwork-fetcher.png#gh-dark-mode-only"><img src="images/showcase/artwork-fetcher.png#gh-dark-mode-only" alt="Artwork Fetcher on an iPhone, showing album and artist-photo checks" width="270"></a><a href="images/showcase/light/artwork-fetcher.png#gh-light-mode-only"><img src="images/showcase/light/artwork-fetcher.png#gh-light-mode-only" alt="Artwork Fetcher on an iPhone, showing album and artist-photo checks" width="270"></a>
-  <a href="images/showcase/artwork-upgrade.png#gh-dark-mode-only"><img src="images/showcase/artwork-upgrade.png#gh-dark-mode-only" alt="Upgrade album covers on an iPhone, listing higher-resolution matches with an animated cover marked" width="270"></a><a href="images/showcase/light/artwork-upgrade.png#gh-light-mode-only"><img src="images/showcase/light/artwork-upgrade.png#gh-light-mode-only" alt="Upgrade album covers on an iPhone, listing higher-resolution matches with an animated cover marked" width="270"></a>
-  <a href="images/showcase/auto-fix-tags.png#gh-dark-mode-only"><img src="images/showcase/auto-fix-tags.png#gh-dark-mode-only" alt="Auto Fix Tags on an iPhone, listing matched tracks and uncertain matches to review" width="270"></a><a href="images/showcase/light/auto-fix-tags.png#gh-light-mode-only"><img src="images/showcase/light/auto-fix-tags.png#gh-light-mode-only" alt="Auto Fix Tags on an iPhone, listing matched tracks and uncertain matches to review" width="270"></a>
-</p>
-
-### Audio controls and Transition Studio
-
-<p>
-  <a href="images/showcase/audio-controls.png#gh-dark-mode-only"><img src="images/showcase/audio-controls.png#gh-dark-mode-only" alt="erhu equalizer with the Bass Booster preset, captured on an iPhone" width="270"></a><a href="images/showcase/light/audio-controls.png#gh-light-mode-only"><img src="images/showcase/light/audio-controls.png#gh-light-mode-only" alt="erhu equalizer with the Bass Booster preset, captured on an iPhone" width="270"></a>
-  <a href="images/showcase/transition-studio.png#gh-dark-mode-only"><img src="images/showcase/transition-studio.png#gh-dark-mode-only" alt="Transition Studio on an iPhone, showing album settings and track pairs" width="270"></a><a href="images/showcase/light/transition-studio.png#gh-light-mode-only"><img src="images/showcase/light/transition-studio.png#gh-light-mode-only" alt="Transition Studio on an iPhone, showing album settings and track pairs" width="270"></a>
-  <a href="images/showcase/transition-editor.png#gh-dark-mode-only"><img src="images/showcase/transition-editor.png#gh-dark-mode-only" alt="The transition editor on an iPhone, showing waveforms and editable curves" width="270"></a><a href="images/showcase/light/transition-editor.png#gh-light-mode-only"><img src="images/showcase/light/transition-editor.png#gh-light-mode-only" alt="The transition editor on an iPhone, showing waveforms and editable curves" width="270"></a>
-</p>
-
-[Album order and transitions](docs/ALBUM_ORDER_AND_TRANSITIONS.md) · The in-app introduction covers these tools; reopen it from **Settings → About Erhu → Introduction**.
-
-### Animated artwork
-
-<a href="images/showcase/animated-artwork.webp#gh-dark-mode-only"><img src="images/showcase/animated-artwork.webp#gh-dark-mode-only" alt="Animated album covers on an album page, in Now Playing and on the Lock Screen, recorded on an iPhone" width="1200"></a><a href="images/showcase/light/animated-artwork.webp#gh-light-mode-only"><img src="images/showcase/light/animated-artwork.webp#gh-light-mode-only" alt="Animated album covers on an album page, in Now Playing and on the Lock Screen, recorded on an iPhone" width="1200"></a>
-
-Animated covers are in the animated-artwork build only. The Lock Screen needs iOS 26 or newer, and iOS decides when it shows the animation.
-
-[How animated covers work](https://github.com/MeezaUni/Erhu-iOS/blob/with-animated-art/docs/ANIMATED_COVERS.md)
-
-## VYBE
-
-VYBE searches your library using descriptions of what you want to hear, such as a mood, an artist or a song you like. It runs entirely on your iPhone; nothing is uploaded and there is no cloud inference.
-
-On iOS, VYBE's model is built into the app (a compressed Core ML MiniLM, about 17 MB), so there is nothing to download. Turn it on during the introduction or in Settings, then leave the app open while it indexes your library. See [VYBE details](docs/VYBE.md).
-
-## Build
-
-erhu for iOS uses Swift, SwiftUI, AVFoundation and Core Audio.
-
-On a Mac with Xcode and [XcodeGen](https://github.com/yonaskolb/XcodeGen):
+El proyecto usa Swift, SwiftUI, AVFoundation y Core Audio. Se necesita un Mac con Xcode y [XcodeGen](https://github.com/yonaskolb/XcodeGen) para compilar iOS:
 
 ```sh
 xcodegen generate
 open Erhu.xcodeproj
 ```
 
-The [iOS workflow](.github/workflows/ios.yml) builds an unsigned IPA and runs the native interaction checks and unit tests on a simulator for both artwork branches. See [Build from source](docs/BUILDING.md).
+El proyecto y los identificadores internos conservan el nombre `Erhu` para mantener la compatibilidad de datos. El nombre de la aplicación instalada es **amp**.
 
-`without-animated-art` is the default branch and builds the static-artwork variant; `with-animated-art` builds the animated variant. Shared changes are kept in sync on both.
+- **[iOS](.github/workflows/ios.yml)** comprueba el borrado real de archivos con casos de aislamiento, compila Release, verifica que la IPA incluya la extensión y publica `amp.ipa` en Releases. Reutiliza dependencias y productos compilados cuando la caché lo permite.
+- **[iOS full validation](.github/workflows/ios-tests.yml)** ejecuta las pruebas completas unitarias, de regresión y de interacción en un simulador. Se inicia manualmente desde Actions; su resultado es independiente de la exportación de desarrollo.
 
-## Feedback
+Una exportación correcta no implica que se haya ejecutado la suite completa de simulador. Las notas de cada publicación indican las comprobaciones realizadas.
 
-Report bugs through [GitHub Issues](https://github.com/MeezaUni/Erhu-iOS/issues). Include your iPhone model, iOS version, app version, artwork variant and steps to reproduce the problem.
+## Problemas y sugerencias
 
-[Contributing](CONTRIBUTING.md) · [Security policy](SECURITY.md) · [Code of conduct](CODE_OF_CONDUCT.md)
+Abre un [issue](https://github.com/SRJW/Erhu-iOS-powerampp/issues) con el modelo de iPhone, versión de iOS, etiqueta de la publicación de amp y pasos para reproducir el problema. Para problemas de instalación, indica también la herramienta de firma.
 
-## Support erhu
+## Créditos y licencia
 
-erhu is free, with no ads or accounts. If you'd like to help cover the Apple Developer fee so it can go on the App Store, you can [buy me a coffee on Ko-fi](https://ko-fi.com/erhu). The same link is in the app under **Settings → About Erhu**.
+amp continúa el proyecto de [Erhu para iOS de Mohammed Azeemulla Khan / Azeem](https://github.com/MeezaUni/Erhu-iOS), con antecedentes en [erhu para Android](https://github.com/lochanpthakke/erhu) de Lochan Thakke y Kshitij Kekunnaya.
 
-## Contributors
-
-- [Azeem](https://github.com/MeezaUni) (iOS)
-- [Lochan Thakke](https://github.com/lochanpthakke) and [Kshitij Kekunnaya](https://github.com/Kshitij1425), authors of [erhu for Android](https://github.com/lochanpthakke/erhu)
-
-## License
-
-erhu for iOS is source-visible proprietary software. You can read the code and install official builds, but copying, modification, rebranding and redistribution need permission. See the [licence](LICENSE) and [licensing and permissions](docs/LICENSING-PERMISSIONS.md).
-
-Android-derived code and the erhu branding are used with the written permission of Kshitij Kekunnaya and Lochan Thakke. Versions up to v1.0-beta were released under the [GNU General Public License v3.0](LICENSES/GPL-3.0-historical.txt) and remain available under it. Third-party components keep their own licences ([ThirdParty](ThirdParty/)).
+El cambio de nombre no modifica las condiciones ni los avisos de los autores originales. Consulta [LICENSE](LICENSE), [licencias y permisos](docs/LICENSING-PERMISSIONS.md) y las licencias de componentes en [ThirdParty](ThirdParty/). Las versiones históricas cubiertas por GPL conservan sus condiciones correspondientes en [LICENSES](LICENSES/).

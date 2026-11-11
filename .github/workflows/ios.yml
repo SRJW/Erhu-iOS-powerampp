@@ -12,6 +12,7 @@ on:
     - .github/workflows/ios.yml
     - .github/actions/setup-ios/**
     - Tools/report_app_size.py
+    - Tools/Tests/LibraryFileDeletion/**
   workflow_dispatch:
     inputs:
       runner:
@@ -22,7 +23,7 @@ on:
         - macos-15-intel
         - macos-15
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
@@ -39,12 +40,17 @@ jobs:
       id: setup
       with:
         cache-suffix: device-release
+    - name: Test real file deletion boundaries
+      run: |
+        xcrun swiftc Erhu/Core/Model/LibraryFileDeletion.swift Tools/Tests/LibraryFileDeletion/main.swift -o "$RUNNER_TEMP/amp-file-deletion-tests"
+        "$RUNNER_TEMP/amp-file-deletion-tests"
     - name: Build unsigned app
       run: |
         set -o pipefail
         mkdir -p build
         if ! xcodebuild build -project Erhu.xcodeproj -scheme Erhu -configuration Release \
           -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
+          ERHU_RELEASE_TAG="v0.1.0-amp.${GITHUB_RUN_NUMBER}" CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER" \
           SWIFT_ACTIVE_COMPILATION_CONDITIONS=ERHU_STATIC_ART \
           CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build/compile.log 2>&1; then
           python3 - <<'PY'
@@ -77,6 +83,19 @@ jobs:
         path: dist/amp.ipa
         compression-level: 0
         if-no-files-found: error
+    - name: Publish a direct IPA download
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        tag="v0.1.0-amp.${GITHUB_RUN_NUMBER}"
+        if ! gh release view "$tag" >/dev/null 2>&1; then
+          gh release create "$tag" dist/amp.ipa --target "$GITHUB_SHA" --prerelease \
+            --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" \
+            --notes "Unsigned development IPA with static artwork. File deletion boundary checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
+        fi
+        printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
     - name: Save compiled products and module caches
       if: steps.setup.outputs.build-cache-hit != 'true'
       uses: actions/cache/save@v4

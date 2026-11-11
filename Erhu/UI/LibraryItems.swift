@@ -14,6 +14,7 @@ struct SongActions {
     var hideFromMixes: ((Song) -> Void)?
     /// Playlist pages only.
     var removeFromPlaylist: ((Song) -> Void)?
+    var deleteFromDevice: ((Song) -> Void)?
 }
 
 /// The song actions as menu items (a row's "…" button and its long-press menu).
@@ -41,6 +42,9 @@ struct SongActionItems: View {
         }
         if let remove = actions.removeFromPlaylist {
             Button(role: .destructive) { remove(song) } label: { Label("Remove from playlist", systemImage: "minus.circle") }
+        }
+        if let delete = actions.deleteFromDevice {
+            Button(role: .destructive) { delete(song) } label: { Label("Delete from device", systemImage: "trash") }
         }
         if let hide = actions.hideFromMixes {
             Button(role: .destructive) { hide(song) } label: { Label("Hide from Smart Playlists", systemImage: "eye.slash") }

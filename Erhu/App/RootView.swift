@@ -263,11 +263,21 @@ extension View {
 }
 
 private struct RouterSheets: ViewModifier {
+    @Environment(LibraryActions.self) private var actions
     let active: Bool
     @Environment(AppRouter.self) private var router
 
     func body(content: Content) -> some View {
         content
+            .confirmationDialog("Delete from device?", isPresented: Binding(
+                get: { active && actions.songPendingDeletion != nil },
+                set: { if active && !$0 { actions.songPendingDeletion = nil } }
+            ), titleVisibility: .visible, presenting: actions.songPendingDeletion) { song in
+                Button("Delete from device", role: .destructive) { actions.deleteFromDevice(song) }
+                Button("Cancel", role: .cancel) {}
+            } message: { song in
+                Text("Permanently delete “\(song.title)” from amp's folder in Files, the library and playlists? This cannot be undone. Separate copies elsewhere are not deleted.")
+            }
             .sheet(item: Binding(get: { active ? router.songsForPlaylist.map(SongBatch.init) : nil }, set: { router.songsForPlaylist = $0?.songs })) { batch in
                 AddToPlaylistSheet(songs: batch.songs)
             }

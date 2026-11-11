@@ -251,6 +251,26 @@ final class PlayerController {
         queueChanged()
     }
 
+    /// Permanent deletion removes every occurrence and cannot be undone into a missing file.
+    func removeDeletedSong(_ songID: Int64) {
+        let current = state.currentEntry
+        let oldIndex = state.currentIndex
+        removals.clear()
+        state.queue.removeAll { $0.song.id == songID }
+        if state.queue.isEmpty {
+            state.currentIndex = -1
+            engine.stopAll()
+            playingChanged(false)
+            currentEntryChanged(sameEntryRepeated: false)
+        } else if current?.song.id == songID {
+            state.currentIndex = min(max(oldIndex, 0), state.queue.count - 1)
+            startCurrent(at: 0, playing: state.isPlaying)
+        } else if let current, let index = state.queue.firstIndex(where: { $0.id == current.id }) {
+            state.currentIndex = index
+        }
+        queueChanged()
+    }
+
     /// Puts the most recently removed entry back at its original position. False when there is nothing to undo.
     @discardableResult
     func undoQueueRemoval() -> Bool {
