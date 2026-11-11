@@ -5,7 +5,10 @@ Builds run on GitHub's macOS runners, so you can get an IPA without owning a Mac
 runs the simulator tests, and uploads **Erhu-ipa** and **Erhu-test-results**. Documentation-only
 commits may skip CI.
 
-CI uses Apple Silicon runners. The device Release build and simulator tests run in parallel;
+CI defaults to Intel runners because GitHub's Apple Silicon pool currently reports capacity
+failures. In **Actions → iOS → Run workflow**, choose `macos-15` to use Apple Silicon when
+capacity is available; `macos-15-intel` selects Intel. Binary codec packages support both
+simulator architectures. The device Release build and simulator tests run in parallel;
 the simulator app and both test bundles are compiled once with `build-for-testing`. The full
 `ErhuInteractionTests` suite and full `ErhuTests` suite then run with `test-without-building`,
 on separate clean simulators. `ErhuTests` includes all artwork, transfer/library, audio and

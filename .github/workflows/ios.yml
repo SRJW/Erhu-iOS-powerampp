@@ -8,6 +8,14 @@ on:
       - ".github/workflows/vybe-probe.yml"
       - "docs/downloads/VYBE-training-kit.zip"
   workflow_dispatch:
+    inputs:
+      runner:
+        description: macos-15 is Apple Silicon; choose it when ARM capacity is available.
+        type: choice
+        default: macos-15-intel
+        options:
+          - macos-15-intel
+          - macos-15
 
 permissions:
   contents: read
@@ -20,7 +28,7 @@ jobs:
   # Device and simulator builds use different SDKs; run them on separate Macs.
   build:
     if: github.event.deleted != true
-    runs-on: macos-15
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
     timeout-minutes: 75
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -82,7 +90,7 @@ jobs:
 
   tests:
     if: github.event.deleted != true
-    runs-on: macos-15
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
     timeout-minutes: 75
     env:
       HOMEBREW_NO_AUTO_UPDATE: "1"
@@ -120,7 +128,7 @@ jobs:
         id: simulator-build
         run: |
           if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath build/DerivedData \
+            -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
             -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
             > build/simulator-build.log 2>&1; then
             python3 Tools/report_native_interactions.py build/simulator-build.log
