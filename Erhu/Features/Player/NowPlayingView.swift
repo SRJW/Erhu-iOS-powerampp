@@ -237,15 +237,15 @@ struct NowPlayingView: View {
 
     private func controls(_ state: PlaybackState) -> some View {
         HStack(spacing: 3) {
-            transport("backward.end.fill", label: "Rewind 10 seconds", size: 50, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
-            transport("backward.fill", label: "Previous track", size: 68, action: { player.skipToPreviousItem() })
-            transport(state.isPlaying ? "pause.fill" : "play.fill", label: state.isPlaying ? "Pause" : "Play", size: 84, action: { player.togglePlayPause() })
-            transport("forward.fill", label: "Next track", size: 68, action: next)
-            transport("forward.end.fill", label: "Forward 10 seconds", size: 50, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
+            transport("backward.end.fill", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: 50, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
+            transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: 68, action: { player.skipToPreviousItem() })
+            transport(state.isPlaying ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: state.isPlaying ? "Pause" : "Play", size: 84, action: { player.togglePlayPause() })
+            transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: 68, action: next)
+            transport("forward.end.fill", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: 50, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
         }
     }
 
-    private func transport(_ symbol: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
+    private func transport(_ symbol: String, identifier: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: size * 0.43, weight: .black))
@@ -255,7 +255,7 @@ struct NowPlayingView: View {
         }
         .buttonStyle(PressScaleStyle(scale: 0.92))
         .accessibilityLabel(label)
-        .accessibilityIdentifier(symbol == "play.fill" || symbol == "pause.fill" ? "nowPlayingPlayPause" : label)
+        .accessibilityIdentifier(identifier)
     }
 
     private var referenceNavigation: some View {

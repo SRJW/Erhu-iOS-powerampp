@@ -73,10 +73,10 @@ final class LibraryInteractionTests: XCTestCase {
         mini.tap()
         let title = app.staticTexts["nowPlayingTitle"]
         XCTAssertTrue(title.waitForExistence(timeout: 10))
-        let next = app.buttons["Next track"]
-        let previous = app.buttons["Previous track"]
-        let forward = app.buttons["Forward 10 seconds"]
-        let rewind = app.buttons["Rewind 10 seconds"]
+        let next = app.buttons["nowPlayingNextTrack"]
+        let previous = app.buttons["nowPlayingPreviousTrack"]
+        let forward = app.buttons["nowPlayingForward"]
+        let rewind = app.buttons["nowPlayingRewind"]
         XCTAssertGreaterThan(next.frame.width, forward.frame.width)
         XCTAssertGreaterThan(previous.frame.width, rewind.frame.width)
         next.tap()
