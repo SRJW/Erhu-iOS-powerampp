@@ -95,12 +95,16 @@ final class LibraryInteractionTests: XCTestCase {
             let parts = elapsed.label.split(separator: ":").compactMap { Int($0) }
             return parts.count == 2 ? parts[0] * 60 + parts[1] : -1
         }
+        let initialSeconds = seconds()
+        XCTAssertGreaterThanOrEqual(initialSeconds, 0)
         forward.tap()
-        let advanced = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= 10 }, object: nil)
+        let advanced = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= initialSeconds + 9 }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 5), .completed)
         XCTAssertEqual(title.label, "Second player track")
         rewind.tap()
-        let rewound = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= 0 && seconds() < 5 }, object: nil)
+        let rewound = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            seconds() >= 0 && abs(seconds() - initialSeconds) <= 1
+        }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [rewound], timeout: 5), .completed)
         XCTAssertEqual(title.label, "Second player track")
         previous.tap()
