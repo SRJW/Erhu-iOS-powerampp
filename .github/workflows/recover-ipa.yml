@@ -38,16 +38,30 @@ jobs:
     - name: Publish the original IPA with a direct download
       run: |
         set -euo pipefail
-        test -s dist/amp.ipa
-        unzip -tq dist/amp.ipa
+        test -s dist/amp.ipa || { echo '::error::Downloaded artifact does not contain amp.ipa'; exit 1; }
+        unzip -tq dist/amp.ipa || { echo '::error::Original IPA failed ZIP integrity verification'; exit 1; }
+        publish() {
+          if "$@" > "$RUNNER_TEMP/release-response.txt" 2>&1; then
+            cat "$RUNNER_TEMP/release-response.txt"
+          else
+            python3 - <<'PYERROR'
+        import os
+        from pathlib import Path
+        message = Path(os.environ['RUNNER_TEMP'], 'release-response.txt').read_text(errors='replace')
+        message = message.replace(os.environ['GH_TOKEN'], '[REDACTED]')
+        print('::error::' + message[-3000:].replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A'))
+        PYERROR
+            exit 1
+          fi
+        }
         tag=amp-static-1bcc84a
         if ! gh release view "$tag" >/dev/null 2>&1; then
           revision=$(python3 -c "import json; print(json.load(open('/tmp/source-run.json'))['head_sha'])")
-          gh release create "$tag" dist/amp.ipa --target "$revision" --prerelease \
+          publish gh release create "$tag" dist/amp.ipa --target "$revision" --prerelease \
             --title "amp — original static artwork IPA" \
             --notes "Original unsigned development IPA from successful build 43093613590 (revision 1bcc84a). Recovered unchanged to provide a direct download. Full simulator validation is separate."
         fi
         if [ "$(gh release view "$tag" --json assets --jq '[.assets[] | select(.name == "amp.ipa")] | length')" -eq 0 ]; then
-          gh release upload "$tag" dist/amp.ipa
+          publish gh release upload "$tag" dist/amp.ipa
         fi
         printf '[Download the original amp.ipa](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
