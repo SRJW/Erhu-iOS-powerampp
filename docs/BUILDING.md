@@ -1,25 +1,34 @@
 # Building Erhu
 
-Builds run on GitHub's macOS runners, so you can get an IPA without owning a Mac. The
-[iOS workflow](../.github/workflows/ios.yml) generates the Xcode project, builds an unsigned IPA,
-runs the simulator tests, and uploads **Erhu-ipa** and **Erhu-test-results**. Documentation-only
-commits may skip CI.
+The [iOS workflow](../.github/workflows/ios.yml) exports an **unsigned static-artwork IPA**
+from `without-animated-art`. Download **Erhu-ipa** from a successful run; its ZIP contains
+`Erhu.ipa`. This is a development build, not a release certified by the full test suite.
 
-CI defaults to Intel runners because GitHub's Apple Silicon pool currently reports capacity
-failures. In **Actions → iOS → Run workflow**, choose `macos-15` to use Apple Silicon when
-capacity is available; `macos-15-intel` selects Intel. Binary codec packages support both
-simulator architectures. The device Release build and simulator tests run in parallel;
-the simulator app and both test bundles are compiled once with `build-for-testing`. The full
-`ErhuInteractionTests` suite and full `ErhuTests` suite then run with `test-without-building`,
-on separate clean simulators. `ErhuTests` includes all artwork, transfer/library, audio and
-transition regressions; they are not rerun as duplicate selections. Both suites must execute
-at least one test and pass before the final job packages and uploads **Erhu-ipa**. Any skips
-requested by an existing test are reported explicitly in the result counts.
+Each relevant app change runs one macOS job: resolve the pinned codecs, compile the iPhone
+Release app, package it and upload the IPA immediately. It does not build a simulator app,
+boot simulators or transfer an intermediate app to another runner. Test-only and documentation
+changes do not rebuild the IPA. Manual runs must select `without-animated-art`; other branches
+do not export. The build explicitly defines only `ERHU_STATIC_ART`, so the animated-artwork
+condition `ERHU_ANIMATED_ART` is not enabled. No app functionality or artwork assets are removed.
 
-Pinned Swift packages and compiler products are cached separately by runner architecture,
-Xcode version, project configuration and source contents. Source changes still trigger a
-build and every test run. Failed test runs retain logs, xcresult bundles and test counts in
-**Erhu-test-results**; device compiler diagnostics are in **Erhu-build-logs**.
+Full validation remains available in **Actions → iOS full validation → Run workflow**.
+It runs all `ErhuInteractionTests` and `ErhuTests`, including artwork, audio, library and transfer
+regressions, and uploads **Erhu-test-results** with actual pass/fail/skip counts. These checks
+remain necessary before claiming a fully tested release; their result does not block a
+requested development IPA export. The separate beta publisher is unchanged.
+
+Both workflows default to `macos-15-intel` because the Apple Silicon pool reported capacity
+failures. Manual runs can choose `macos-15` when ARM capacity is available. Package and compiler
+caches are separated by architecture, Xcode version, project and sources. Changes to test code
+no longer invalidate the device build's exact cache key. Builds still run after cache restore;
+results from a prior compilation are never treated as test results.
+
+Measured before this split: roughly 15 minutes compiling simulator tests, 9 minutes executing
+UI tests, 19 minutes executing unit tests, plus simulator startup and upload time. The device
+build itself completed in about 6–8 minutes in observed runs. Export now depends only on that
+device build and packaging; this is not a guaranteed duration because GitHub queue, cache and
+runner performance vary. The bundled VYBE/Core ML model and the three pinned codec packages
+remain part of the app and still need compilation/resolution when caches are cold.
 
 For local development, use a Mac with a compatible Xcode and install XcodeGen:
 

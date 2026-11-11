@@ -1,12 +1,15 @@
 name: iOS
-
 on:
   push:
-    paths-ignore:
-      - "Tools/vybe_lab/**"
-      - "Tools/VybeProbe/**"
-      - ".github/workflows/vybe-probe.yml"
-      - "docs/downloads/VYBE-training-kit.zip"
+    branches:
+    - without-animated-art
+    paths:
+    - Erhu/**
+    - Support/**
+    - project.yml
+    - .github/workflows/ios.yml
+    - .github/actions/setup-ios/**
+    - Tools/report_app_size.py
   workflow_dispatch:
     inputs:
       runner:
@@ -14,274 +17,76 @@ on:
         type: choice
         default: macos-15-intel
         options:
-          - macos-15-intel
-          - macos-15
-
+        - macos-15-intel
+        - macos-15
 permissions:
   contents: read
-
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
-  # Device and simulator builds use different SDKs; run them on separate Macs.
   build:
-    if: github.event.deleted != true
+    if: github.ref == 'refs/heads/without-animated-art' && github.event.deleted != true
     runs-on: ${{ inputs.runner || 'macos-15-intel' }}
-    timeout-minutes: 75
+    timeout-minutes: 30
     env:
-      HOMEBREW_NO_AUTO_UPDATE: "1"
+      HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup-ios
-        id: setup
-        with:
-          cache-suffix: device-release
-      - name: Build unsigned app
-        run: |
-          set -o pipefail
-          mkdir -p build
-          if ! xcodebuild build -project Erhu.xcodeproj -scheme Erhu -configuration Release \
-            -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build/compile.log 2>&1; then
-            python3 - <<'PY'
-          import os
-          from pathlib import Path
-          lines = Path('build/compile.log').read_text(errors='replace').splitlines()
-          errors = [line for line in lines if 'error:' in line.lower()]
-          for error in errors[:12]:
-              escaped = error.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-              print('::error::' + escaped, flush=True)
-          detail = '\n'.join(errors or lines[-80:])[-24000:]
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write('## Build errors\n\n```text\n' + detail + '\n```\n')
-          PY
-            exit 1
-          fi
-      - name: Save compiled products and module caches
-        if: steps.setup.outputs.build-cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            build/DerivedData/Build
-            build/DerivedData/ModuleCache.noindex
-            build/DerivedData/SDKStatCaches.noindex
-          key: ${{ steps.setup.outputs.build-cache-key }}
-      # This intermediate is not an IPA. Packaging/publication requires all tests.
-      - name: Stage app for packaging after tests
-        run: COPYFILE_DISABLE=1 tar -cf build/Erhu-app.tar -C build/DerivedData/Build/Products/Release-iphoneos Erhu.app
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Erhu-app-build
-          path: build/Erhu-app.tar
-          retention-days: 1
-          compression-level: 0
-          if-no-files-found: error
-      - name: Upload device build diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Erhu-build-logs
-          path: |
-            build/compile.log
-            build/resolve.log
-          if-no-files-found: warn
-
-  tests:
-    if: github.event.deleted != true
-    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
-    timeout-minutes: 75
-    env:
-      HOMEBREW_NO_AUTO_UPDATE: "1"
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/setup-ios
-        id: setup
-        with:
-          cache-suffix: simulator-debug
-      - name: Create and start the interaction simulator
-        run: |
-          newest_ios_runtime() {
-            xcrun simctl list runtimes available -j | jq -r '
-              [.runtimes[] | select(.platform == "iOS")]
-              | sort_by(.version | split(".") | map(tonumber)) | last | .identifier // empty'
-          }
-          RUNTIME=$(newest_ios_runtime)
-          if [ -z "$RUNTIME" ]; then
-            echo "No iOS simulator runtime installed for this Xcode; downloading one."
-            xcodebuild -downloadPlatform iOS
-            RUNTIME=$(newest_ios_runtime)
-          fi
-          DEVICE_TYPE=$(xcrun simctl list runtimes available -j | jq -r --arg runtime "$RUNTIME" '
-            .runtimes[] | select(.identifier == $runtime)
-            | [.supportedDeviceTypes[] | select(.productFamily == "iPhone")] | last | .identifier')
-          echo "Creating $DEVICE_TYPE on $RUNTIME"
-          DEVICE=$(xcrun simctl create "CI UI iPhone" "$DEVICE_TYPE" "$RUNTIME")
-          echo "UI_SIMULATOR_ID=$DEVICE" >> "$GITHUB_ENV"
-          echo "SIMULATOR_RUNTIME=$RUNTIME" >> "$GITHUB_ENV"
-          echo "SIMULATOR_DEVICE_TYPE=$DEVICE_TYPE" >> "$GITHUB_ENV"
-          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
-          # Boot while build-for-testing compiles, rather than blocking compilation on boot.
-          xcrun simctl boot "$DEVICE"
-      - name: Compile app and both test bundles once
-        id: simulator-build
-        run: |
-          if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
-            -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
-            -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
-            > build/simulator-build.log 2>&1; then
-            python3 Tools/report_native_interactions.py build/simulator-build.log
-            tail -n 80 build/simulator-build.log
-            exit 1
-          fi
-      - name: Save compiled products and module caches
-        if: steps.setup.outputs.build-cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            build/DerivedData/Build
-            build/DerivedData/ModuleCache.noindex
-            build/DerivedData/SDKStatCaches.noindex
-          key: ${{ steps.setup.outputs.build-cache-key }}
-      - name: Wait for the interaction simulator
-        run: xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
-      - name: Run all native interaction checks
-        run: |
-          if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
-            -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
-            -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/InteractionResults.xcresult \
-            CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests -parallel-testing-enabled NO \
-            > build/ui-tests.log 2>&1; then
-            python3 Tools/report_native_interactions.py build/ui-tests.log
-            exit 1
-          fi
-      - name: Report native interaction status
-        if: always()
-        run: python3 Tools/report_native_interactions.py build/ui-tests.log
-      # Even if interactions fail, run the entire unit suite and retain both results.
-      # A fresh simulator prevents UI fixture state from leaking into unit tests.
-      - name: Boot a clean simulator for the complete unit suite
-        if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
-        id: unit-simulator
-        run: |
-          xcrun simctl shutdown "$UI_SIMULATOR_ID" >/dev/null 2>&1 || true
-          DEVICE=$(xcrun simctl create "CI Unit iPhone" "$SIMULATOR_DEVICE_TYPE" "$SIMULATOR_RUNTIME")
-          echo "SIMULATOR_ID=$DEVICE" >> "$GITHUB_ENV"
-          xcrun simctl boot "$DEVICE"
-          xcrun simctl bootstatus "$DEVICE" -b > build/unit-boot.log 2>&1
-      # All ErhuTests run here, including every previous artwork, transfer/library,
-      # audio and transition regression selection. No cases are filtered out.
-      - name: Run every unit, artwork and regression test once
-        if: ${{ !cancelled() && steps.unit-simulator.outcome == 'success' }}
-        run: |
-          set -o pipefail
-          if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
-            -destination "id=$SIMULATOR_ID" -resultBundlePath build/TestResults.xcresult CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests -parallel-testing-enabled NO \
-            > build/tests.log 2>&1; then
-            python3 - <<'PY'
-          import json
-          import os
-          import re
-          import subprocess
-          from pathlib import Path
-          lines = Path('build/tests.log').read_text(errors='replace').splitlines()
-          def is_failure(line):
-              # Media fixtures deliberately produce system diagnostics. Report test/compiler
-              # failures, including Xcode's parallel runner, without promoting those to errors.
-              return (re.search(r'\.(?:swift|m|mm|h):\d+(?::\d+)?:\s*(?:fatal )?error:', line) is not None
-                      or line.lstrip().startswith(('error:', 'fatal error:', 'xcodebuild: error:', 'Testing failed:'))
-                      or ('XCTAssert' in line and 'failed' in line)
-                      or re.search(r'Test [Cc]ase .* failed(?: on | \()', line) is not None
-                      or (line.startswith('Test Suite ') and ' failed at ' in line)
-                      or '** TEST FAILED **' in line)
-          failures = [line for line in lines if is_failure(line)]
-          result_detail = []
-          bundle = Path('build/TestResults.xcresult')
-          if bundle.exists():
-              commands = [
-                  ['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path', str(bundle)],
-                  ['xcrun', 'xcresulttool', 'get', 'object', '--legacy', '--path', str(bundle), '--format', 'json'],
-              ]
-              for command in commands:
-                  try:
-                      result = subprocess.run(command, capture_output=True, text=True, timeout=30)
-                      if result.returncode:
-                          result_detail.append(result.stderr[-2000:])
-                          continue
-                      data = json.loads(result.stdout)
-                      if 'testFailures' in data:
-                          result_detail.append(result.stdout[-18000:])
-                          for failure in data.get('testFailures') or []:
-                              name = failure.get('testName') or failure.get('testIdentifier') or 'Test failure'
-                              failures.append(str(name) + ': ' + str(failure.get('failureText') or failure))
-                      else:
-                          for category in ['testFailureSummaries', 'errorSummaries']:
-                              for issue in data.get('issues', {}).get(category, {}).get('_values', []):
-                                  name = issue.get('testCaseName', {}).get('_value', 'Test runner')
-                                  message = issue.get('message', {}).get('_value', '')
-                                  if message:
-                                      failures.append(name + ': ' + message)
-                  except (OSError, ValueError, subprocess.TimeoutExpired) as error:
-                      result_detail.append(str(error))
-          failures = list(dict.fromkeys(failures))
-          for failure in failures[:30]:
-              escaped = failure.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-              print('::error::' + escaped, flush=True)
-          detail = '\n'.join(failures + result_detail + ['Last test output:'] + lines[-100:])[-40000:]
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
-              summary.write('## Test errors\n\n```text\n' + detail + '\n```\n')
-          PY
-            exit 1
-          fi
-      - name: Verify and report executed test counts
-        if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
-        run: python3 Tools/report_ci_tests.py build/InteractionResults.xcresult build/TestResults.xcresult
-      - name: Upload test results and performance measurements
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Erhu-test-results
-          path: |
-            build/InteractionResults.xcresult
-            build/TestResults.xcresult
-            build/ui-tests.log
-            build/tests.log
-            build/simulator-build.log
-            build/ui-boot.log
-            build/unit-boot.log
-            build/resolve.log
-            build/*.summary.json
-          if-no-files-found: warn
-      - name: Shut down simulators
-        if: always()
-        run: |
-          if [ -n "${UI_SIMULATOR_ID:-}" ]; then
-            xcrun simctl shutdown "$UI_SIMULATOR_ID" >/dev/null 2>&1 || true
-          fi
-          if [ -n "${SIMULATOR_ID:-}" ]; then
-            xcrun simctl shutdown "$SIMULATOR_ID" >/dev/null 2>&1 || true
-          fi
-
-  publish:
-    needs: [build, tests]
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/download-artifact@v4
-        with:
-          name: Erhu-app-build
-          path: build
-      - name: Package validated IPA and report app size
-        run: |
-          mkdir -p dist/Payload
-          tar -xf build/Erhu-app.tar -C dist/Payload
-          (cd dist && zip -qry Erhu.ipa Payload)
-          python3 Tools/report_app_size.py dist/Payload/Erhu.app dist/Erhu.ipa
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Erhu-ipa
-          path: dist/Erhu.ipa
-          compression-level: 0
-          if-no-files-found: error
+    - uses: actions/checkout@v5
+    - uses: ./.github/actions/setup-ios
+      id: setup
+      with:
+        cache-suffix: device-release
+    - name: Build unsigned app
+      run: |
+        set -o pipefail
+        mkdir -p build
+        if ! xcodebuild build -project Erhu.xcodeproj -scheme Erhu -configuration Release \
+          -destination 'generic/platform=iOS' -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS=ERHU_STATIC_ART \
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" > build/compile.log 2>&1; then
+          python3 - <<'PY'
+        import os
+        from pathlib import Path
+        lines = Path('build/compile.log').read_text(errors='replace').splitlines()
+        errors = [line for line in lines if 'error:' in line.lower()]
+        for error in errors[:12]:
+            escaped = error.replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+            print('::error::' + escaped, flush=True)
+        detail = '\n'.join(errors or lines[-80:])[-24000:]
+        with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as summary:
+            summary.write('## Build errors\n\n```text\n' + detail + '\n```\n')
+        PY
+          exit 1
+        fi
+    - name: Package static IPA
+      run: |
+        mkdir -p dist/Payload
+        cp -R build/DerivedData/Build/Products/Release-iphoneos/Erhu.app dist/Payload/
+        (cd dist && zip -qry Erhu.ipa Payload)
+        python3 Tools/report_app_size.py dist/Payload/Erhu.app dist/Erhu.ipa
+        printf 'Static artwork development IPA. Full simulator tests are a separate manual workflow.\n' >> "$GITHUB_STEP_SUMMARY"
+    - uses: actions/upload-artifact@v4
+      with:
+        name: Erhu-ipa
+        path: dist/Erhu.ipa
+        compression-level: 0
+        if-no-files-found: error
+    - name: Save compiled products and module caches
+      if: steps.setup.outputs.build-cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          build/DerivedData/Build
+          build/DerivedData/ModuleCache.noindex
+          build/DerivedData/SDKStatCaches.noindex
+        key: ${{ steps.setup.outputs.build-cache-key }}
+    - name: Upload device build diagnostics
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Erhu-build-logs
+        path: |
+          build/compile.log
+          build/resolve.log
+        if-no-files-found: warn
