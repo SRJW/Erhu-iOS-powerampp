@@ -118,7 +118,8 @@ jobs:
           if ! xcodebuild test -project Erhu.xcodeproj -scheme Erhu -clonedSourcePackagesDirPath build/SourcePackages \
             -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/InteractionResults.xcresult CODE_SIGNING_ALLOWED=NO \
             -only-testing:ErhuInteractionTests -parallel-testing-enabled NO > build/ui-tests.log 2>&1; then
-            echo "::error::Native interaction checks failed; see the test-status report and result bundle."
+            echo "::error::Native interaction checks failed; see the compiler diagnostics and test-status report."
+            python3 Tools/report_native_interactions.py build/ui-tests.log
             exit 1
           fi
 

@@ -15,7 +15,7 @@ struct RootView: View {
     @Environment(WifiTransferStore.self) private var transfer
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.palette) private var palette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerReduceMotion) private var reduceMotion
     @State private var showsImporter = false
     @State private var releases = ReleaseChecker.shared
     @State private var chrome = LibraryChromeState()

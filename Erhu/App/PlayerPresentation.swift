@@ -4,8 +4,16 @@ import SwiftUI
 
 private struct PlayerCoverProgressKey: EnvironmentKey { static let defaultValue: CGFloat = 1 }
 private struct PlayerArtworkInFlightKey: EnvironmentKey { static let defaultValue = false }
+private struct PlayerReduceMotionKey: EnvironmentKey { static let defaultValue: Bool? = nil }
 private struct PlayerMotionKey: EnvironmentKey { static let defaultValue = false }
 extension EnvironmentValues {
+    /// Follow the system by default; allow deterministic player animation tests
+    /// without trying to write SwiftUI's read-only accessibilityReduceMotion value.
+    var playerReduceMotion: Bool {
+        get { self[PlayerReduceMotionKey.self] ?? accessibilityReduceMotion }
+        set { self[PlayerReduceMotionKey.self] = newValue }
+    }
+
     var playerArtworkInFlight: Bool {
         get { self[PlayerArtworkInFlightKey.self] }
         set { self[PlayerArtworkInFlightKey.self] = newValue }
@@ -63,7 +71,7 @@ extension View {
 /// when mounted, including with missing artwork, an empty queue, and Reduce Motion.
 struct PlayerPresentation: View {
     let drag: PlayerDragState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerReduceMotion) private var reduceMotion
 
     var body: some View {
         NowPlayingView(drag: drag)
@@ -84,7 +92,7 @@ extension EnvironmentValues {
 /// Keeping this named space outside the art slot lets an untransformed placeholder measure it.
 struct PlayerForegroundMotion: ViewModifier {
     let drag: PlayerDragState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -215,7 +223,7 @@ struct PlayerArtworkClip: ViewModifier {
     let side: CGFloat
     @Environment(PlayerDragState.self) private var drag
     @Environment(\.playerArtworkFrames) private var frames
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         let small = frames.mini.width / max(side, 1)
@@ -244,7 +252,7 @@ struct PlayerArtworkFlight<Artwork: View>: View {
     let drag: PlayerDragState
     let frames: PlayerArtworkFrames
     @ViewBuilder var artwork: () -> Artwork
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerReduceMotion) private var reduceMotion
     @State private var endpoints = PlayerArtworkFrames()
 
     var body: some View {

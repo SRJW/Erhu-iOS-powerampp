@@ -9,7 +9,7 @@ struct NowPlayingView: View {
     @Environment(AppRouter.self) private var router
     @Environment(LibraryStore.self) private var library
     @Environment(\.palette) private var palette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.playerReduceMotion) private var reduceMotion
     @State private var artworkTarget: ArtworkTarget?
     let drag: PlayerDragState
     @State private var showsQueue = false

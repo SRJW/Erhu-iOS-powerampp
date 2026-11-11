@@ -68,7 +68,7 @@ private struct PlayerInteractionProbe: View {
             else if let failure { Text(failure).accessibilityIdentifier("playerProbeFailure") }
             else { ProgressView() }
         }
-        .environment(\.accessibilityReduceMotion, reduceMotion)
+        .environment(\.playerReduceMotion, reduceMotion)
         .task {
             guard !ready else { return }
             settings.introductionCompleted = true
