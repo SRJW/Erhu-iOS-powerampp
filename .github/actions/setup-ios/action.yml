@@ -69,6 +69,6 @@ runs:
           build/DerivedData/Build
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
-        key: ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-${{ hashFiles('Erhu/**', 'Support/**') }}-${{ inputs.cache-suffix == 'simulator-debug' && hashFiles('ErhuTests/**', 'ErhuInteractionTests/**') || 'app-only' }}
+        key: ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-${{ hashFiles('Erhu/**', 'ErhuPlayerWidget/**', 'WidgetShared/**', 'Support/**') }}-${{ inputs.cache-suffix == 'simulator-debug' && hashFiles('ErhuTests/**', 'ErhuInteractionTests/**') || 'app-only' }}
         restore-keys: |
           ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-

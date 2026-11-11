@@ -391,6 +391,12 @@ final class AudioEngine {
         return session.outputLatency + session.ioBufferDuration
     }
 
+    var outputPCMBitDepth: Int? {
+        guard isReady else { return nil }
+        let bits = Int(engine.outputNode.outputFormat(forBus: 0).streamDescription.pointee.mBitsPerChannel)
+        return bits > 0 ? bits : nil
+    }
+
     var outputSampleRate: Double { isReady ? engine.outputNode.outputFormat(forBus: 0).sampleRate : 0 }
 
     // MARK: Internals

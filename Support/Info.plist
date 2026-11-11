@@ -23,15 +23,32 @@
 	<key>ErhuReleaseTag</key>
 	<string>$(ERHU_RELEASE_TAG)</string>
 	<key>UTImportedTypeDeclarations</key>
-	<array><dict>
-		<key>UTTypeIdentifier</key><string>org.xiph.ogg</string>
-		<key>UTTypeDescription</key><string>Ogg Vorbis or Opus audio</string>
-		<key>UTTypeConformsTo</key><array><string>public.audio</string></array>
-		<key>UTTypeTagSpecification</key><dict>
-			<key>public.filename-extension</key><array><string>ogg</string><string>oga</string><string>opus</string></array>
-			<key>public.mime-type</key><array><string>audio/ogg</string><string>audio/opus</string></array>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.xiph.ogg</string>
+			<key>UTTypeDescription</key>
+			<string>Ogg Vorbis or Opus audio</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.audio</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>ogg</string>
+					<string>oga</string>
+					<string>opus</string>
+				</array>
+				<key>public.mime-type</key>
+				<array>
+					<string>audio/ogg</string>
+					<string>audio/opus</string>
+				</array>
+			</dict>
 		</dict>
-	</dict></array>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocalNetworkUsageDescription</key>
@@ -54,6 +71,21 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.erhu.player</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>erhu</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.erhu.nowplaying</string>
 	</array>
 </dict>
 </plist>

@@ -5,6 +5,8 @@ on:
     - without-animated-art
     paths:
     - Erhu/**
+    - ErhuPlayerWidget/**
+    - WidgetShared/**
     - Support/**
     - project.yml
     - .github/workflows/ios.yml

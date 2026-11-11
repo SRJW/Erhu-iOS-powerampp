@@ -57,6 +57,7 @@ struct RootView: View {
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .onChange(of: geometry.size, initial: true) { _, size in playerMotion.travel = max(size.height * 0.65, 240) }
             }
+            .ignoresSafeArea()
             .allowsHitTesting(playerMotion.isPresented)
         }
         .animation(reduceMotion ? .linear(duration: 0.12) : .easeInOut(duration: 0.28), value: router.section)

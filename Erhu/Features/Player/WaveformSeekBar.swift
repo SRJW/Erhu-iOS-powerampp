@@ -23,6 +23,7 @@ struct WaveformSeekBar: View {
             Canvas { context, size in
                 draw(in: &context, size: size)
             }
+            .clipped()
             .allowsHitTesting(false)
             .overlay {
                 SeekInteraction(preview: { x in previewMs = x.map { position(at: $0, width: geometry.size.width) } },
@@ -44,18 +45,35 @@ struct WaveformSeekBar: View {
     }
 
     private func position(at x: CGFloat, width: CGFloat) -> Int64 {
-        width <= 0 ? 0 : WaveformTimeline.positionAt(Float(x / width), durationMs)
+        guard width > 0 else { return 0 }
+        let span = min(1, 60_000 / Double(max(durationMs, 1)))
+        let fraction = referenceStyle
+            ? Double(positionMs) / Double(max(durationMs, 1)) + (Double(x / width) - 0.5) * span
+            : Double(x / width)
+        return WaveformTimeline.positionAt(Float(min(max(fraction, 0), 1)), durationMs)
     }
 
     private func draw(in context: inout GraphicsContext, size: CGSize) {
         let barWidth: CGFloat = referenceStyle ? 7 : Self.barWidth
         let step = barWidth + Self.barGap
         let count = max(Int((size.width + Self.barGap) / step), 1)
-        let bars = Self.barLevels(levels, count)
-        let playedX = CGFloat(WaveformTimeline.fractionOf(previewMs ?? positionMs, durationMs)) * size.width
+        let fraction = CGFloat(WaveformTimeline.fractionOf(previewMs ?? positionMs, durationMs))
+        let span = CGFloat(min(1, 60_000 / Double(max(durationMs, 1))))
+        let bars: [Float] = referenceStyle ? (0..<count).map { index in
+            let f = fraction + (CGFloat(index) / CGFloat(count) - 0.5) * span
+            guard f >= 0, f <= 1 else { return 0 }
+            guard let levels, !levels.isEmpty else { return 0.12 }
+            let start = min(Int(f * CGFloat(levels.count)), levels.count - 1)
+            let end = min(max(start + Int(span * CGFloat(levels.count) / CGFloat(count)), start + 1), levels.count)
+            return levels[start..<end].max() ?? 0
+        } : Self.barLevels(levels, count)
+        func timelineX(_ f: CGFloat) -> CGFloat {
+            referenceStyle ? size.width * (0.5 + (f - fraction) / span) : f * size.width
+        }
+        let playedX = referenceStyle ? size.width / 2 : fraction * size.width
         if let loop {
-            let start = loop.startMs.map { CGFloat(WaveformTimeline.fractionOf($0, durationMs)) * size.width }
-            let end = loop.endMs.map { CGFloat(WaveformTimeline.fractionOf($0, durationMs)) * size.width }
+            let start = loop.startMs.map { timelineX(CGFloat(WaveformTimeline.fractionOf($0, durationMs))) }
+            let end = loop.endMs.map { timelineX(CGFloat(WaveformTimeline.fractionOf($0, durationMs))) }
             if let start, let end, end > start {
                 context.fill(Path(CGRect(x: start, y: 0, width: end - start, height: size.height)),
                              with: .color(palette.onSurfaceVariant.opacity(loop.enabled ? 0.16 : 0.07)))
@@ -66,15 +84,18 @@ struct WaveformSeekBar: View {
         }
         for (i, level) in bars.enumerated() {
             let x = CGFloat(i) * step
-            let height = max(CGFloat(level) * size.height, 2)
+            let height = max(CGFloat(level) * size.height * (referenceStyle ? 0.75 : 1), 2)
             let rect = CGRect(x: x, y: (size.height - height) / 2, width: barWidth, height: height)
             let color = referenceStyle
-                ? Color.white.opacity(x + barWidth / 2 <= playedX ? 0.18 : 0.65)
+                ? Color.white.opacity(x + barWidth / 2 <= playedX ? 0.25 : 0.70)
                 : (x + barWidth / 2 <= playedX ? palette.primary : palette.onSurfaceVariant.opacity(0.35))
             context.fill(Path(roundedRect: rect, cornerRadius: barWidth / 2), with: .color(color))
         }
+        if referenceStyle {
+            context.fill(Path(CGRect(x: size.width / 2 - 0.5, y: 0, width: 1, height: size.height)), with: .color(.white.opacity(0.75)))
+        }
         for ms in bookmarks {
-            let x = CGFloat(WaveformTimeline.fractionOf(ms, durationMs)) * size.width
+            let x = timelineX(CGFloat(WaveformTimeline.fractionOf(ms, durationMs)))
             context.fill(Path(ellipseIn: CGRect(x: x - 2.5, y: size.height - 5, width: 5, height: 5)), with: .color(palette.onSurface))
         }
     }

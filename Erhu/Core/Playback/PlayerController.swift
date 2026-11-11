@@ -821,6 +821,7 @@ final class PlayerController {
     }
 
     private func publishNowPlaying() {
+        PlayerWidgetPublisher.publish(song: state.currentSong, playing: state.isPlaying)
         guard let song = state.currentSong else {
             MPNowPlayingInfoCenter.default().playbackState = .stopped
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -834,6 +835,9 @@ final class PlayerController {
             if exact == nil { loadArtwork(for: song) }
         }
         var info: [String: Any] = [
+            MPNowPlayingInfoPropertyExternalContentIdentifier: "erhu://player",
+            MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
+            MPNowPlayingInfoPropertyIsLiveStream: false,
             MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist,
             MPMediaItemPropertyAlbumTitle: song.album,

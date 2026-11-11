@@ -62,11 +62,12 @@ final class LibraryInteractionTests: XCTestCase {
             }, object: nil)
             XCTAssertEqual(XCTWaiter.wait(for: [play], timeout: 5), .completed)
             transport.tap()
-            waitUntilHittable(close)
             let screenshot = XCTAttachment(screenshot: app.screenshot())
             screenshot.name = page + "-full-player"
             screenshot.lifetime = .keepAlways
             add(screenshot)
+            app.buttons["nowPlayingMenu"].tap()
+            waitUntilHittable(close)
             close.tap()
             waitUntilHittable(mini)
             XCTAssertFalse(title.exists)
