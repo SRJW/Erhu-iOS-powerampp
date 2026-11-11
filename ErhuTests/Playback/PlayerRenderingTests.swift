@@ -7,6 +7,46 @@ import XCTest
 /// while its pixels are clipped, covered by a sibling, or collapsed to a tiny ideal size.
 final class PlayerRenderingTests: XCTestCase {
     @MainActor
+    func testWholeCoverEdgesSurviveAndDominantColourFillsBelowTheCover() async throws {
+        let url = TagFixtures.write(TagFixtures.mp3(v4: true), name: "player-cover-composition.mp3")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100)).image { context in
+            UIColor.blue.setFill(); context.fill(CGRect(x: 0, y: 0, width: 100, height: 100))
+            UIColor.red.setFill(); context.fill(CGRect(x: 0, y: 0, width: 10, height: 100))
+            UIColor.green.setFill(); context.fill(CGRect(x: 90, y: 0, width: 10, height: 100))
+        }
+        var edit = TagWriteRequest()
+        edit.artwork = try XCTUnwrap(image.pngData())
+        try TagWriter.write(edit, to: url)
+        ArtworkLoader.shared.forget(path: url.path)
+        _ = await ArtworkLoader.shared.image(for: url, maxPixels: 600)
+        let backdrop = PlayerArtworkBackground(dominant: .blue) {
+            SongArtworkView(url: url, maxPixels: 1200, contentMode: .fit)
+        }
+        let rendered = try pixels(backdrop, size: CGSize(width: 200, height: 500))
+        assertColor(rendered, at: CGPoint(x: 8, y: 60), dominant: 0)
+        assertColor(rendered, at: CGPoint(x: 192, y: 60), dominant: 1)
+        assertColor(rendered, at: CGPoint(x: 100, y: 60), dominant: 2)
+        // No stretched photograph below the width-sized cover; even its red edge
+        // must turn into blue from the artwork's dominant colour.
+        assertColor(rendered, at: CGPoint(x: 8, y: 260), dominant: 2)
+        let bottom = rendered.color(x: 100, y: 480)
+        XCTAssertGreaterThan(bottom[2], 0.1)
+        XCTAssertLessThan(bottom[0], 0.02)
+        XCTAssertLessThan(bottom[1], 0.02)
+    }
+
+    func testPlayerDominantColourIsNotReplacedByTheDarkLyricsSurface() {
+        let original: UInt32 = 0xFF56_887F
+        let pixels = Array(repeating: original, count: 900) + Array(repeating: UInt32(0xFFFF_FFFF), count: 124)
+        let palette = LyricsPalette.fromPixels(pixels)
+        XCTAssertEqual(palette.artworkDominant, original)
+        XCTAssertNotEqual(palette.surface, original)
+        XCTAssertEqual(palette.forScheme(.light).artworkDominant, original)
+        XCTAssertEqual(palette.forScheme(.dark).artworkDominant, original)
+    }
+
+    @MainActor
     func testCachedArtworkIsVisibleOnTheFirstFrameWithoutWaitingForATask() async throws {
         let url = TagFixtures.write(TagFixtures.mp3(v4: true), name: "first-frame-cover.mp3")
         defer { try? FileManager.default.removeItem(at: url) }

@@ -237,11 +237,11 @@ struct NowPlayingView: View {
 
     private func controls(_ state: PlaybackState) -> some View {
         HStack(spacing: 3) {
-            transport("backward.end.fill", label: "Previous track", size: 50, action: { player.skipToPreviousItem() })
-            transport("backward.fill", label: "Rewind 10 seconds", size: 68, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
+            transport("backward.end.fill", label: "Rewind 10 seconds", size: 50, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
+            transport("backward.fill", label: "Previous track", size: 68, action: { player.skipToPreviousItem() })
             transport(state.isPlaying ? "pause.fill" : "play.fill", label: state.isPlaying ? "Pause" : "Play", size: 84, action: { player.togglePlayPause() })
-            transport("forward.fill", label: "Forward 10 seconds", size: 68, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
-            transport("forward.end.fill", label: "Next track", size: 50, action: next)
+            transport("forward.fill", label: "Next track", size: 68, action: next)
+            transport("forward.end.fill", label: "Forward 10 seconds", size: 50, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
         }
     }
 
@@ -332,6 +332,7 @@ private struct ProgressSection<Controls: View>: View {
             .overlay(alignment: .bottom) {
                 HStack {
                     timeBadge(previewMs ?? player.clock.positionMs)
+                        .accessibilityIdentifier("nowPlayingElapsed")
                     Spacer()
                     timeBadge(duration)
                 }
@@ -360,34 +361,56 @@ private struct ProgressSection<Controls: View>: View {
 private struct ReferencePlayerBackdrop: View {
     let song: Song?
     @State private var artworkPalette = ArtworkPaletteState()
+    @State private var artworkRevision = 0
 
     var body: some View {
-        let colors = LyricsColors(artworkPalette.palette(for: song?.url), scheme: .dark)
-        GeometryReader { geometry in
-            ZStack(alignment: .top) {
-                LinearGradient(colors: colors.gradient, startPoint: .top, endPoint: .bottom)
-                if let song {
-                    SongArtworkView(song: song, maxPixels: 1600)
-                        .frame(width: geometry.size.width, height: geometry.size.height * 0.65)
-                        .clipped()
-                        .mask {
-                            LinearGradient(stops: [.init(color: .white, location: 0),
-                                                   .init(color: .white, location: 0.65),
-                                                   .init(color: .clear, location: 1)],
-                                           startPoint: .top, endPoint: .bottom)
-                        }
-                }
-                LinearGradient(colors: [.clear, .black.opacity(0.15), .black.opacity(0.78)],
-                               startPoint: .top, endPoint: .bottom)
+        let dominant = Color(argb: artworkPalette.palette(for: song?.url).artworkDominant)
+        PlayerArtworkBackground(dominant: dominant) {
+            if let song {
+                SongArtworkView(song: song, maxPixels: 1600, contentMode: .fit)
             }
         }
-        .task(id: song?.url) {
+        .onReceive(NotificationCenter.default.publisher(for: ArtworkLoader.didChange)) { note in
+            if note.object as? String == song?.url.path { artworkRevision += 1 }
+        }
+        .task(id: "\(song?.url.path ?? "")|\(artworkRevision)") {
             guard let url = song?.url else { return }
             let revision = ArtworkLoader.shared.revision(for: url.path)
             let sampled = await LyricsPaletteCache.shared.palette(for: url)
             guard !Task.isCancelled else { return }
             artworkPalette.set(sampled, for: url, revision: revision)
         }
+    }
+}
+
+/// The cover keeps its full composition in a width-sized slot. Its lower edge
+/// dissolves into the original dominant colour, which fills all remaining space.
+struct PlayerArtworkBackground<Artwork: View>: View {
+    let dominant: Color
+    @ViewBuilder var artwork: () -> Artwork
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .top) {
+                dominant
+                artwork()
+                    .frame(width: geometry.size.width, height: geometry.size.width)
+                    .mask {
+                        LinearGradient(stops: [.init(color: .white, location: 0),
+                                               .init(color: .white, location: 0.72),
+                                               .init(color: .clear, location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                    }
+                // Keep the artwork itself intact; add depth to the colour extension
+                // beneath it, with some of its hue still present at the bottom.
+                LinearGradient(stops: [.init(color: .clear, location: 0),
+                                       .init(color: .clear, location: min(geometry.size.width / max(geometry.size.height, 1) * 0.72, 0.6)),
+                                       .init(color: .black.opacity(0.25), location: 0.65),
+                                       .init(color: .black.opacity(0.88), location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+            }
+        }
+        .allowsHitTesting(false)
     }
 }
 

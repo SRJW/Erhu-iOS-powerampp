@@ -5,6 +5,7 @@ struct SongArtworkView: View {
     let url: URL?
     var maxPixels = 300
     var placeholder = "music.note"
+    var contentMode: ContentMode = .fill
     @Environment(\.palette) private var palette
     @State private var image: UIImage?
     @State private var artworkRevision = 0
@@ -16,7 +17,11 @@ struct SongArtworkView: View {
             : url.flatMap { ArtworkLoader.shared.cachedImage(for: $0, maxPixels: maxPixels, fallbackSizes: [1200, 600, 400, 300, 120]) }
         ZStack {
             if let displayed {
-                FillImage(image: displayed)
+                if contentMode == .fit {
+                    Image(uiImage: displayed).resizable().scaledToFit()
+                } else {
+                    FillImage(image: displayed)
+                }
             } else {
                 Rectangle().fill(palette.surfaceVariant)
                 Image(systemName: placeholder)
@@ -46,8 +51,8 @@ struct SongArtworkView: View {
 }
 
 extension SongArtworkView {
-    init(song: Song?, maxPixels: Int = 300) {
-        self.init(url: song?.url, maxPixels: maxPixels)
+    init(song: Song?, maxPixels: Int = 300, contentMode: ContentMode = .fill) {
+        self.init(url: song?.url, maxPixels: maxPixels, contentMode: contentMode)
     }
 }
 

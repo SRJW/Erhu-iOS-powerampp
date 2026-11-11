@@ -127,6 +127,18 @@ jobs:
         if: always()
         run: python3 Tools/report_native_interactions.py build/ui-tests.log
 
+      - name: Validate full-cover composition and dominant colour
+        run: |
+          if ! xcodebuild test -project Erhu.xcodeproj -scheme Erhu -clonedSourcePackagesDirPath build/SourcePackages \
+            -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/ArtworkResults.xcresult CODE_SIGNING_ALLOWED=NO \
+            -only-testing:ErhuTests/PlayerRenderingTests/testWholeCoverEdgesSurviveAndDominantColourFillsBelowTheCover \
+            -only-testing:ErhuTests/PlayerRenderingTests/testPlayerDominantColourIsNotReplacedByTheDarkLyricsSurface \
+            -only-testing:ErhuTests/LyricsPaletteTests -parallel-testing-enabled NO > build/artwork-tests.log 2>&1; then
+            echo "::error::Artwork rendering/colour checks failed."
+            tail -n 80 build/artwork-tests.log
+            exit 1
+          fi
+
       # Publish an installable build only after the real mini/full player interaction
       # checks (including close/reopen and Reduce Motion) succeed.
       - uses: actions/upload-artifact@v4
@@ -263,6 +275,8 @@ jobs:
             build/TestResults.xcresult
             build/RegressionResults.xcresult
             build/InteractionResults.xcresult
+            build/ArtworkResults.xcresult
+            build/artwork-tests.log
             build/ui-tests.log
             build/ui-boot.log
             build/regression-tests.log

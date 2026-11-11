@@ -22,6 +22,8 @@ enum ArtworkPaletteSource: Equatable, Sendable {
 /// the sampled hues; the image itself stays unchanged. ARGB values.
 struct LyricsPalette: Equatable, Sendable {
     let surface: UInt32
+    /// Unmodified sampled artwork colour, independent of the readable lyrics theme.
+    var artworkDominant: UInt32 = ArtworkColors.fallback.primary
     /// Top to bottom; [surface] in the middle.
     let gradient: [UInt32]
     /// Headings and the active line.
@@ -136,7 +138,9 @@ struct LyricsPalette: Equatable, Sendable {
         // Neutral when the artwork as a whole has hardly any colour; otherwise as colourful as its strongest colour.
         let overall = colourfulness / Double(counted)
         let saturation: Float = overall < neutralColourfulness ? 0 : Float(bandVotes / bandPixels(pixels, band))
-        return from(hue: hue, saturation: saturation, artworkLightness: Float(lightness / Double(counted)), secondHue: second)
+        var palette = from(hue: hue, saturation: saturation, artworkLightness: Float(lightness / Double(counted)), secondHue: second)
+        palette.artworkDominant = DominantColorExtractor.colors(pixels: pixels).primary
+        return palette
     }
 
     private static func degrees(_ radians: Double) -> Double {
@@ -201,8 +205,10 @@ struct LyricsPalette: Equatable, Sendable {
     func forScheme(_ scheme: ColorScheme) -> LyricsPalette {
         let light = scheme == .light
         guard light != lightAppearance else { return self }
-        return Self.from(hue: seed.hue, saturation: seed.saturation, artworkLightness: seed.lightness,
-                         secondHue: seed.secondHue, light: light)
+        var palette = Self.from(hue: seed.hue, saturation: seed.saturation, artworkLightness: seed.lightness,
+                                secondHue: seed.secondHue, light: light)
+        palette.artworkDominant = artworkDominant
+        return palette
     }
 
     /// Light or dark text, whichever contrasts more with [surface].

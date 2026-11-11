@@ -66,6 +66,50 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertTrue(transport.isHittable)
     }
 
+    @MainActor func testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack() {
+        let app = launch("player")
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 20))
+        mini.tap()
+        let title = app.staticTexts["nowPlayingTitle"]
+        XCTAssertTrue(title.waitForExistence(timeout: 10))
+        let next = app.buttons["Next track"]
+        let previous = app.buttons["Previous track"]
+        let forward = app.buttons["Forward 10 seconds"]
+        let rewind = app.buttons["Rewind 10 seconds"]
+        XCTAssertGreaterThan(next.frame.width, forward.frame.width)
+        XCTAssertGreaterThan(previous.frame.width, rewind.frame.width)
+        next.tap()
+        let changed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            title.label == "Second player track"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [changed], timeout: 10), .completed)
+        let playPause = app.buttons["nowPlayingPlayPause"]
+        let playing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in playPause.label == "Pause" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [playing], timeout: 10), .completed)
+        playPause.tap()
+        let paused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in playPause.label == "Play" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 5), .completed)
+        let elapsed = app.staticTexts["nowPlayingElapsed"]
+        func seconds() -> Int {
+            let parts = elapsed.label.split(separator: ":").compactMap { Int($0) }
+            return parts.count == 2 ? parts[0] * 60 + parts[1] : -1
+        }
+        forward.tap()
+        let advanced = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= 10 }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [advanced], timeout: 5), .completed)
+        XCTAssertEqual(title.label, "Second player track")
+        rewind.tap()
+        let rewound = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= 0 && seconds() < 5 }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [rewound], timeout: 5), .completed)
+        XCTAssertEqual(title.label, "Second player track")
+        previous.tap()
+        let restored = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            title.label == "Player presentation regression"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
+    }
+
     @MainActor func testSearchClearAndCloseAreTappableWithKeyboardVisible() {
         let app = launch("search")
         app.buttons["openSearchProbe"].tap()

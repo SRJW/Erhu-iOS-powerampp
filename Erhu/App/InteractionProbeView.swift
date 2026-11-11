@@ -94,7 +94,9 @@ private struct PlayerInteractionProbe: View {
                 }
                 let song = Song(id: -9001, title: "Player presentation regression", artist: "Local fixture",
                                 album: "No artwork", durationMs: 120_000, path: name)
-                player.playSongs([song])
+                let next = Song(id: -9002, title: "Second player track", artist: "Local fixture",
+                                album: "No artwork", durationMs: 120_000, path: name)
+                player.playSongs([song, next])
                 ready = true
             } catch { failure = error.localizedDescription }
         }
