@@ -1,0 +1,50 @@
+name: Recover previous amp download
+on:
+  push:
+    branches: [without-animated-art]
+    paths: [.github/workflows/recover-ipa.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: recover-amp-previous
+  cancel-in-progress: false
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+    - name: Verify the original successful build
+      run: |
+        set -euo pipefail
+        gh api "repos/$GH_REPO/actions/runs/43093613590" > /tmp/source-run.json
+        python3 - <<'PY'
+        import json
+        run = json.load(open('/tmp/source-run.json'))
+        assert run['conclusion'] == 'success', 'Original build did not succeed'
+        assert run['head_sha'].startswith('1bcc84a'), 'Unexpected original source revision'
+        assert run['head_branch'] == 'without-animated-art'
+        PY
+    - uses: actions/download-artifact@v4
+      with:
+        name: amp-ipa
+        path: dist
+        github-token: ${{ github.token }}
+        run-id: 43093613590
+    - name: Publish the original IPA with a direct download
+      run: |
+        set -euo pipefail
+        test -s dist/amp.ipa
+        unzip -tq dist/amp.ipa
+        tag=amp-static-1bcc84a
+        if ! gh release view "$tag" >/dev/null 2>&1; then
+          revision=$(python3 -c "import json; print(json.load(open('/tmp/source-run.json'))['head_sha'])")
+          gh release create "$tag" dist/amp.ipa --target "$revision" --prerelease \
+            --title "amp — original static artwork IPA" \
+            --notes "Original unsigned development IPA from successful build 43093613590 (revision 1bcc84a). Recovered unchanged to provide a direct download. Full simulator validation is separate."
+        fi
+        printf '[Download the original amp.ipa](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
