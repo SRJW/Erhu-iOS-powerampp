@@ -1,4 +1,4 @@
-name: Recover previous amp download
+name: Recover amp release downloads
 on:
   push:
     branches: [without-animated-art]
@@ -14,28 +14,47 @@ jobs:
   recover:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - run: 43093613590
+          revision: 1bcc84a
+          tag: amp-static-1bcc84a
+        - run: 43117024149
+          revision: cfec9cd
+          tag: v0.1.0-amp.19
     env:
+      SOURCE_RUN: ${{ matrix.run }}
+      SOURCE_REVISION: ${{ matrix.revision }}
+      RELEASE_TAG: ${{ matrix.tag }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
-    - name: Verify the original successful build
+    - name: Verify the source IPA and checks
       run: |
         set -euo pipefail
-        gh api "repos/$GH_REPO/actions/runs/43093613590" > /tmp/source-run.json
-        python3 - <<'PY'
-        import json
+        gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN" > /tmp/source-run.json
+        gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN/jobs" > /tmp/source-jobs.json
+        python3 - <<'PYCHECK'
+        import json, os
         run = json.load(open('/tmp/source-run.json'))
-        assert run['conclusion'] == 'success', 'Original build did not succeed'
-        assert run['head_sha'].startswith('1bcc84a'), 'Unexpected original source revision'
+        assert run['head_sha'].startswith(os.environ['SOURCE_REVISION']), 'Unexpected source revision'
         assert run['head_branch'] == 'without-animated-art'
-        PY
+        steps = {step['name']: step['conclusion'] for job in json.load(open('/tmp/source-jobs.json'))['jobs'] for step in job['steps']}
+        for name in ['Build unsigned app', 'Package static IPA']:
+            assert steps.get(name) == 'success', f'{name} did not pass'
+        if os.environ['SOURCE_REVISION'] == 'cfec9cd':
+            for name in ['Test real file deletion boundaries', 'Test scrolling waveform interactions']:
+                assert steps.get(name) == 'success', f'{name} did not pass'
+        PYCHECK
     - uses: actions/download-artifact@v4
       with:
         name: amp-ipa
         path: dist
         github-token: ${{ github.token }}
-        run-id: 43093613590
-    - name: Publish the original IPA with a direct download
+        run-id: ${{ matrix.run }}
+    - name: Publish the verified IPA with a direct download
       run: |
         set -euo pipefail
         test -s dist/amp.ipa || { echo '::error::Downloaded artifact does not contain amp.ipa'; exit 1; }
@@ -54,12 +73,12 @@ jobs:
             exit 1
           fi
         }
-        tag=amp-static-1bcc84a
+        tag="$RELEASE_TAG"
         if ! gh release view "$tag" >/dev/null 2>&1; then
           revision=$(python3 -c "import json; print(json.load(open('/tmp/source-run.json'))['head_sha'])")
-          publish gh release create "$tag" dist/amp.ipa --target "$revision" --prerelease \
-            --title "amp — original static artwork IPA" \
-            --notes "Original unsigned development IPA from successful build 43093613590 (revision 1bcc84a). Recovered unchanged to provide a direct download. Full simulator validation is separate."
+          publish gh release create "$tag" dist/amp.ipa --verify-tag --prerelease \
+            --title "amp — static artwork ($SOURCE_REVISION)" \
+            --notes "Unsigned development IPA recovered unchanged from build $SOURCE_RUN, revision $revision. Release compilation and packaging verified. Build cfec9cd also passed file deletion and scrolling waveform checks. Full simulator validation is separate."
         fi
         if [ "$(gh release view "$tag" --json assets --jq '[.assets[] | select(.name == "amp.ipa")] | length')" -eq 0 ]; then
           publish gh release upload "$tag" dist/amp.ipa
