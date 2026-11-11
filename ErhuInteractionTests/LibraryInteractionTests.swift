@@ -8,6 +8,64 @@ final class LibraryInteractionTests: XCTestCase {
         return app
     }
 
+    @MainActor func testFullPlayerOpensClosesAndReopensWithoutArtwork() {
+        checkPlayerPresentation(page: "player")
+    }
+
+    @MainActor func testFullPlayerOpensClosesAndReopensWithReducedMotion() {
+        checkPlayerPresentation(page: "player-reduced-motion")
+    }
+
+    @MainActor private func checkPlayerPresentation(page: String) {
+        let app = launch(page)
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 20), "The local fixture must load into the real mini player")
+        let title = app.staticTexts["nowPlayingTitle"]
+        let transport = app.buttons["nowPlayingPlayPause"]
+        let close = app.buttons["closeNowPlaying"]
+        func waitUntilHittable(_ element: XCUIElement) {
+            let visible = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                element.exists && element.isHittable
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [visible], timeout: 10), .completed)
+        }
+        for _ in 0..<2 {
+            waitUntilHittable(mini)
+            mini.tap()
+            waitUntilHittable(title)
+            XCTAssertEqual(title.label, "Player presentation regression")
+            waitUntilHittable(transport)
+            // Playback is exercised through the full-screen controls, rather than
+            // just checking that an invisible overlay exists in accessibility.
+            let paused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                transport.label == "Pause"
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 10), .completed)
+            transport.tap()
+            let play = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+                transport.label == "Play"
+            }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [play], timeout: 5), .completed)
+            transport.tap()
+            waitUntilHittable(close)
+            let screenshot = XCTAttachment(screenshot: app.screenshot())
+            screenshot.name = page + "-full-player"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            close.tap()
+            waitUntilHittable(mini)
+            XCTAssertFalse(title.exists)
+        }
+        mini.tap()
+        waitUntilHittable(title)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.80)))
+        waitUntilHittable(mini)
+        mini.tap()
+        waitUntilHittable(title)
+        XCTAssertTrue(transport.isHittable)
+    }
+
     @MainActor func testSearchClearAndCloseAreTappableWithKeyboardVisible() {
         let app = launch("search")
         app.buttons["openSearchProbe"].tap()

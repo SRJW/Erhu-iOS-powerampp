@@ -59,24 +59,16 @@ extension View {
     }
 }
 
-/// Only lightweight modifiers observe progress. The actual cover stays mounted throughout;
-/// no second video, screen snapshot, or artwork decode is created for the animation.
+/// The full-bleed player has no carousel artwork slot to measure. Start its entrance
+/// when mounted, including with missing artwork, an empty queue, and Reduce Motion.
 struct PlayerPresentation: View {
     let drag: PlayerDragState
-    let frames: PlayerArtworkFrames
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var startedEntrance = false
 
     var body: some View {
         NowPlayingView(drag: drag)
             .environment(\.playerInMotion, drag.isMoving)
-            .environment(\.playerArtworkFrames, frames)
-            .opacity(frames.expanded.width > 0 ? 1 : 0)
-            .onChange(of: frames.expanded, initial: true) { _, frame in
-                guard frame.width > 0, !startedEntrance else { return }
-                startedEntrance = true
-                drag.finishEntrance(reduceMotion: reduceMotion)
-            }
+            .onAppear { drag.finishEntrance(reduceMotion: reduceMotion) }
     }
 }
 

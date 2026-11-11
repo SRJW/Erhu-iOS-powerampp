@@ -1,5 +1,6 @@
 #if DEBUG
 import SwiftUI
+import AVFoundation
 
 /// Native automation exercises production controls without a music import or network request.
 struct InteractionProbeView: View {
@@ -12,7 +13,9 @@ struct InteractionProbeView: View {
     var body: some View {
         @Bindable var router = router
         Group {
-            if page == "search" {
+            if page == "player" || page == "player-reduced-motion" {
+                PlayerInteractionProbe(reduceMotion: page == "player-reduced-motion")
+            } else if page == "search" {
                 Button("Open search") { router.showsSearch = true }
                     .accessibilityIdentifier("openSearchProbe")
                     .sheet(isPresented: $router.showsSearch) { SearchView() }
@@ -45,6 +48,55 @@ struct InteractionProbeView: View {
             } else {
                 NavigationStack { TransitionStudioRow(collection: .album(42)) }
             }
+        }
+    }
+}
+
+/// Uses the real root, mini player, presentation and transport. A local silent track
+/// removes imports, network access, artwork availability and audio fixtures as prerequisites.
+private struct PlayerInteractionProbe: View {
+    let reduceMotion: Bool
+    @Environment(PlayerController.self) private var player
+    @Environment(AppSettings.self) private var settings
+    @Environment(AppRouter.self) private var router
+    @State private var ready = false
+    @State private var failure: String?
+
+    var body: some View {
+        Group {
+            if ready { RootView() }
+            else if let failure { Text(failure).accessibilityIdentifier("playerProbeFailure") }
+            else { ProgressView() }
+        }
+        .environment(\.accessibilityReduceMotion, reduceMotion)
+        .task {
+            guard !ready else { return }
+            settings.introductionCompleted = true
+            router.showsNowPlaying = false
+            // The controller restores persisted playback asynchronously on launch.
+            for _ in 0..<100 {
+                if player.restoreFinished { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            guard player.restoreFinished else { failure = "Playback restore did not finish"; return }
+            do {
+                let name = "player-interaction-probe.wav"
+                let url = LibraryPaths.musicFolder.appendingPathComponent(name)
+                try FileManager.default.createDirectory(at: LibraryPaths.musicFolder, withIntermediateDirectories: true)
+                let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+                let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 44_100)!
+                buffer.frameLength = buffer.frameCapacity
+                for frame in 0..<Int(buffer.frameLength) { buffer.floatChannelData![0][frame] = 0 }
+                // Close the file before playback so its duration header has been finalized.
+                do {
+                    let file = try AVAudioFile(forWriting: url, settings: format.settings)
+                    for _ in 0..<120 { try file.write(from: buffer) }
+                }
+                let song = Song(id: -9001, title: "Player presentation regression", artist: "Local fixture",
+                                album: "No artwork", durationMs: 120_000, path: name)
+                player.playSongs([song])
+                ready = true
+            } catch { failure = error.localizedDescription }
         }
     }
 }

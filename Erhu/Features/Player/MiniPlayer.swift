@@ -29,6 +29,8 @@ struct MiniPlayer: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Open Now Playing")
+            .accessibilityIdentifier("openNowPlaying")
             .accessibilityHint("Opens Now Playing")
             Button { player.skipPrevious() } label: { Image(systemName: "backward.fill").frame(width: 44, height: 48).contentShape(Rectangle()) }
                 .frame(width: 44 * (1 - compactness)).clipped()

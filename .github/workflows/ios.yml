@@ -82,12 +82,6 @@ jobs:
       - name: Report IPA and VYBE model size
         run: python3 Tools/report_app_size.py build/Build/Products/Release-iphoneos/Erhu.app dist/Erhu.ipa
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Erhu-ipa
-          path: dist/Erhu.ipa
-          if-no-files-found: error
-
       - name: Create iPhone simulator
         run: |
           newest_ios_runtime() {
@@ -131,6 +125,14 @@ jobs:
       - name: Report native interaction status
         if: always()
         run: python3 Tools/report_native_interactions.py build/ui-tests.log
+
+      # Publish an installable build only after the real mini/full player interaction
+      # checks (including close/reopen and Reduce Motion) succeed.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Erhu-ipa
+          path: dist/Erhu.ipa
+          if-no-files-found: error
 
       - name: Release the UI simulator before unit testing
         if: always()

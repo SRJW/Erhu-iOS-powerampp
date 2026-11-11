@@ -20,7 +20,6 @@ struct RootView: View {
     @State private var releases = ReleaseChecker.shared
     @State private var chrome = LibraryChromeState()
     @State private var playerMotion = PlayerDragState()
-    @State private var artworkFrames = PlayerArtworkFrames()
     @State private var visualBudget = VisualWorkBudget.current
     /// While a finger moves the side menu: how far it has pulled (positive opening, negative closing).
     @State private var drawerDrag: CGFloat?
@@ -49,7 +48,7 @@ struct RootView: View {
             GeometryReader { geometry in
                 ZStack {
                     if playerMotion.isPresented {
-                        PlayerPresentation(drag: playerMotion, frames: artworkFrames)
+                        PlayerPresentation(drag: playerMotion)
                             .frame(width: geometry.size.width, height: geometry.size.height)
                             .transition(.identity)
                             .zIndex(1)
@@ -62,12 +61,7 @@ struct RootView: View {
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: router.showsDrawer)
         .coordinateSpace(name: PlayerArtworkSpace.root)
-        .onPreferenceChange(PlayerArtworkFrameKey.self) { next in
-            // The expanded placeholder stays fixed while its artwork overlay flies to the mini-player.
-            artworkFrames.collect(next, isMoving: playerMotion.isMoving, isReady: playerMotion.isReady)
-        }
         .onChange(of: router.showsNowPlaying, initial: true) { _, shown in
-            if shown && !playerMotion.isPresented { artworkFrames.expanded = .zero }
             playerMotion.setPresented(shown, reduceMotion: reduceMotion)
         }
         .animation(.easeInOut(duration: 0.2), value: actions.message)

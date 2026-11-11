@@ -32,6 +32,7 @@ struct NowPlayingView: View {
                         .accessibilityAction(named: "Close player") { close() }
                     VStack(spacing: 10) {
                         Text(song.title)
+                            .accessibilityIdentifier("nowPlayingTitle")
                             .font(.system(size: 22, weight: .bold))
                             .lineLimit(2)
                         Text("\(song.artist) - \(song.album)")
@@ -65,6 +66,7 @@ struct NowPlayingView: View {
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .modifier(PlayerForegroundMotion(drag: drag))
+        .modifier(PlayerChromeFade())
         .onChange(of: headerPullActive) { _, active in
             if !active { drag.cancelGesture(reduceMotion: reduceMotion) }
         }
@@ -75,6 +77,18 @@ struct NowPlayingView: View {
         }
         .background(backdrop(state.currentSong).ignoresSafeArea().modifier(PlayerBackdropFade(drag: drag)))
         .contentShape(Rectangle())
+        .overlay(alignment: .topLeading) {
+            Button { close() } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(.black.opacity(0.25), in: Circle())
+            }
+            .accessibilityLabel("Close player")
+            .accessibilityIdentifier("closeNowPlaying")
+            .padding(8)
+        }
         .overlay(alignment: .bottom) { toast }
         .animation(.easeInOut(duration: 0.2), value: actions.message)
         .preferredColorScheme(.dark)
@@ -241,6 +255,7 @@ struct NowPlayingView: View {
         }
         .buttonStyle(PressScaleStyle(scale: 0.92))
         .accessibilityLabel(label)
+        .accessibilityIdentifier(symbol == "play.fill" || symbol == "pause.fill" ? "nowPlayingPlayPause" : label)
     }
 
     private var referenceNavigation: some View {
