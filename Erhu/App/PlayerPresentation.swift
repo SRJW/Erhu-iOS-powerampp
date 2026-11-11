@@ -237,13 +237,15 @@ struct PlayerArtworkClip: ViewModifier {
 struct PlayerBackdropFade: ViewModifier {
     let drag: PlayerDragState
     func body(content: Content) -> some View {
-        content.opacity(Double(drag.progress)).modifier(PlayerCollapseVisibility())
+        content.modifier(PlayerChromeOpacity(progress: drag.progress))
     }
 }
 
 struct MiniArtworkVisibility: ViewModifier {
     @Environment(PlayerDragState.self) private var drag
-    func body(content: Content) -> some View { content.opacity(drag.isPresented && drag.isReady ? 0 : 1) }
+    func body(content: Content) -> some View {
+        content.opacity(drag.isPresented ? 1 - PlayerCoverGeometry.chromeOpacity(drag.progress) : 1)
+    }
 }
 
 /// The progress observer stays below NowPlayingView: dragging must not rebuild its lyrics,
@@ -282,7 +284,7 @@ final class PlayerProgressMeter: @unchecked Sendable {
 }
 
 enum PlayerMotionTiming {
-    static let duration: TimeInterval = 0.40
+    static let duration: TimeInterval = 0.46
     static func presentation(reduceMotion: Bool, duration: TimeInterval = PlayerMotionTiming.duration,
                              delta: CGFloat = 1, velocity: CGFloat? = nil) -> Animation {
         guard !reduceMotion else { return .linear(duration: 0.16) }

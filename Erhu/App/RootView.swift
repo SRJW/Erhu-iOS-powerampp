@@ -59,6 +59,7 @@ struct RootView: View {
             }
             .allowsHitTesting(playerMotion.isPresented)
         }
+        .animation(reduceMotion ? .linear(duration: 0.12) : .easeInOut(duration: 0.28), value: router.section)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: router.showsDrawer)
         .coordinateSpace(name: PlayerArtworkSpace.root)
         .onChange(of: router.showsNowPlaying, initial: true) { _, shown in

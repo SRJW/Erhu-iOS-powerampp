@@ -12,6 +12,7 @@ struct NowPlayingView: View {
     @Environment(\.playerReduceMotion) private var reduceMotion
     @State private var artworkTarget: ArtworkTarget?
     let drag: PlayerDragState
+    @State private var statusBarInset: CGFloat = 44
     @State private var showsQueue = false
     @State private var showsLyrics = false
     @State private var showsMarks = false
@@ -23,50 +24,55 @@ struct NowPlayingView: View {
     var body: some View {
         let state = player.state
         GeometryReader { geometry in
-            if let current = state.currentSong {
-                let song = library.songs.first(where: { $0.id == current.id }) ?? current
-                VStack(spacing: 0) {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .gesture(pullGesture)
-                        .accessibilityAction(named: "Close player") { close() }
-                    VStack(spacing: 10) {
-                        Text(song.title)
-                            .accessibilityIdentifier("nowPlayingTitle")
-                            .font(.system(size: 22, weight: .bold))
-                            .lineLimit(2)
-                        Text("\(song.artist) - \(song.album)")
-                            .font(.system(size: 15, weight: .bold))
-                            .lineLimit(2)
-                    }
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 14)
-                    referenceOptions(song, state: state)
+            Group {
+                if let current = state.currentSong {
+                    let song = library.songs.first(where: { $0.id == current.id }) ?? current
+                    VStack(spacing: 0) {
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .gesture(pullGesture)
+                            .accessibilityAction(named: "Close player") { close() }
+                        VStack(spacing: 10) {
+                            Text(song.title)
+                                .accessibilityIdentifier("nowPlayingTitle")
+                                .font(.system(size: 22, weight: .bold))
+                                .lineLimit(2)
+                            Text("\(song.artist) - \(song.album)")
+                                .font(.system(size: 15, weight: .bold))
+                                .lineLimit(2)
+                        }
+                        .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
-                    ProgressSection(song: song) { controls(state) }
-                        .frame(height: min(geometry.size.height * 0.21, 180))
-                        .padding(.horizontal, 10)
-                    Button { showsAudioDetails = true } label: {
-                        Text(audioSummary(song))
-                            .font(.system(size: 10, weight: .bold))
-                            .lineLimit(1)
-                            .padding(.vertical, 8)
+                        .padding(.bottom, 14)
+                        referenceOptions(song, state: state)
+                            .padding(.horizontal, 24)
+                        ProgressSection(song: song) { controls(state) }
+                            .frame(height: min(geometry.size.height * 0.21, 180))
+                            .padding(.horizontal, 10)
+                        Button { showsAudioDetails = true } label: {
+                            Text(audioSummary(song))
+                                .font(.system(size: 10, weight: .bold))
+                                .lineLimit(1)
+                                .padding(.vertical, 8)
+                        }
+                        referenceNavigation
+                            .padding(.top, 8)
+                            .padding(.bottom, 12)
                     }
-                    referenceNavigation
-                        .padding(.top, 8)
-                        .padding(.bottom, 12)
+                    .foregroundStyle(.white)
+                } else {
+                    EmptyState(message: "Nothing is playing. Pick a song from your library.", systemImage: "music.note")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .foregroundStyle(.white)
-            } else {
-                EmptyState(message: "Nothing is playing. Pick a song from your library.", systemImage: "music.note")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+            .onChange(of: geometry.safeAreaInsets.top, initial: true) { _, inset in
+                statusBarInset = max(inset, 44)
             }
         }
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .modifier(PlayerForegroundMotion(drag: drag))
-        .modifier(PlayerChromeFade())
+        .modifier(PlayerChromeOpacity(progress: drag.progress))
         .onChange(of: headerPullActive) { _, active in
             if !active { drag.cancelGesture(reduceMotion: reduceMotion) }
         }
@@ -284,7 +290,7 @@ struct NowPlayingView: View {
     }
 
     private func backdrop(_ song: Song?) -> some View {
-        ReferencePlayerBackdrop(song: song)
+        ReferencePlayerBackdrop(song: song, topInset: statusBarInset + 12)
     }
 
 }
@@ -360,16 +366,19 @@ private struct ProgressSection<Controls: View>: View {
 
 private struct ReferencePlayerBackdrop: View {
     let song: Song?
+    let topInset: CGFloat
+    @Environment(\.playerReduceMotion) private var reduceMotion
     @State private var artworkPalette = ArtworkPaletteState()
     @State private var artworkRevision = 0
 
     var body: some View {
         let dominant = Color(argb: artworkPalette.palette(for: song?.url).artworkDominant)
-        PlayerArtworkBackground(dominant: dominant) {
+        PlayerArtworkBackground(dominant: dominant, topInset: topInset, horizontalInset: 12) {
             if let song {
                 SongArtworkView(song: song, maxPixels: 1600, contentMode: .fit)
             }
         }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: dominant)
         .onReceive(NotificationCenter.default.publisher(for: ArtworkLoader.didChange)) { note in
             if note.object as? String == song?.url.path { artworkRevision += 1 }
         }
@@ -387,6 +396,8 @@ private struct ReferencePlayerBackdrop: View {
 /// dissolves into the original dominant colour, which fills all remaining space.
 struct PlayerArtworkBackground<Artwork: View>: View {
     let dominant: Color
+    var topInset: CGFloat = 0
+    var horizontalInset: CGFloat = 0
     @ViewBuilder var artwork: () -> Artwork
 
     var body: some View {
@@ -394,13 +405,16 @@ struct PlayerArtworkBackground<Artwork: View>: View {
             ZStack(alignment: .top) {
                 dominant
                 artwork()
-                    .frame(width: geometry.size.width, height: geometry.size.width)
+                    .frame(width: max(geometry.size.width - horizontalInset * 2, 1),
+                           height: max(geometry.size.width - horizontalInset * 2, 1))
+                    .shadow(color: .black.opacity(topInset > 0 ? 0.20 : 0), radius: 10, y: 3)
                     .mask {
                         LinearGradient(stops: [.init(color: .white, location: 0),
                                                .init(color: .white, location: 0.72),
                                                .init(color: .clear, location: 1)],
                                        startPoint: .top, endPoint: .bottom)
                     }
+                    .padding(.top, topInset)
                 // Keep the artwork itself intact; add depth to the colour extension
                 // beneath it, with some of its hue still present at the bottom.
                 LinearGradient(stops: [.init(color: .clear, location: 0),
@@ -408,6 +422,14 @@ struct PlayerArtworkBackground<Artwork: View>: View {
                                        .init(color: .black.opacity(0.25), location: 0.65),
                                        .init(color: .black.opacity(0.88), location: 1)],
                                startPoint: .top, endPoint: .bottom)
+                if topInset > 0 {
+                    // Keep white system status text readable even over a white cover.
+                    LinearGradient(stops: [.init(color: .black.opacity(0.60), location: 0),
+                                           .init(color: .black.opacity(0.60), location: 0.60),
+                                           .init(color: .clear, location: 1)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: topInset + 30)
+                }
             }
         }
         .allowsHitTesting(false)
