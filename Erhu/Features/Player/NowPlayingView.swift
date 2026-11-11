@@ -303,39 +303,65 @@ private struct ProgressSection<Controls: View>: View {
     let song: Song
     @ViewBuilder let controls: () -> Controls
     @Environment(PlayerController.self) private var player
+    @Environment(\.playerReduceMotion) private var reduceMotion
+    @Environment(\.playerInMotion) private var playerInMotion
     @State private var previewMs: Int64?
     @State private var levels: [Float]?
+    @State private var levelsSongID: Int64?
     @State private var bookmarks: [Int64] = []
 
     var body: some View {
         let state = player.state
+        let entryID = state.currentEntry?.id
         let duration = max(state.durationMs > 0 ? state.durationMs : song.durationMs, 1)
         GeometryReader { geometry in
-            ZStack {
-                WaveformSeekBar(levels: levels, positionMs: player.clock.positionMs,
-                                durationMs: duration, bookmarks: bookmarks,
-                                loop: state.abLoop?.songId == song.id ? state.abLoop : nil,
-                                previewMs: $previewMs, onSeek: { player.seek(to: $0) },
-                                referenceStyle: true, barHeight: geometry.size.height)
-                controls()
-            }
-            .overlay(alignment: .bottom) {
-                HStack {
-                    timeBadge(previewMs ?? player.clock.positionMs)
-                        .accessibilityIdentifier("nowPlayingElapsed")
-                    Spacer()
-                    timeBadge(duration)
+            TimelineView(.animation(minimumInterval: 1.0 / 30,
+                                    paused: !state.isPlaying || previewMs != nil || playerInMotion)) { _ in
+                let position = player.currentPositionMs()
+                ZStack {
+                    WaveformSeekBar(levels: levelsSongID == song.id ? levels : nil, positionMs: position,
+                                    durationMs: duration, bookmarks: bookmarks,
+                                    loop: state.abLoop?.songId == song.id ? state.abLoop : nil,
+                                    previewMs: $previewMs, onSeek: { target in
+                                        // A gesture on an outgoing track must never seek its replacement.
+                                        guard player.state.currentEntry?.id == entryID else { return }
+                                        player.seek(to: target)
+                                    }, referenceStyle: true, barHeight: geometry.size.height)
+                        .id(entryID)
+                        .transition(reduceMotion ? .opacity : .modifier(
+                            active: WaveformArrival(amount: 0), identity: WaveformArrival(amount: 1)))
+                    controls()
+                        .opacity(previewMs == nil ? 1 : 0)
+                        .allowsHitTesting(previewMs == nil)
+                        .accessibilityHidden(previewMs != nil)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: previewMs == nil ? 0.18 : 0.10), value: previewMs != nil)
                 }
-                .allowsHitTesting(false)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: entryID)
+                .overlay(alignment: .bottom) {
+                    HStack {
+                        timeBadge(previewMs ?? position)
+                            .accessibilityIdentifier("nowPlayingElapsed")
+                        Spacer()
+                        timeBadge(duration)
+                    }
+                    .allowsHitTesting(false)
+                }
             }
         }
-        .task(id: song.id) {
+        .onChange(of: entryID) { _, _ in previewMs = nil }
+        .task(id: entryID) {
             levels = nil
+            levelsSongID = nil
             previewMs = nil
             bookmarks = ((try? AppServices.shared.database.bookmarks(songId: song.id)) ?? []).map(\.positionMs)
             let result = await AppServices.shared.waveforms.waveform(song)
-            guard !Task.isCancelled else { return }
-            if case .ready(let loaded) = result { levels = loaded }
+            guard !Task.isCancelled, player.state.currentEntry?.id == entryID else { return }
+            if case .ready(let loaded) = result {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.22)) {
+                    levelsSongID = song.id
+                    levels = loaded
+                }
+            }
         }
     }
 
@@ -345,6 +371,13 @@ private struct ProgressSection<Controls: View>: View {
             .foregroundStyle(.white)
             .padding(.horizontal, 9).padding(.vertical, 5)
             .background(.black, in: Capsule())
+    }
+}
+
+private struct WaveformArrival: ViewModifier {
+    let amount: CGFloat
+    func body(content: Content) -> some View {
+        content.scaleEffect(x: 1, y: 0.08 + amount * 0.92).opacity(Double(amount))
     }
 }
 

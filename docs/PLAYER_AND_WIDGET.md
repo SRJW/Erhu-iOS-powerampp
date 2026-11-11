@@ -15,6 +15,29 @@ tracks. The reference waveform shows a real 60-second window, centred on the pla
 played/unplayed bars at 25%/70% opacity and 75% maximum amplitude height. Other seek-bar styles
 retain their full-track timeline. No file bitrate, timestamp or battery values are fabricated.
 
+## Waveform touch behaviour
+
+The waveform follows the supplied Poweramp recording: time is fixed at the centre and bars
+translate continuously underneath. Each bar represents a stable slice of the audio rather than
+a screen column whose height is replaced on each tick. Playback renders at up to 30 fps, stopping
+the animation clock while paused, scrubbing or moving the player.
+
+Tap the visible waveform to seek to that time. Drag left to advance or right to rewind; the
+position is anchored once per gesture, so playback does not move the target under the finger.
+Elapsed time previews immediately, the transport controls fade out during a drag and return
+on release/cancellation. A release commits one seek; cancellation leaves playback untouched.
+Both ends clamp to the real track duration. Normal transport-button taps keep their existing
+actions. The display retains a 60-second window (or the track duration for shorter songs).
+
+Each queue entry has a separate waveform interaction identity. Changing tracks cancels the old
+preview, contracts/fades its waveform and reveals the incoming one. Late waveform decoding and
+old gesture callbacks cannot apply to a replacement entry. Reduced Motion uses a fade without
+the contraction. File decoding remains cached; animation does not decode audio every frame.
+
+The fast export runs standalone Swift checks against the production geometry. The manual
+simulator suite additionally drags the real waveform in both directions and checks the next
+track starts with its own time and responsive transport controls.
+
 ## Audio output
 
 The output badge reads AVAudioSession.currentRoute and sampleRate. When available its bit count

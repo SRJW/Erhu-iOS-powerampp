@@ -130,6 +130,43 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
     }
 
+    @MainActor func testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh() {
+        let app = launch("player")
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 20))
+        mini.tap()
+        let playPause = app.buttons["nowPlayingPlayPause"]
+        XCTAssertTrue(playPause.waitForExistence(timeout: 10))
+        let playing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in playPause.label == "Pause" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [playing], timeout: 10), .completed)
+        playPause.tap()
+        let paused = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in playPause.label == "Play" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [paused], timeout: 5), .completed)
+        let elapsed = app.staticTexts["nowPlayingElapsed"]
+        func seconds() -> Int {
+            let parts = elapsed.label.split(separator: ":").compactMap { Int($0) }
+            return parts.count == 2 ? parts[0] * 60 + parts[1] : -1
+        }
+        let waveform = app.otherElements["nowPlayingWaveform"]
+        XCTAssertTrue(waveform.waitForExistence(timeout: 5))
+        let initial = seconds()
+        // Above the transport circles: an actual drag on the waveform, across their x positions.
+        waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.12))
+            .press(forDuration: 0.05, thenDragTo: waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.12)))
+        let forward = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= initial + 27 }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [forward], timeout: 5), .completed)
+        XCTAssertTrue(playPause.isHittable, "Controls return after scrubbing")
+        waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.12))
+            .press(forDuration: 0.05, thenDragTo: waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.12)))
+        let backward = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in abs(seconds() - initial) <= 1 }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [backward], timeout: 5), .completed)
+        app.buttons["nowPlayingNextTrack"].tap()
+        let reset = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            app.staticTexts["nowPlayingTitle"].label == "Second player track" && (0...2).contains(seconds())
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 10), .completed)
+    }
+
     @MainActor func testSearchClearAndCloseAreTappableWithKeyboardVisible() {
         let app = launch("search")
         app.buttons["openSearchProbe"].tap()

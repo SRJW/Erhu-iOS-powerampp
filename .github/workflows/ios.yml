@@ -13,6 +13,7 @@ on:
     - .github/actions/setup-ios/**
     - Tools/report_app_size.py
     - Tools/Tests/LibraryFileDeletion/**
+    - Tools/Tests/ScrollingWaveform/**
   workflow_dispatch:
     inputs:
       runner:
@@ -44,6 +45,10 @@ jobs:
       run: |
         xcrun swiftc Erhu/Core/Model/LibraryFileDeletion.swift Tools/Tests/LibraryFileDeletion/main.swift -o "$RUNNER_TEMP/amp-file-deletion-tests"
         "$RUNNER_TEMP/amp-file-deletion-tests"
+    - name: Test scrolling waveform interactions
+      run: |
+        xcrun swiftc Erhu/Core/Playback/ScrollingWaveform.swift Tools/Tests/ScrollingWaveform/main.swift -o "$RUNNER_TEMP/amp-waveform-tests"
+        "$RUNNER_TEMP/amp-waveform-tests"
     - name: Build unsigned app
       run: |
         set -o pipefail
@@ -93,7 +98,7 @@ jobs:
         if ! gh release view "$tag" >/dev/null 2>&1; then
           gh release create "$tag" dist/amp.ipa --target "$GITHUB_SHA" --prerelease \
             --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" \
-            --notes "Unsigned development IPA with static artwork. File deletion boundary checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
+            --notes "Unsigned development IPA with static artwork. File deletion boundary checks, scrolling waveform checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
         fi
         printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
     - name: Save compiled products and module caches
