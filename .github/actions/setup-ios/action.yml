@@ -1,0 +1,74 @@
+name: Set up the pinned iOS project and reusable build caches
+description: Select Xcode, generate the project, resolve verified packages and restore compiler products.
+inputs:
+  cache-suffix:
+    description: Separate device Release and simulator Debug products.
+    required: true
+outputs:
+  build-cache-key:
+    description: Exact key to save after a successful compilation.
+    value: ${{ steps.build-cache.outputs.cache-primary-key }}
+  build-cache-hit:
+    description: Whether the exact compiler cache was restored.
+    value: ${{ steps.build-cache.outputs.cache-hit }}
+runs:
+  using: composite
+  steps:
+    - name: Select newest stable Xcode
+      id: xcode
+      shell: bash
+      run: |
+        XCODE=$(ls -d /Applications/Xcode_*.app | grep -iv beta | sort -V | tail -1)
+        sudo xcode-select -s "$XCODE"
+        xcodebuild -version
+        echo "key=$(xcodebuild -version | shasum -a 256 | cut -d ' ' -f1)" >> "$GITHUB_OUTPUT"
+    - name: Generate Xcode project
+      shell: bash
+      run: |
+        if ! command -v xcodegen >/dev/null 2>&1; then
+          brew install xcodegen
+        fi
+        xcodegen generate
+        mkdir -p build
+    - name: Restore pinned Swift packages
+      id: packages
+      uses: actions/cache/restore@v4
+      with:
+        path: build/SourcePackages
+        key: ios-packages-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ hashFiles('project.yml') }}
+    - name: Resolve and verify Swift packages
+      shell: bash
+      run: |
+        for attempt in 1 2 3 4 5; do
+          if xcodebuild -resolvePackageDependencies -project Erhu.xcodeproj -scheme Erhu \
+            -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
+            > build/resolve.log 2>&1; then
+            exit 0
+          fi
+          # Only discard binary artifact caches after a failed verified resolution.
+          # Keep pinned source checkouts and never bypass checksums or TLS.
+          rm -rf build/SourcePackages/artifacts "$HOME/Library/Caches/org.swift.swiftpm/artifacts"
+          if [ "$attempt" -lt 5 ]; then
+            echo "::warning::Package resolution attempt $attempt failed; retrying."
+            sleep $((attempt * 15))
+          fi
+        done
+        tail -n 80 build/resolve.log
+        exit 1
+    - name: Save verified packages immediately
+      if: steps.packages.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: build/SourcePackages
+        key: ${{ steps.packages.outputs.cache-primary-key }}
+    - name: Restore compiled products and module caches
+      id: build-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          build/DerivedData/Build
+          build/DerivedData/ModuleCache.noindex
+          build/DerivedData/SDKStatCaches.noindex
+        key: ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-${{ hashFiles('Erhu/**', 'ErhuTests/**', 'ErhuInteractionTests/**', 'Support/**') }}
+        restore-keys: |
+          ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-

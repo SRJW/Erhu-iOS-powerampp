@@ -5,6 +5,19 @@ Builds run on GitHub's macOS runners, so you can get an IPA without owning a Mac
 runs the simulator tests, and uploads **Erhu-ipa** and **Erhu-test-results**. Documentation-only
 commits may skip CI.
 
+CI uses Apple Silicon runners. The device Release build and simulator tests run in parallel;
+the simulator app and both test bundles are compiled once with `build-for-testing`. The full
+`ErhuInteractionTests` suite and full `ErhuTests` suite then run with `test-without-building`,
+on separate clean simulators. `ErhuTests` includes all artwork, transfer/library, audio and
+transition regressions; they are not rerun as duplicate selections. Both suites must execute
+at least one test and pass before the final job packages and uploads **Erhu-ipa**. Any skips
+requested by an existing test are reported explicitly in the result counts.
+
+Pinned Swift packages and compiler products are cached separately by runner architecture,
+Xcode version, project configuration and source contents. Source changes still trigger a
+build and every test run. Failed test runs retain logs, xcresult bundles and test counts in
+**Erhu-test-results**; device compiler diagnostics are in **Erhu-build-logs**.
+
 For local development, use a Mac with a compatible Xcode and install XcodeGen:
 
 ```sh
