@@ -25,7 +25,7 @@ the badge; file sample rate/bitrate/container remain on the separate technical l
 
 ## Opening the player
 
-`erhu://player` opens the player. The optional `action` query accepts `toggle`, `previous` and
+`amp://player` opens the player. The optional `action` query accepts `toggle`, `previous` and
 `next`; these wait for queue restoration on cold launch. Other schemes/hosts are ignored.
 Returning from background with a loaded track also reveals the player. Now Playing metadata
 includes the external content identifier and audio media type. Native iOS media-panel launching
@@ -47,8 +47,17 @@ IDs or strips entitlements, it must preserve a matching App Group (or configure 
 consistently in `WidgetShared/PlayerWidgetSnapshot.swift` and both Support entitlement files).
 A build without signing cannot validate those installation capabilities. Without shared-container
 access the widget displays its empty state and its links still open the app; current-track data
-requires a correctly provisioned group. After installation, add **Erhu Player** through the iOS
+requires a correctly provisioned group. After installation, add **amp Player** through the iOS
 Home Screen widget gallery. Visibility and signed-extension installation require a device check.
 
 Full simulator tests remain in the manual **iOS full validation** workflow. Its player lifecycle
 check now uses the menu's close action, since the circular close button was intentionally removed.
+
+## amp branding
+
+The installed app is named **amp**. The Xcode product, bundle IDs, storage directories and App
+Group identifiers retain their existing internal names so updating the app preserves its data.
+Both `amp://player` and legacy `erhu://player` links work. The icon assets are opaque 1024px
+light/dark images with the glass tile reframed to the canvas edges; iOS supplies the launcher
+mask. This removes the old flat outside padding, rather than claiming unsupported transparent
+wallpaper-visible regions in a legacy PNG app icon.

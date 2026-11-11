@@ -122,7 +122,7 @@ struct RootView: View {
     private func sectionStack(_ section: LibrarySection) -> some View {
         NavigationStack(path: router.binding(for: section)) {
             sectionRoot(section)
-                .navigationTitle(section == .albums ? "" : section == .home ? "Erhu" : section.label)
+                .navigationTitle(section == .albums ? "" : section == .home ? "amp" : section.label)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
                         Button { router.showsDrawer = true } label: { Image(systemName: "line.3.horizontal") }
@@ -205,7 +205,7 @@ struct RootView: View {
             Color.black.opacity(0.35 * Double(shown / Self.drawerWidth)).ignoresSafeArea()
                 .onTapGesture { settleDrawer(open: false) }
             VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("Erhu").font(.largeTitle.weight(.bold)).padding(.horizontal, Spacing.lg).padding(.vertical, Spacing.lg)
+                Text("amp").font(.largeTitle.weight(.bold)).padding(.horizontal, Spacing.lg).padding(.vertical, Spacing.lg)
                 drawerItem("Library", icon: "books.vertical") {
                     router.showsDrawer = false
                     router.paths[router.section] = NavigationPath()

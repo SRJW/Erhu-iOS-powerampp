@@ -14,7 +14,7 @@ struct IntroductionPage: Identifiable {
             .init(id: "sound", title: "Shape the handover", text: "Use the eight-band EQ for your sound. Open Transition Studio from an album or playlist to edit its crossfades, or select a track pair to inspect waveforms and preview the handover.", symbol: "waveform.path"),
         ]
         if vybe { pages.append(.init(id: "vybe", title: "Discover your own library", text: "VYBE searches the artists, genres, tempo and lyrics saved in your collection. Radio stations offer tracks to browse before you press Play. Nothing is streamed from a radio service.", symbol: "recordingtape")) }
-        pages.append(.init(id: "ready", title: "Ready when you are", text: "You can revisit this introduction in Settings → About Erhu. No Erhu account or music subscription is needed.", symbol: "checkmark.circle"))
+        pages.append(.init(id: "ready", title: "Ready when you are", text: "You can revisit this introduction in Settings → About amp. No amp account or music subscription is needed.", symbol: "checkmark.circle"))
         return pages
     }
 }
@@ -57,7 +57,7 @@ struct IntroductionView: View {
                 }.modifier(PaletteFilledButton()).controlSize(.large).padding(.bottom)
             }
             .background(palette.background).foregroundStyle(palette.onSurface)
-            .navigationTitle("Welcome to Erhu").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Welcome to amp").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(firstLaunch ? "Skip" : "Done", action: finish) } }
         }
         .onChange(of: settings.vybeEnabled) { _, _ in if !pages.contains(where: { $0.id == selected }) { selected = "ready" } }

@@ -37,7 +37,7 @@ struct SettingsView: View {
                 SettingsLink("Metadata & Artwork", subtitle: "Tags, cover art and online sources", icon: "number", page: .metadata)
             }
             SettingsGroup("About") {
-                SettingsLink("About Erhu", subtitle: "Version, privacy and source code", icon: "info.circle.fill", page: .about)
+                SettingsLink("About amp", subtitle: "Version, privacy and source code", icon: "info.circle.fill", page: .about)
             }
         }
         .navigationTitle("Settings")
@@ -416,7 +416,7 @@ private struct AboutSettingsView: View {
     @State private var showingIntroduction = false
     var body: some View {
         SettingsPage {
-            SettingsGroup("Erhu") {
+            SettingsGroup("amp") {
                 HStack(spacing: Spacing.lg) {
                     Image("ErhuLogo")
                         .resizable()
@@ -424,7 +424,7 @@ private struct AboutSettingsView: View {
                         .frame(width: 56, height: 56)
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: Spacing.xs) {
-                        Text("Erhu").font(.title3.weight(.semibold))
+                        Text("amp").font(.title3.weight(.semibold))
                         Text("Your music, on your iPhone.").font(.subheadline).foregroundStyle(.secondary)
                     }
                     .padding(.vertical, Spacing.sm)
@@ -457,13 +457,13 @@ private struct AboutSettingsView: View {
                 Link(destination: URL(string: "https://ko-fi.com/erhu")!) {
                     SettingsActionLabel(title: "Support erhu on Ko-fi", icon: "cup.and.saucer.fill", accessory: "arrow.up.right")
                 }
-                Text("erhu is free. If you'd like to help get it onto the App Store, you can buy me a coffee.")
+                Text("amp is free. If you'd like to help get it onto the App Store, you can buy me a coffee.")
                     .font(.footnote).foregroundStyle(.secondary).padding([.horizontal, .bottom], Spacing.lg)
             }
             #endif
             SettingsGroup("Updates") { ReleaseCheckView() }
         }
-        .navigationTitle("About Erhu")
+        .navigationTitle("About amp")
         .sheet(isPresented: $showingIntroduction) { IntroductionView() }
     }
 }

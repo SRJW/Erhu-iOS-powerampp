@@ -1,8 +1,8 @@
 # Building Erhu
 
 The [iOS workflow](../.github/workflows/ios.yml) exports an **unsigned static-artwork IPA**
-from `without-animated-art`. Download **Erhu-ipa** from a successful run; its ZIP contains
-`Erhu.ipa`. This is a development build, not a release certified by the full test suite.
+from `without-animated-art`. Download **amp-ipa** from a successful run; its ZIP contains
+`amp.ipa`. This is a development build, not a release certified by the full test suite.
 
 Each relevant app change runs one macOS job: resolve the pinned codecs, compile the iPhone
 Release app, package it and upload the IPA immediately. It does not build a simulator app,

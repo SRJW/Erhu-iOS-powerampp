@@ -65,13 +65,16 @@ jobs:
       run: |
         mkdir -p dist/Payload
         cp -R build/DerivedData/Build/Products/Release-iphoneos/Erhu.app dist/Payload/
-        (cd dist && zip -qry Erhu.ipa Payload)
-        python3 Tools/report_app_size.py dist/Payload/Erhu.app dist/Erhu.ipa
+        test -d dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex
+        test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' dist/Payload/Erhu.app/Info.plist)" = "amp"
+        test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex/Info.plist)" = "amp Player"
+        (cd dist && zip -qry amp.ipa Payload)
+        python3 Tools/report_app_size.py dist/Payload/Erhu.app dist/amp.ipa
         printf 'Static artwork development IPA. Full simulator tests are a separate manual workflow.\n' >> "$GITHUB_STEP_SUMMARY"
     - uses: actions/upload-artifact@v4
       with:
-        name: Erhu-ipa
-        path: dist/Erhu.ipa
+        name: amp-ipa
+        path: dist/amp.ipa
         compression-level: 0
         if-no-files-found: error
     - name: Save compiled products and module caches

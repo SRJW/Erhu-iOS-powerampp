@@ -48,14 +48,14 @@ private struct PlayerWidgetView: View {
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
-        .widgetURL(URL(string: "erhu://player"))
+        .widgetURL(URL(string: "amp://player"))
     }
     @ViewBuilder private var artwork: some View {
         if let cover { Image(uiImage: cover).resizable().scaledToFill() }
         else { RoundedRectangle(cornerRadius: 12).fill(.secondary.opacity(0.15)).overlay { Image(systemName: "music.note").font(.largeTitle) } }
     }
     private func command(_ symbol: String, action: String, label: String) -> some View {
-        Link(destination: URL(string: "erhu://player?action=" + action)!) {
+        Link(destination: URL(string: "amp://player?action=" + action)!) {
             Image(systemName: symbol).frame(minWidth: 32, minHeight: 36)
         }.accessibilityLabel(label)
     }
@@ -65,8 +65,8 @@ struct ErhuPlayerWidget: Widget {
     let kind = PlayerWidgetSnapshot.kind
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PlayerProvider()) { PlayerWidgetView(entry: $0) }
-            .configurationDisplayName("Erhu Player")
-            .description("Your current song, with controls that open Erhu to control playback.")
+            .configurationDisplayName("amp Player")
+            .description("Your current song, with controls that open amp to control playback.")
             .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

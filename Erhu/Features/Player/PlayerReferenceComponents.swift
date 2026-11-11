@@ -11,14 +11,15 @@ struct PlayerFullBleedBackground<Artwork: View>: View {
         guard UIColor(dominant).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) else {
             return UIColor(red: 0.50, green: 0.31, blue: 0.29, alpha: 1)
         }
-        return UIColor(hue: hue, saturation: saturation * 0.48,
-                       brightness: min(max(brightness * 0.58, 0.25), 0.58), alpha: 1)
+        let mutedHue = hue < 0.12 ? hue * 0.5 : hue
+        return UIColor(hue: mutedHue, saturation: saturation * 0.55,
+                       brightness: min(max(brightness, 0.50), 0.58), alpha: 1)
     }
     var body: some View {
         GeometryReader { geometry in
             let base = Color(uiColor: muted)
             ZStack(alignment: .top) {
-                LinearGradient(colors: [base, base, base.opacity(0.35)],
+                LinearGradient(colors: [base, base, base.opacity(0.18)],
                                startPoint: .top, endPoint: .bottom)
                     .background(Color(red: 0.10, green: 0.045, blue: 0.035))
                 artwork()

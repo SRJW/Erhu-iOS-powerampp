@@ -37,7 +37,7 @@ struct ErhuApp: App {
     }
 
     private func handlePlayerURL(_ url: URL) {
-        guard url.scheme?.lowercased() == "erhu", url.host?.lowercased() == "player" else { return }
+        guard ["amp", "erhu"].contains(url.scheme?.lowercased() ?? ""), url.host?.lowercased() == "player" else { return }
         let action = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value
         Task { @MainActor in
             for _ in 0..<200 {

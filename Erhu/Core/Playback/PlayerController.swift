@@ -835,7 +835,7 @@ final class PlayerController {
             if exact == nil { loadArtwork(for: song) }
         }
         var info: [String: Any] = [
-            MPNowPlayingInfoPropertyExternalContentIdentifier: "erhu://player",
+            MPNowPlayingInfoPropertyExternalContentIdentifier: "amp://player",
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
             MPNowPlayingInfoPropertyIsLiveStream: false,
             MPMediaItemPropertyTitle: song.title,

@@ -6,7 +6,7 @@ enum PlayerWidgetPublisher {
     private static var previous: PlayerWidgetSnapshot?
     static func publish(song: Song?, playing: Bool) {
         let image = song.flatMap { ArtworkLoader.shared.cachedImage(for: $0.url, maxPixels: 600, fallbackSizes: [1200, 400, 300, 150, 120, 80]) }
-        let value = PlayerWidgetSnapshot(title: song?.title ?? "Erhu", artist: song?.artist ?? "Open your music",
+        let value = PlayerWidgetSnapshot(title: song?.title ?? "amp", artist: song?.artist ?? "Open your music",
                                         isPlaying: playing, songID: song?.id, hasArtwork: image != nil)
         guard value != previous, let folder = PlayerWidgetSnapshot.folder else { return }
         do {
