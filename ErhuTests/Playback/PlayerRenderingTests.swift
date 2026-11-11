@@ -7,7 +7,7 @@ import XCTest
 /// while its pixels are clipped, covered by a sibling, or collapsed to a tiny ideal size.
 final class PlayerRenderingTests: XCTestCase {
     @MainActor
-    func testWholeCoverEdgesSurviveAndDominantColourFillsBelowTheCover() async throws {
+    func testFullBleedCoverCropsEdgesAndDissolvesIntoMutedBackground() async throws {
         let url = TagFixtures.write(TagFixtures.mp3(v4: true), name: "player-cover-composition.mp3")
         defer { try? FileManager.default.removeItem(at: url) }
         let image = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100)).image { context in
@@ -20,23 +20,24 @@ final class PlayerRenderingTests: XCTestCase {
         try TagWriter.write(edit, to: url)
         ArtworkLoader.shared.forget(path: url.path)
         _ = await ArtworkLoader.shared.image(for: url, maxPixels: 600)
-        // Match the fixture's UIColor.blue (pure RGB blue). SwiftUI Color.blue
-        // is a system colour containing green, so it cannot satisfy the pure-blue
-        // channel assertions below after the darkening gradient is applied.
-        let backdrop = PlayerArtworkBackground(dominant: Color(.sRGB, red: 0, green: 0, blue: 1)) {
-            SongArtworkView(url: url, maxPixels: 1200, contentMode: .fit)
+        let backdrop = PlayerFullBleedBackground(dominant: Color(.sRGB, red: 0, green: 0, blue: 1)) {
+            SongArtworkView(url: url, maxPixels: 1200, contentMode: .fill).scaleEffect(1.10)
         }
         let rendered = try pixels(backdrop, size: CGSize(width: 200, height: 500))
-        assertColor(rendered, at: CGPoint(x: 8, y: 60), dominant: 0)
-        assertColor(rendered, at: CGPoint(x: 192, y: 60), dominant: 1)
+        // The 55%-height fill crop plus zoom removes the source's side stripes.
+        // Its visible image reaches both screen edges, without a card border.
+        assertColor(rendered, at: CGPoint(x: 8, y: 60), dominant: 2)
+        assertColor(rendered, at: CGPoint(x: 192, y: 60), dominant: 2)
         assertColor(rendered, at: CGPoint(x: 100, y: 60), dominant: 2)
-        // No stretched photograph below the width-sized cover; even its red edge
-        // must turn into blue from the artwork's dominant colour.
-        assertColor(rendered, at: CGPoint(x: 8, y: 260), dominant: 2)
+        XCTAssertLessThan(rendered.color(x: 100, y: 10)[2], rendered.color(x: 100, y: 60)[2],
+                          "The upper scrim must darken the image behind system status text")
+        let belowCover = rendered.color(x: 100, y: 300)
         let bottom = rendered.color(x: 100, y: 480)
-        XCTAssertGreaterThan(bottom[2], 0.1)
-        XCTAssertLessThan(bottom[0], 0.02)
-        XCTAssertLessThan(bottom[1], 0.02)
+        XCTAssertGreaterThan(belowCover[2], belowCover[0], "The muted background must retain the artwork hue")
+        XCTAssertGreaterThan(belowCover[0], 0.02, "Desaturation introduces neutral channels; the background is not pure blue")
+        XCTAssertLessThan(bottom.max() ?? 1, belowCover.max() ?? 0, "The background darkens towards the home indicator")
+        XCTAssertLessThan(bottom.max() ?? 1, 0.30)
+
     }
 
     func testPlayerDominantColourIsNotReplacedByTheDarkLyricsSurface() {
