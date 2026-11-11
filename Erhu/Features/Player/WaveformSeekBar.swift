@@ -11,6 +11,8 @@ struct WaveformSeekBar: View {
     let loop: AbLoopState?
     @Binding var previewMs: Int64?
     let onSeek: (Int64) -> Void
+    var referenceStyle = false
+    var barHeight: CGFloat = 56
     @Environment(\.palette) private var palette
 
     private static let barWidth: CGFloat = 3
@@ -27,7 +29,7 @@ struct WaveformSeekBar: View {
                                 commit: { onSeek(position(at: $0, width: geometry.size.width)) })
             }
         }
-        .frame(height: 56)
+        .frame(height: barHeight)
         .accessibilityElement()
         .accessibilityLabel("Seek")
         .accessibilityValue("\(formatDuration(positionMs)) of \(formatDuration(durationMs))")
@@ -46,7 +48,8 @@ struct WaveformSeekBar: View {
     }
 
     private func draw(in context: inout GraphicsContext, size: CGSize) {
-        let step = Self.barWidth + Self.barGap
+        let barWidth: CGFloat = referenceStyle ? 7 : Self.barWidth
+        let step = barWidth + Self.barGap
         let count = max(Int((size.width + Self.barGap) / step), 1)
         let bars = Self.barLevels(levels, count)
         let playedX = CGFloat(WaveformTimeline.fractionOf(previewMs ?? positionMs, durationMs)) * size.width
@@ -64,9 +67,11 @@ struct WaveformSeekBar: View {
         for (i, level) in bars.enumerated() {
             let x = CGFloat(i) * step
             let height = max(CGFloat(level) * size.height, 2)
-            let rect = CGRect(x: x, y: (size.height - height) / 2, width: Self.barWidth, height: height)
-            let color = x + Self.barWidth / 2 <= playedX ? palette.primary : palette.onSurfaceVariant.opacity(0.35)
-            context.fill(Path(roundedRect: rect, cornerRadius: Self.barWidth / 2), with: .color(color))
+            let rect = CGRect(x: x, y: (size.height - height) / 2, width: barWidth, height: height)
+            let color = referenceStyle
+                ? Color.white.opacity(x + barWidth / 2 <= playedX ? 0.18 : 0.65)
+                : (x + barWidth / 2 <= playedX ? palette.primary : palette.onSurfaceVariant.opacity(0.35))
+            context.fill(Path(roundedRect: rect, cornerRadius: barWidth / 2), with: .color(color))
         }
         for ms in bookmarks {
             let x = CGFloat(WaveformTimeline.fractionOf(ms, durationMs)) * size.width
