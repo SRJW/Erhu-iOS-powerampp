@@ -140,7 +140,9 @@ final class CarouselMotionTests: XCTestCase {
         try await hosted(EntranceProbe(drag: drag, frames: frames)) {
             drag.finishEntrance()
             XCTAssertTrue(drag.isReady)
-            try await Task.sleep(for: .milliseconds(450))
+            // The production entrance lasts 460 ms; checking at 450 ms races
+            // its deadline even on an idle simulator.
+            try await Task.sleep(for: .seconds(PlayerMotionTiming.duration + 0.10))
             XCTAssertFalse(drag.isMoving)
             XCTAssertEqual(drag.progress, 1)
         }

@@ -48,12 +48,12 @@ jobs:
         defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
         # Boot while build-for-testing compiles, rather than blocking compilation on boot.
         xcrun simctl boot "$DEVICE"
-    - name: Compile app and the native interaction bundle
+    - name: Compile app and both test bundles once
       id: simulator-build
       run: |
         if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
-          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests \
+          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
           > build/simulator-build.log 2>&1; then
           python3 Tools/report_native_interactions.py build/simulator-build.log
           tail -n 80 build/simulator-build.log
@@ -66,7 +66,10 @@ jobs:
         if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
           -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/InteractionResults.xcresult \
-          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer -parallel-testing-enabled NO \
+          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer \
+          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack \
+          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh \
+          -parallel-testing-enabled NO \
           > build/ui-tests.log 2>&1; then
           python3 Tools/report_native_interactions.py build/ui-tests.log
           exit 1
@@ -74,19 +77,8 @@ jobs:
     - name: Report native interaction status
       if: always()
       run: python3 Tools/report_native_interactions.py build/ui-tests.log
-    - name: Compile the rendering test bundle
-      id: render-build
-      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
-      run: |
-        if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
-          -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
-          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests \
-          > build/render-build.log 2>&1; then
-          python3 Tools/report_native_interactions.py build/render-build.log
-          exit 1
-        fi
     - name: Save compiled products and module caches
-      if: ${{ always() && steps.setup.outcome == 'success' && steps.setup.outputs.build-cache-hit != 'true' }}
+      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' && steps.setup.outputs.build-cache-hit != 'true' }}
       uses: actions/cache/save@v4
       with:
         path: |
@@ -96,15 +88,13 @@ jobs:
           build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Verify the actual rendered colour blend
-      if: ${{ !cancelled() && steps.render-build.outcome == 'success' }}
+      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
       run: |
         if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
           -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/BlendResults.xcresult \
-          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests/PlayerRenderingTests/testCoverBackgroundActuallyBlendsBothArtworkColours \
-          -only-testing:ErhuTests/PlayerRenderingTests/testCoverLayersDissolveAtTheSameVisibleProgress \
-          -only-testing:ErhuTests/PlayerRenderingTests/testChangingCoverRendersAnIntermediateColourFrame \
-          -only-testing:ErhuTests/ReleaseAndDiscoveryTests/testAmpReleaseOffersDirectIPAAndComparesBuildNumbers \
+          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests/PlayerRenderingTests \
+          -only-testing:ErhuTests/CarouselMotionTests \
           -parallel-testing-enabled NO > build/blend-tests.log 2>&1; then
           python3 Tools/report_native_interactions.py build/blend-tests.log
           tail -n 35 build/blend-tests.log

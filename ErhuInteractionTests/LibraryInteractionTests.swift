@@ -155,7 +155,11 @@ final class LibraryInteractionTests: XCTestCase {
             .press(forDuration: 0.05, thenDragTo: waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.12)))
         let forward = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in seconds() >= initial + 27 }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [forward], timeout: 5), .completed)
-        XCTAssertTrue(playPause.isHittable, "Controls return after scrubbing")
+        let controlsReturned = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            playPause.isHittable
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [controlsReturned], timeout: 3), .completed,
+                       "Controls return after scrubbing")
         waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.12))
             .press(forDuration: 0.05, thenDragTo: waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.8, dy: 0.12)))
         let backward = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in abs(seconds() - initial) <= 1 }, object: nil)

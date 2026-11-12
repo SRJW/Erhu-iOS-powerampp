@@ -7,6 +7,10 @@ import XCTest
 /// Render the production containers, rather than accepting a mathematically correct frame
 /// while its pixels are clipped, covered by a sibling, or collapsed to a tiny ideal size.
 final class PlayerRenderingTests: XCTestCase {
+    // Semantic SwiftUI red/blue are platform colours, not unit RGB primaries.
+    // Use explicit primaries for assertions about blend weights and coverage.
+    private let blendRed = Color(.sRGB, red: 1, green: 0, blue: 0, opacity: 1)
+    private let blendBlue = Color(.sRGB, red: 0, green: 0, blue: 1, opacity: 1)
     @MainActor
     func testFullBleedCoverCropsEdgesAndDissolvesIntoMutedBackground() async throws {
         let url = TagFixtures.write(TagFixtures.mp3(v4: true), name: "player-cover-composition.mp3")
@@ -47,7 +51,7 @@ final class PlayerRenderingTests: XCTestCase {
         var previousBlue = -1.0
         var endpoints: [[Double]] = []
         for amount in [0.0, 0.25, 0.5, 0.75, 1.0] {
-            let view = PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: amount) { Color.clear }
+            let view = PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: amount) { Color.clear }
             let rendered = try pixels(view, size: CGSize(width: 200, height: 500))
             let sample = rendered.color(x: 100, y: 300)
             XCTAssertLessThanOrEqual(sample[0], previousRed + 0.02, "The old cover colour must fade: \(sample)")
@@ -64,9 +68,9 @@ final class PlayerRenderingTests: XCTestCase {
     @MainActor
     func testPaletteDissolveFormsAGradientFromTheCoverIntoTheControls() throws {
         let size = CGSize(width: 200, height: 500)
-        let start = try pixels(PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: 0) { Color.clear }, size: size)
-        let middle = try pixels(PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: 0.5) { Color.clear }, size: size)
-        let end = try pixels(PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: 1) { Color.clear }, size: size)
+        let start = try pixels(PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: 0) { Color.clear }, size: size)
+        let middle = try pixels(PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: 0.5) { Color.clear }, size: size)
+        let end = try pixels(PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: 1) { Color.clear }, size: size)
         // Normalize against each position's endpoints to exclude the permanent
         // darkening towards the home indicator from the transition measurement.
         func arrival(at y: Int) -> Double {
@@ -85,8 +89,8 @@ final class PlayerRenderingTests: XCTestCase {
         let size = CGSize(width: 200, height: 200)
         let mixed = ZStack {
             Color.black
-            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: false, reduceMotion: false, size: size) { Color.red }
-            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: true, reduceMotion: false, size: size) { Color.blue }
+            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: false, reduceMotion: false, size: size) { blendRed }
+            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: true, reduceMotion: false, size: size) { blendBlue }
         }
         let image = try pixels(mixed, size: size)
         let centre = image.color(x: 100, y: 100)
@@ -101,8 +105,8 @@ final class PlayerRenderingTests: XCTestCase {
         }
         for direction in [-1, 1] {
             let layers = ZStack {
-                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: false, reduceMotion: false, size: size) { Color.red }
-                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: true, reduceMotion: false, size: size) { Color.blue }
+                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: false, reduceMotion: false, size: size) { blendRed }
+                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: true, reduceMotion: false, size: size) { blendBlue }
             }
             let rendered = try pixels(layers, size: size)
             for x in [0, 199] {
@@ -159,7 +163,8 @@ final class PlayerRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(250))
         let first = try sample()
         selection.song = songs[1]
-        try await Task.sleep(for: .milliseconds(220))
+        // Sample near the middle of the eased 880 ms fade, not in its slow start.
+        try await Task.sleep(for: .milliseconds(440))
         let middle = try sample()
         try await Task.sleep(for: .milliseconds(850))
         let last = try sample()
