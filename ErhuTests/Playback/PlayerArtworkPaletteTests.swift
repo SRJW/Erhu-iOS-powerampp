@@ -14,7 +14,7 @@ final class PlayerArtworkPaletteTests: XCTestCase {
                     for colour in [palette.top, palette.bottom] {
                         let hsv = PlayerArtworkPalette.hsv(colour)
                         XCTAssertGreaterThanOrEqual(1.05 / (PlayerArtworkPalette.relativeLuminance(colour) + 0.05), 4.5)
-                        XCTAssertLessThanOrEqual(hsv.s, PlayerReferenceStyle.maximumSaturation + 0.01)
+                        XCTAssertLessThanOrEqual(hsv.s, PlayerReferenceStyle.maximumSaturation + 1e-12)
                         XCTAssertLessThanOrEqual(hsv.v, PlayerReferenceStyle.maximumBrightness + 0.004)
                         XCTAssertGreaterThanOrEqual(hsv.v, PlayerReferenceStyle.minimumBrightness - 0.004)
                     }

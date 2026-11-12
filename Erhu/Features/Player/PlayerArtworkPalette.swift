@@ -125,7 +125,14 @@ struct PlayerArtworkPalette: Equatable, Sendable {
         case 4: rgb = (x, 0, c)
         default: rgb = (c, 0, x)
         }
-        return argb(rgb.0 + m, rgb.1 + m, rgb.2 + m)
+        // Independent rounding can increase saturation in dark 8-bit colours.
+        // Bound the quantized channels as well as the original HSB components.
+        let maximumChannel = UInt32((v * 255).rounded())
+        let minimumChannel = UInt32(ceil(Double(maximumChannel) * (1 - s)))
+        func channel(_ component: Double) -> UInt32 {
+            min(maximumChannel, max(minimumChannel, UInt32(((component + m) * 255).rounded())))
+        }
+        return 0xFF000000 | (channel(rgb.0) << 16) | (channel(rgb.1) << 8) | channel(rgb.2)
     }
 
     private static func argb(_ r: Double, _ g: Double, _ b: Double) -> UInt32 {
