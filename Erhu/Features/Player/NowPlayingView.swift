@@ -21,7 +21,7 @@ struct NowPlayingView: View {
     @State private var showsVisualizer = false
     @State private var showsEqualizer = false
     @State private var showsAudioDetails = false
-    @GestureState private var headerPullActive = false
+    @GestureState private var artworkGestureActive = false
 
     var body: some View {
         let state = player.state
@@ -31,7 +31,7 @@ struct NowPlayingView: View {
                 let width = geometry.size.width
                 let height = geometry.size.height
                 ZStack {
-                    Color.clear.contentShape(Rectangle()).gesture(pullGesture)
+                    Color.clear.contentShape(Rectangle())
                         .accessibilityAction(named: "Close player") { close() }
                     artworkInteraction(width: width)
                         .frame(width: width, height: height * 0.55)
@@ -70,8 +70,16 @@ struct NowPlayingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .modifier(PlayerForegroundMotion(drag: drag))
         .modifier(PlayerChromeOpacity(progress: drag.progress))
-        .onChange(of: headerPullActive) { _, active in
-            if !active { drag.cancelGesture(reduceMotion: reduceMotion) }
+        .onChange(of: artworkGestureActive) { _, active in
+            guard !active else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(16))
+                guard !artworkGestureActive, artworkGestureMode != 0 else { return }
+                artworkGestureMode = 0
+                artworkGestureEntry = nil
+                restoreArtworkDrag()
+                drag.cancelGesture(reduceMotion: reduceMotion)
+            }
         }
         .onChange(of: drag.isMoving, initial: true) { _, active in player.setVisualMotion(.presentation, active: active) }
         .onDisappear {
@@ -98,38 +106,39 @@ struct NowPlayingView: View {
     }
 
     private func artworkInteraction(width: CGFloat) -> some View {
-        PanInteraction(canBegin: { _, delta in
-            HorizontalGestureIntent.accepts(delta) || (delta.height > 0 && abs(delta.height) > abs(delta.width))
-        }, change: { sample in
-            if artworkGestureMode == 0 {
-                artworkGestureMode = HorizontalGestureIntent.accepts(sample.translation) ? 1 : 2
-                artworkGestureEntry = player.state.currentEntry?.id
+        Rectangle().fill(Color.white.opacity(0.001))
+        .contentShape(Rectangle())
+        .gesture(DragGesture(minimumDistance: 10, coordinateSpace: .local)
+            .updating($artworkGestureActive) { _, active, _ in active = true }
+            .onChanged { sample in
+                if artworkGestureMode == 0 {
+                    if HorizontalGestureIntent.accepts(sample.translation) { artworkGestureMode = 1 }
+                    else if sample.translation.height > abs(sample.translation.width) { artworkGestureMode = 2 }
+                    else { return }
+                    artworkGestureEntry = player.state.currentEntry?.id
+                }
+                guard artworkGestureEntry == player.state.currentEntry?.id else { return }
+                if artworkGestureMode == 1 {
+                    let direction = sample.translation.width < 0 ? 1 : -1
+                    let available = canSwipeArtwork(direction)
+                    artworkDrag = Double(sample.translation.width / max(width, 1)).clamped(-0.95, 0.95) * (available ? 1 : 0.12)
+                } else { pulled(sample.translation.height) }
             }
-            guard artworkGestureEntry == player.state.currentEntry?.id else { return }
-            if artworkGestureMode == 1 {
-                let direction = sample.translation.width < 0 ? 1 : -1
-                let available = canSwipeArtwork(direction)
-                artworkDrag = Double(sample.translation.width / max(width, 1)).clamped(-0.95, 0.95) * (available ? 1 : 0.12)
-            } else { pulled(sample.translation.height) }
-        }, end: { sample in
-            defer { artworkGestureMode = 0; artworkGestureEntry = nil }
-            guard artworkGestureEntry == player.state.currentEntry?.id else { restoreArtworkDrag(); return }
-            if artworkGestureMode == 1 {
-                let direction = ArtworkSwipeIntent.direction(translation: Double(sample.translation.width),
-                    velocity: Double(sample.velocity.width), width: Double(width),
-                    canNext: canSwipeArtwork(1), canPrevious: canSwipeArtwork(-1))
-                if direction > 0 { player.skipNext() }
-                else if direction < 0 { player.skipToPreviousItem() }
-                else { restoreArtworkDrag() }
-            } else {
-                pullEnded(sample.translation.height, sample.translation.height + sample.velocity.height * 0.18)
-            }
-        }, cancel: {
-            artworkGestureMode = 0
-            artworkGestureEntry = nil
-            restoreArtworkDrag()
-            drag.cancelGesture(reduceMotion: reduceMotion)
-        }, tap: { _ in })
+            .onEnded { sample in
+                defer { artworkGestureMode = 0; artworkGestureEntry = nil }
+                guard artworkGestureEntry == player.state.currentEntry?.id else { restoreArtworkDrag(); return }
+                if artworkGestureMode == 1 {
+                    let velocity = (sample.predictedEndTranslation.width - sample.translation.width) * 5
+                    let direction = ArtworkSwipeIntent.direction(translation: Double(sample.translation.width),
+                        velocity: Double(velocity), width: Double(width),
+                        canNext: canSwipeArtwork(1), canPrevious: canSwipeArtwork(-1))
+                    if direction > 0 { player.skipNext() }
+                    else if direction < 0 { player.skipToPreviousItem() }
+                    else { restoreArtworkDrag() }
+                } else if artworkGestureMode == 2 {
+                    pullEnded(sample.translation.height, sample.predictedEndTranslation.height)
+                } else { restoreArtworkDrag() }
+            })
         .accessibilityElement()
         .accessibilityLabel("Album artwork")
         .accessibilityIdentifier("nowPlayingArtwork")
@@ -148,14 +157,6 @@ struct NowPlayingView: View {
 
     private func restoreArtworkDrag() {
         withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) { artworkDrag = 0 }
-    }
-
-    /// Pull the artwork down to close the player.
-    private var pullGesture: some Gesture {
-        DragGesture(minimumDistance: 8, coordinateSpace: .global)
-            .updating($headerPullActive) { _, active, _ in active = true }
-            .onChanged { pulled($0.translation.height) }
-            .onEnded { pullEnded($0.translation.height, $0.predictedEndTranslation.height) }
     }
 
     private func pulled(_ distance: CGFloat) { drag.update(distance) }

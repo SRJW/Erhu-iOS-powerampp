@@ -279,9 +279,13 @@ final class LibraryInteractionTests: XCTestCase {
     }
 
     @MainActor func testCoverSwipesChangeTracksAndVerticalPullClosesPlayer() {
-        let app = launch("player")
+        let app = launch("player-artwork")
         let mini = app.buttons["openNowPlaying"]
-        XCTAssertTrue(mini.waitForExistence(timeout: 20))
+        guard mini.waitForExistence(timeout: 20) else {
+            let failure = app.staticTexts["playerProbeFailure"]
+            XCTFail(failure.exists ? failure.label : "Player fixture did not become ready")
+            return
+        }
         mini.tap()
         let cover = app.otherElements["nowPlayingArtwork"]
         XCTAssertTrue(cover.waitForExistence(timeout: 10))

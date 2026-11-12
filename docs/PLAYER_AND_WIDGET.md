@@ -154,3 +154,17 @@ Radio generation remains on demand, using the shared track-analysis engine.
 About amp uses the amp icon, installed release/build, current repository/Releases/issue links and
 amp's feature information, while retaining original attribution. The unrelated Erhu donation
 section is removed.
+
+## Functional cover verification
+
+The cover input now uses one SwiftUI drag recognizer with a locked horizontal/vertical intent.
+The former UIKit pan overlay and competing full-screen dismissal recognizer are removed.
+A cancelled gesture restores the cover; a committed horizontal gesture retains its progress
+until the next artwork is ready. Cover and background layers expose an animatable blend phase
+so their actual visible samples stay synchronized.
+
+Release compilation and focused simulator verification run in parallel. Publishing depends on
+both succeeding. Verification swipes two distinct audio files with embedded red/blue covers,
+checks reverse navigation and vertical dismissal, renders the actual cover overlap, and samples
+the production backdrop before, during and after a timed change. Screenshots and xcresults are
+retained as workflow artifacts. Other tests remain in the full-validation workflow.

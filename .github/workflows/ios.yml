@@ -1,30 +1,4 @@
 name: iOS
-on:
-  push:
-    branches:
-    - without-animated-art
-    paths:
-    - Erhu/**
-    - ErhuPlayerWidget/**
-    - WidgetShared/**
-    - Support/**
-    - project.yml
-    - .github/workflows/ios.yml
-    - .github/actions/setup-ios/**
-    - Tools/report_app_size.py
-    - Tools/Tests/LibraryFileDeletion/**
-    - Tools/Tests/ScrollingWaveform/**
-    - Tools/Tests/PlayerWidget/**
-    - Tools/Tests/ArtworkSlide/**
-  workflow_dispatch:
-    inputs:
-      runner:
-        description: macos-15 is Apple Silicon; choose it when ARM capacity is available.
-        type: choice
-        default: macos-15-intel
-        options:
-        - macos-15-intel
-        - macos-15
 permissions:
   contents: write
 concurrency:
@@ -121,19 +95,6 @@ jobs:
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
         key: ${{ steps.setup.outputs.build-cache-key }}
-    - name: Publish a direct IPA download
-      env:
-        GH_TOKEN: ${{ github.token }}
-        GH_REPO: ${{ github.repository }}
-      run: |
-        set -euo pipefail
-        tag="v0.1.0-amp.${GITHUB_RUN_NUMBER}"
-        if ! gh release view "$tag" >/dev/null 2>&1; then
-          gh release create "$tag" dist/amp.ipa --verify-tag --prerelease \
-            --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" \
-            --notes "Unsigned development IPA with static artwork. File deletion boundary checks, scrolling waveform checks, widget storage/launch checks, cover transition checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
-        fi
-        printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
     - name: Upload device build diagnostics
       if: always()
       uses: actions/upload-artifact@v4
@@ -143,3 +104,57 @@ jobs:
           build/compile.log
           build/resolve.log
         if-no-files-found: warn
+  cover-checks:
+    if: github.ref == 'refs/heads/without-animated-art' && github.event.deleted != true
+    uses: ./.github/workflows/player-interaction.yml
+    permissions:
+      contents: read
+  publish:
+    needs:
+    - build
+    - cover-checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      actions: read
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: amp-ipa
+        path: dist
+    - name: Publish a direct IPA download
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: "set -euo pipefail\ntag=\"v0.1.0-amp.${GITHUB_RUN_NUMBER}\"\nif ! gh release view \"$tag\" >/dev/null 2>&1; then\n  gh release create \"$tag\" dist/amp.ipa\
+        \ --verify-tag --prerelease \\\n    --title \"amp \u2014 static artwork build ${GITHUB_RUN_NUMBER}\" \\\n    --notes \"Unsigned development IPA with static\
+        \ artwork. File deletion boundary checks, scrolling waveform checks, widget storage/launch checks, cover transition checks and Release compilation passed.\
+        \ Native cover swipe, dismissal and rendered blend verification passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}.\"\n\
+        fi\nprintf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\\n' \"$GH_REPO\" \"$tag\" >> \"$GITHUB_STEP_SUMMARY\"\n"
+'on':
+  push:
+    branches:
+    - without-animated-art
+    paths:
+    - Erhu/**
+    - ErhuPlayerWidget/**
+    - WidgetShared/**
+    - Support/**
+    - project.yml
+    - .github/workflows/ios.yml
+    - .github/actions/setup-ios/**
+    - Tools/report_app_size.py
+    - Tools/Tests/LibraryFileDeletion/**
+    - Tools/Tests/ScrollingWaveform/**
+    - Tools/Tests/PlayerWidget/**
+    - Tools/Tests/ArtworkSlide/**
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: macos-15 is Apple Silicon; choose it when ARM capacity is available.
+        type: choice
+        default: macos-15-intel
+        options:
+        - macos-15-intel
+        - macos-15

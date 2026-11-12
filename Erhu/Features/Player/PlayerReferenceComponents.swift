@@ -2,11 +2,16 @@ import SwiftUI
 import UIKit
 import AVFoundation
 
-struct PlayerFullBleedBackground<Artwork: View>: View {
+struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
     let dominant: Color
     var secondaryDominant: Color? = nil
     var blend = 0.0
     @ViewBuilder var artwork: () -> Artwork
+
+    var animatableData: Double {
+        get { blend }
+        set { blend = newValue }
+    }
 
     private func muted(_ color: Color) -> UIColor {
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0

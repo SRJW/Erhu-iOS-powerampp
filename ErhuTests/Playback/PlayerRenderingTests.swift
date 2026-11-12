@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Observation
 import XCTest
 @testable import Erhu
 
@@ -58,6 +59,83 @@ final class PlayerRenderingTests: XCTestCase {
         XCTAssertGreaterThan(endpoints[4][2] - endpoints[0][2], 0.10)
         XCTAssertGreaterThan(endpoints[2][0], 0.10, "Midpoint must retain the outgoing colour")
         XCTAssertGreaterThan(endpoints[2][2], 0.10, "Midpoint must retain the incoming colour")
+    }
+
+    @MainActor
+    func testCoverLayersDissolveAtTheSameVisibleProgress() throws {
+        let size = CGSize(width: 200, height: 200)
+        let mixed = ZStack {
+            Color.black
+            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: false, reduceMotion: false, size: size) { Color.red }
+            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: true, reduceMotion: false, size: size) { Color.blue }
+        }
+        let image = try pixels(mixed, size: size)
+        let centre = image.color(x: 100, y: 100)
+        XCTAssertGreaterThan(centre[0], 0.20, "The departing cover must remain visible: \(centre)")
+        XCTAssertGreaterThan(centre[2], 0.40, "The arriving cover must blend over it: \(centre)")
+    }
+
+    @MainActor
+    func testChangingCoverRendersAnIntermediateColourFrame() async throws {
+        let folder = LibraryPaths.musicFolder
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let names = ["blend-red-\(UUID().uuidString).mp3", "blend-blue-\(UUID().uuidString).mp3"]
+        let urls = names.map { folder.appendingPathComponent($0) }
+        defer { for url in urls { try? FileManager.default.removeItem(at: url) } }
+        for (index, url) in urls.enumerated() {
+            try TagFixtures.mp3(v4: true).write(to: url)
+            let image = UIGraphicsImageRenderer(size: CGSize(width: 32, height: 32)).image { context in
+                (index == 0 ? UIColor.red : UIColor.blue).setFill()
+                context.fill(CGRect(x: 0, y: 0, width: 32, height: 32))
+            }
+            var request = TagWriteRequest()
+            request.artwork = try XCTUnwrap(image.pngData())
+            try TagWriter.write(request, to: url)
+            ArtworkLoader.shared.forget(path: url.path)
+            _ = await ArtworkLoader.shared.image(for: url, maxPixels: 1600)
+            _ = await LyricsPaletteCache.shared.palette(for: url)
+        }
+        let songs = names.enumerated().map { Song(id: Int64(-9500 - $0.offset), title: "Cover fixture", artist: "Local", album: "Fixture", durationMs: 120_000, path: $0.element) }
+        let selection = CoverRenderSelection(song: songs[0])
+        let player = PlayerController(database: try LibraryDatabase.inMemory(), transitions: TransitionSettingsStore())
+        let previous = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first(where: \.isKeyWindow)
+        let size = CGSize(width: 200, height: 500)
+        let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+        let controller = UIHostingController(rootView: CoverRenderHost(selection: selection).environment(player).environment(\.playerReduceMotion, false))
+        controller.safeAreaRegions = []
+        window.rootViewController = controller
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true; window.rootViewController = nil; previous?.makeKeyAndVisible() }
+        window.layoutIfNeeded(); controller.view.layoutIfNeeded()
+        func sample() throws -> [Double] {
+            let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
+            let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+                controller.view.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
+            }
+            let attachment = XCTAttachment(image: image)
+            attachment.lifetime = .keepAlways
+            add(attachment)
+            return try rgbaPixels(XCTUnwrap(image.cgImage)).color(x: 100, y: 300)
+        }
+        try await Task.sleep(for: .milliseconds(250))
+        let first = try sample()
+        selection.song = songs[1]
+        try await Task.sleep(for: .milliseconds(220))
+        let middle = try sample()
+        try await Task.sleep(for: .milliseconds(700))
+        let last = try sample()
+        XCTAssertGreaterThan(first[0] - last[0], 0.10, "Red cover must change to blue: \(first) -> \(last)")
+        XCTAssertGreaterThan(middle[2], first[2] + 0.02, "The actual animation must show blue before settling: \(first), \(middle), \(last)")
+        XCTAssertGreaterThan(middle[0], last[0] + 0.02, "The actual animation must retain red at an intermediate frame: \(first), \(middle), \(last)")
+    }
+
+    @MainActor @Observable private final class CoverRenderSelection {
+        var song: Song
+        init(song: Song) { self.song = song }
+    }
+    private struct CoverRenderHost: View {
+        let selection: CoverRenderSelection
+        var body: some View { ReferencePlayerBackdrop(song: selection.song, artworkDrag: .constant(0)) }
     }
 
     func testPlayerDominantColourIsNotReplacedByTheDarkLyricsSurface() {

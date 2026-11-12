@@ -96,21 +96,16 @@ struct ReferencePlayerBackdrop: View {
     }
 
     private func cover(_ frame: ArtworkSlideFrame, size: CGSize, incoming: Bool, amount: Double, direction: Int) -> some View {
-        let pose = reduceMotion
-            ? ArtworkSlidePose(x: 0, scale: 1, opacity: incoming ? amount : 1)
-            : ArtworkSlidePose.sample(progress: amount, direction: direction, incoming: incoming)
-        return ZStack {
-            if let image = frame.image { Image(uiImage: image).resizable().scaledToFill() }
-            else {
-                frame.dominant
-                Image(systemName: "music.note").font(.system(size: 20)).foregroundStyle(.white.opacity(0.2))
+        ArtworkSlideLayer(progress: amount, direction: direction, incoming: incoming,
+                          reduceMotion: reduceMotion, size: size) {
+            ZStack {
+                if let image = frame.image { Image(uiImage: image).resizable().scaledToFill() }
+                else {
+                    frame.dominant
+                    Image(systemName: "music.note").font(.system(size: 20)).foregroundStyle(.white.opacity(0.2))
+                }
             }
         }
-        .frame(width: size.width, height: size.height).clipped()
-        .scaleEffect(CGFloat(1.10 * pose.scale))
-        .frame(width: size.width, height: size.height).clipped()
-        .opacity(pose.opacity)
-        .offset(x: size.width * CGFloat(pose.x))
     }
 
     private func animatePair(from start: Double = 0) {
