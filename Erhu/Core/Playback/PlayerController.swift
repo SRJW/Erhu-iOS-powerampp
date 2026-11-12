@@ -11,6 +11,7 @@ import UIKit
 @Observable
 final class PlayerController {
     private(set) var state = PlaybackState()
+    private(set) var artworkDirection = 1
     /// The playing position, published on its own: it changes four times a second, and only the
     /// views showing progress should redraw for it (a menu open elsewhere would otherwise reset).
     let clock = PlaybackClock()
@@ -133,6 +134,7 @@ final class PlayerController {
                 QueueOrigin(collection: $0, occurrence: TrackOccurrence(songs[i].id, slots.flatMap { $0.indices.contains(i) ? $0[i] : nil }))
             }, source: source)
         }
+        artworkDirection = 1
         setQueue(entries, startIndex: playIndex)
         if case .playlist(let id)? = origin.map({ CollectionKindRef($0) }) { try? database.markPlaylistPlayed(id) }
         startCurrent(at: 0, playing: true)
@@ -178,12 +180,12 @@ final class PlayerController {
     func skipToPreviousItem() {
         guard let previous = PlayOrder.previous(before: state.currentIndex, count: state.queue.count, repeatMode: state.repeatMode)
         else { return }
-        moveTo(previous, playing: state.isPlaying, sameEntryRepeated: false)
+        moveTo(previous, playing: state.isPlaying, sameEntryRepeated: false, direction: -1)
     }
 
     func skipToQueueItem(_ index: Int) {
         guard state.queue.indices.contains(index) else { return }
-        moveTo(index, playing: true, sameEntryRepeated: false)
+        moveTo(index, playing: true, sameEntryRepeated: false, direction: index < state.currentIndex ? -1 : 1)
     }
 
     /// Shuffle is physical: turning it on puts the current entry first and shuffles the rest; turning
@@ -431,7 +433,8 @@ final class PlayerController {
         }
     }
 
-    private func moveTo(_ index: Int, playing: Bool, sameEntryRepeated: Bool) {
+    private func moveTo(_ index: Int, playing: Bool, sameEntryRepeated: Bool, direction: Int = 1) {
+        artworkDirection = direction
         engine.cancelCrossfade()
         state.currentIndex = index
         startCurrent(at: 0, playing: playing)
@@ -452,6 +455,7 @@ final class PlayerController {
             persistState()
             return
         }
+        artworkDirection = 1
         let repeated = next == state.currentIndex
         if !repeated, engine.hasQueued(state.queue[next].id) {
             // Gapless: the engine already plays it.
@@ -473,6 +477,7 @@ final class PlayerController {
         consecutiveErrors += 1
         if consecutiveErrors < state.queue.count,
            let next = PlayOrder.next(after: state.currentIndex, count: state.queue.count, repeatMode: state.repeatMode, userSkip: true) {
+            artworkDirection = 1
             state.currentIndex = next
             startCurrent(at: 0, playing: true)
         } else {
@@ -632,6 +637,7 @@ final class PlayerController {
             try? await Task.sleep(for: .seconds(delay))
             guard let self, self.state.queue.indices.contains(planned.plan.nextIndex),
                   self.state.queue[planned.plan.nextIndex].id == next.id else { return }
+            self.artworkDirection = 1
             self.state.currentIndex = planned.plan.nextIndex
             self.setPosition(planned.plan.incomingStartMs)
             self.state.durationMs = next.song.durationMs

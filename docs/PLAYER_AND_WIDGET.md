@@ -122,3 +122,17 @@ on the user's signed installation; adding this control does not claim to overrid
 The transport buttons fade out over 0.30 s during scrubbing and return over 0.42 s. The thin
 centre line fades in after the buttons have disappeared and fades out on release or
 cancellation. It is hidden during ordinary playback. Reduced Motion skips these animations.
+
+## Cover changes
+
+The reference's track change slides the departing still cover sideways as the next cover enters
+from the opposite edge, with a small scale/opacity adjustment and a coordinated colour fade.
+The animation lasts 0.42 s; Previous reverses Next even when wrapping the queue. The cover keeps
+its existing full-bleed crop, 10% zoom and lower-edge mask. It does not turn into a bordered card
+or require downloaded animated artwork. Reduced Motion uses a short dissolve without travel.
+
+The old image remains visible until the new image and its palette have loaded. A cancelled
+request cannot display a late result for a skipped track. Rapid selections preserve the current
+visual pair and replace one pending destination, so images do not snap halfway through a slide
+or accumulate in an unbounded animation queue. Closing the player releases departing layers.
+The fast export checks the production queue/geometry, including reversal and rapid skipping.

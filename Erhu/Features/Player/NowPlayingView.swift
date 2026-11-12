@@ -381,34 +381,6 @@ private struct WaveformArrival: ViewModifier {
     }
 }
 
-private struct ReferencePlayerBackdrop: View {
-    let song: Song?
-    @Environment(\.playerReduceMotion) private var reduceMotion
-    @State private var artworkPalette = ArtworkPaletteState()
-    @State private var artworkRevision = 0
-
-    var body: some View {
-        let dominant = Color(argb: artworkPalette.palette(for: song?.url).artworkDominant)
-        PlayerFullBleedBackground(dominant: dominant) {
-            if let song {
-                SongArtworkView(song: song, maxPixels: 1600, contentMode: .fill)
-                    .scaleEffect(1.10)
-            }
-        }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.35), value: dominant)
-        .onReceive(NotificationCenter.default.publisher(for: ArtworkLoader.didChange)) { note in
-            if note.object as? String == song?.url.path { artworkRevision += 1 }
-        }
-        .task(id: "\(song?.url.path ?? "")|\(artworkRevision)") {
-            guard let url = song?.url else { return }
-            let revision = ArtworkLoader.shared.revision(for: url.path)
-            let sampled = await LyricsPaletteCache.shared.palette(for: url)
-            guard !Task.isCancelled else { return }
-            artworkPalette.set(sampled, for: url, revision: revision)
-        }
-    }
-}
-
 /// The cover keeps its full composition in a width-sized slot. Its lower edge
 /// dissolves into the original dominant colour, which fills all remaining space.
 struct PlayerArtworkBackground<Artwork: View>: View {
