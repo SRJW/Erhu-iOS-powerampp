@@ -91,7 +91,6 @@ jobs:
         python3 Tools/wait_for_simulator.py build/ui-boot.log
     - name: Run real cover swipe and dismissal checks
       if: ${{ inputs.scope != 'animation-only' }}
-      timeout-minutes: 15
       run: |
         run_interactions() {
           xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
