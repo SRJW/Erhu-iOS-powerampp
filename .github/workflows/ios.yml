@@ -78,6 +78,33 @@ jobs:
         test -d dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex/Metadata.appintents
         test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' dist/Payload/Erhu.app/Info.plist)" = "amp"
         test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex/Info.plist)" = "amp Player"
+        # Carry the requested App Groups in both executables so a re-signer can
+        # preserve/remap them. Ad-hoc signatures do not grant device permissions.
+        app=dist/Payload/Erhu.app
+        while IFS= read -r -d '' framework; do
+          codesign --force --sign - "$framework"
+        done < <(find "$app" -depth -type d -name '*.framework' -print0)
+        codesign --force --sign - --generate-entitlement-der \
+          --entitlements Support/ErhuPlayerWidget.entitlements "$app/PlugIns/ErhuPlayerWidget.appex"
+        codesign --force --sign - --generate-entitlement-der \
+          --entitlements Support/Erhu.entitlements "$app"
+        codesign --verify --deep --strict "$app"
+        python3 - <<'PYVERIFY'
+        import plistlib
+        import subprocess
+        from pathlib import Path
+        app = Path('dist/Payload/Erhu.app')
+        for bundle, declared in [(app, 'Support/Erhu.entitlements'),
+                                 (app / 'PlugIns/ErhuPlayerWidget.appex', 'Support/ErhuPlayerWidget.entitlements')]:
+            result = subprocess.run(['codesign', '--display', '--entitlements', '-', str(bundle)],
+                                    check=True, capture_output=True)
+            actual = plistlib.loads(result.stdout)
+            expected = plistlib.loads(Path(declared).read_bytes())
+            key = 'com.apple.security.application-groups'
+            if actual.get(key) != expected[key]:
+                raise SystemExit(f'App Group request missing from {bundle.name}')
+            print(f'{bundle.name}: verified embedded App Group request {actual[key]}')
+        PYVERIFY
         (cd dist && zip -qry amp.ipa Payload)
         python3 Tools/report_app_size.py dist/Payload/Erhu.app dist/amp.ipa
         printf 'Static artwork development IPA. Full simulator tests are a separate manual workflow.\n' >> "$GITHUB_STEP_SUMMARY"

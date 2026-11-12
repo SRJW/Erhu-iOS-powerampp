@@ -91,6 +91,13 @@ wallpaper-visible regions in a legacy PNG app icon.
 
 ## Signed installations and widget diagnostics
 
+The exported development IPA carries ad-hoc signatures with the requested App Group in both
+executables, including DER entitlements. This lets a re-signer read and preserve or consistently
+remap the requests. These signatures are not device provisioning: the final signing profile
+must authorize the same concrete group for the app and its widget. CI verifies the embedded
+requests before uploading the IPA; that check cannot establish the permissions of a later
+FlareStore installation.
+
 Both targets inspect their own embedded provisioning profile for a concrete amp App Group,
 including names suffixed/prefixed by a signing tool such as FlareStore. `AmpWidgetAppGroup` in
 each Info.plist also supports an explicitly configured group. No private container or arbitrary
