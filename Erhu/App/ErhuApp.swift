@@ -4,7 +4,7 @@ import SwiftUI
 struct ErhuApp: App {
     @State private var services = AppServices.shared
     @Environment(\.scenePhase) private var scenePhase
-    @State private var returningFromBackground = false
+    @State private var playerLaunch = PlayerLaunchGate()
 
     var body: some Scene {
         WindowGroup {
@@ -24,34 +24,45 @@ struct ErhuApp: App {
                 .environment(services.artwork)
                 .environment(services.transitions)
                 .preferredColorScheme(services.settings.colorScheme)
-                .onOpenURL { url in handlePlayerURL(url) }
-                .onContinueUserActivity("com.erhu.nowplaying") { _ in services.router.showsNowPlaying = true }
-                .onChange(of: scenePhase) { _, phase in
-                    if phase == .background { returningFromBackground = true }
-                    if phase == .active, returningFromBackground {
-                        returningFromBackground = false
-                        if services.player.state.currentSong != nil { services.router.showsNowPlaying = true }
+                .onOpenURL { url in
+                    guard let request = PlayerLaunchRequest(url: url) else { return }
+                    playerLaunch.request(request)
+                    openRequestedPlayer()
+                }
+                .onContinueUserActivity("com.erhu.nowplaying") { _ in
+                    playerLaunch.request()
+                    openRequestedPlayer()
+                }
+                .userActivity("com.erhu.nowplaying", isActive: services.player.state.currentSong != nil) { activity in
+                    activity.title = services.player.state.currentSong?.title
+                    activity.userInfo = services.player.state.currentSong.map { ["songID": $0.id] }
+                    activity.targetContentIdentifier = services.player.state.currentSong.map { "amp.track.\($0.id)" }
+                }
+                .onChange(of: services.player.restoreFinished, initial: true) { _, ready in
+                    if ready {
+                        openRequestedPlayer()
+                        services.player.refreshSystemPlayback()
+                    }
+                }
+                .onChange(of: scenePhase, initial: true) { _, phase in
+                    if phase == .inactive || phase == .background { playerLaunch.resume() }
+                    if phase == .active {
+                        openRequestedPlayer()
+                        services.player.refreshSystemPlayback()
                     }
                 }
         }
     }
 
-    private func handlePlayerURL(_ url: URL) {
-        guard ["amp", "erhu"].contains(url.scheme?.lowercased() ?? ""), url.host?.lowercased() == "player" else { return }
-        let action = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "action" }?.value
-        Task { @MainActor in
-            for _ in 0..<200 {
-                if services.player.restoreFinished { break }
-                try? await Task.sleep(for: .milliseconds(50))
-            }
-            switch action {
-            case "toggle": services.player.togglePlayPause()
-            case "next": services.player.skipNext()
-            case "previous": services.player.skipPrevious()
-            default: break
-            }
-            services.router.showsNowPlaying = true
+    private func openRequestedPlayer() {
+        guard let request = playerLaunch.take(restored: services.player.restoreFinished) else { return }
+        switch request.command {
+        case .toggle: services.player.togglePlayPause()
+        case .next: services.player.skipNext()
+        case .previous: services.player.skipPrevious()
+        case nil: break
         }
+        if services.player.state.currentSong != nil { services.router.showsNowPlaying = true }
     }
 
     @ViewBuilder private var appContent: some View {

@@ -432,6 +432,7 @@ private struct AboutSettingsView: View {
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–").padding(Spacing.lg)
                 LabeledContent("Build", value: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–").padding(Spacing.lg)
             }
+            PlayerWidgetStatusSettings()
             SettingsGroup("Privacy") {
                 Label("Music stays on your iPhone", systemImage: "iphone").padding(Spacing.lg)
                 Text("Your music files, library index and VYBE processing stay on this device. Online lyrics, metadata and artwork searches use the song or artist details needed for the request.")
@@ -465,5 +466,38 @@ private struct AboutSettingsView: View {
         }
         .navigationTitle("About amp")
         .sheet(isPresented: $showingIntroduction) { IntroductionView() }
+    }
+}
+
+private struct PlayerWidgetStatusSettings: View {
+    @Environment(PlayerController.self) private var player
+    @State private var sharedTitle = ""
+    @State private var error: String?
+
+    var body: some View {
+        SettingsGroup("Home Screen widget") {
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                if let storage = PlayerWidgetStorage.shared {
+                    Label("Shared storage available", systemImage: "checkmark.circle")
+                    Text("Last shared song: \(sharedTitle)").font(.subheadline)
+                    Text(storage.group).font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
+                } else {
+                    Label("Shared storage unavailable", systemImage: "exclamationmark.triangle")
+                    Text("When signing in FlareStore, preserve the widget extension and a matching App Group for both targets. Without that permission, iOS prevents the widget from reading the current song.")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                if let error { Text(error).font(.caption).foregroundStyle(.secondary) }
+                Button("Refresh widget") {
+                    player.refreshSystemPlayback()
+                    readStatus()
+                }.buttonStyle(.bordered)
+            }.padding(Spacing.lg)
+        }
+        .onAppear { readStatus() }
+    }
+
+    private func readStatus() {
+        sharedTitle = PlayerWidgetSnapshot.load().title
+        error = PlayerWidgetPublisher.lastError
     }
 }

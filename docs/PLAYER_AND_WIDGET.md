@@ -50,8 +50,9 @@ the badge; file sample rate/bitrate/container remain on the separate technical l
 
 `amp://player` opens the player. The optional `action` query accepts `toggle`, `previous` and
 `next`; these wait for queue restoration on cold launch. Other schemes/hosts are ignored.
-Returning from background with a loaded track also reveals the player. Now Playing metadata
-includes the external content identifier and audio media type. Native iOS media-panel launching
+Returning from inactive/background with a loaded track also reveals the player, as does a cold
+launch after queue restoration. Pending widget commands wait for restoration and run once.
+Now Playing metadata includes a per-track content identifier and audio media type. Native iOS media-panel launching
 is controlled by the OS and the installed application's signing/registration; verify this on a
 physical device after installation. Tapping the status bar itself is an OS action, not a custom
 app notification handler.
@@ -84,3 +85,24 @@ Both `amp://player` and legacy `erhu://player` links work. The icon assets are o
 light/dark images with the glass tile reframed to the canvas edges; iOS supplies the launcher
 mask. This removes the old flat outside padding, rather than claiming unsupported transparent
 wallpaper-visible regions in a legacy PNG app icon.
+
+## Signed installations and widget diagnostics
+
+Both targets inspect their own embedded provisioning profile for a concrete amp App Group,
+including names suffixed/prefixed by a signing tool such as FlareStore. `AmpWidgetAppGroup` in
+each Info.plist also supports an explicitly configured group. No private container or arbitrary
+unrelated App Group is used as a fallback. A signer must retain the extension and authorize the
+same group for the app and widget; app code cannot grant a missing signing entitlement.
+
+**Settings → About amp → Home Screen widget** shows the resolved group, last shared title and
+write errors, with a refresh action. The widget shows a permissions diagnostic instead of a fake
+empty player when it cannot access shared storage. Current metadata is republished on activation;
+artwork is written under a unique filename before its metadata is committed to avoid mismatched
+covers. Snapshot files remain accessible after first unlock when the app runs in the background.
+WidgetKit controls the refresh schedule; reload requests do not guarantee an immediate OS redraw.
+
+The native Control Center media panel is separate from the Home Screen widget. amp registers
+remote control events and handles inactive → active and user-activity restoration. The OS still
+controls whether a tap on its media panel launches the signed installation; verify that behaviour
+on device with the installed signature. The external content identifier is a track ID, not an
+invented launch-URL API.

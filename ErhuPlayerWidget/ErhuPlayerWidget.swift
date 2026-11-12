@@ -12,7 +12,7 @@ private struct PlayerProvider: TimelineProvider {
         completion(PlayerEntry(date: .now, snapshot: .load()))
     }
     func getTimeline(in context: Context, completion: @escaping (Timeline<PlayerEntry>) -> Void) {
-        completion(Timeline(entries: [PlayerEntry(date: .now, snapshot: .load())], policy: .after(Date().addingTimeInterval(900))))
+        completion(Timeline(entries: [PlayerEntry(date: .now, snapshot: .load())], policy: .after(Date().addingTimeInterval(300))))
     }
 }
 private struct PlayerWidgetView: View {
@@ -20,7 +20,7 @@ private struct PlayerWidgetView: View {
     @Environment(\.widgetFamily) private var family
     private var cover: UIImage? {
         guard entry.snapshot.hasArtwork, let folder = PlayerWidgetSnapshot.folder else { return nil }
-        return UIImage(contentsOfFile: folder.appendingPathComponent("cover.jpg").path)
+        return UIImage(contentsOfFile: folder.appendingPathComponent(entry.snapshot.artworkFileName ?? "cover.jpg").path)
     }
     var body: some View {
         HStack(spacing: 12) {
@@ -48,14 +48,14 @@ private struct PlayerWidgetView: View {
             }
         }
         .containerBackground(.fill.tertiary, for: .widget)
-        .widgetURL(URL(string: "amp://player"))
+        .widgetURL(PlayerLaunchRequest.url())
     }
     @ViewBuilder private var artwork: some View {
         if let cover { Image(uiImage: cover).resizable().scaledToFill() }
         else { RoundedRectangle(cornerRadius: 12).fill(.secondary.opacity(0.15)).overlay { Image(systemName: "music.note").font(.largeTitle) } }
     }
     private func command(_ symbol: String, action: String, label: String) -> some View {
-        Link(destination: URL(string: "amp://player?action=" + action)!) {
+        Link(destination: PlayerLaunchRequest.url(command: PlayerLaunchRequest.Command(rawValue: action))) {
             Image(systemName: symbol).frame(minWidth: 32, minHeight: 36)
         }.accessibilityLabel(label)
     }

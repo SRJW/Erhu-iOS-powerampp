@@ -14,6 +14,7 @@ on:
     - Tools/report_app_size.py
     - Tools/Tests/LibraryFileDeletion/**
     - Tools/Tests/ScrollingWaveform/**
+    - Tools/Tests/PlayerWidget/**
   workflow_dispatch:
     inputs:
       runner:
@@ -61,6 +62,10 @@ jobs:
       run: |
         xcrun swiftc Erhu/Core/Playback/ScrollingWaveform.swift Tools/Tests/ScrollingWaveform/main.swift -o "$RUNNER_TEMP/amp-waveform-tests"
         "$RUNNER_TEMP/amp-waveform-tests"
+    - name: Test widget storage and playback launches
+      run: |
+        xcrun swiftc WidgetShared/PlayerWidgetStorage.swift WidgetShared/PlayerWidgetSnapshot.swift WidgetShared/PlayerLaunchRequest.swift Tools/Tests/PlayerWidget/main.swift -o "$RUNNER_TEMP/amp-widget-tests"
+        "$RUNNER_TEMP/amp-widget-tests"
     - name: Build unsigned app
       run: |
         set -o pipefail
@@ -119,7 +124,7 @@ jobs:
         if ! gh release view "$tag" >/dev/null 2>&1; then
           gh release create "$tag" dist/amp.ipa --verify-tag --prerelease \
             --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" \
-            --notes "Unsigned development IPA with static artwork. File deletion boundary checks, scrolling waveform checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
+            --notes "Unsigned development IPA with static artwork. File deletion boundary checks, scrolling waveform checks, widget storage/launch checks and Release compilation passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}."
         fi
         printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
     - name: Upload device build diagnostics

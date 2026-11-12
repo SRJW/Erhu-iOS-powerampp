@@ -48,7 +48,7 @@ final class PlayerController {
     @ObservationIgnored private var engineSetup: Task<Void, Never>?
     @ObservationIgnored private var preparingPlayIntent = false
     private(set) var playbackError: String?
-    @ObservationIgnored private(set) var restoreFinished = false
+    private(set) var restoreFinished = false
     @ObservationIgnored private var consecutiveErrors = 0
     @ObservationIgnored private var plannedTransition: (entryId: UUID, nextEntryId: UUID, plan: Planned)?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
@@ -788,6 +788,7 @@ final class PlayerController {
     }
 
     private func configureRemoteCommands() {
+        UIApplication.shared.beginReceivingRemoteControlEvents()
         let center = MPRemoteCommandCenter.shared()
         center.playCommand.addTarget { [weak self] _ in
             Task { @MainActor in self?.play() }
@@ -840,8 +841,17 @@ final class PlayerController {
         }
     }
 
-    private func publishNowPlaying() {
-        PlayerWidgetPublisher.publish(song: state.currentSong, playing: state.isPlaying)
+    func refreshSystemPlayback() {
+        guard restoreFinished else { return }
+        nowPlayingUpdate?.cancel()
+        nowPlayingUpdate = nil
+        publishNowPlaying(forceWidgetReload: true)
+    }
+
+    private func publishNowPlaying(forceWidgetReload: Bool = false) {
+        // Opening from the widget must not erase the last snapshot while restoration runs.
+        guard restoreFinished || state.currentSong != nil else { return }
+        PlayerWidgetPublisher.publish(song: state.currentSong, playing: state.isPlaying, forceReload: forceWidgetReload)
         guard let song = state.currentSong else {
             MPNowPlayingInfoCenter.default().playbackState = .stopped
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
@@ -855,7 +865,7 @@ final class PlayerController {
             if exact == nil { loadArtwork(for: song) }
         }
         var info: [String: Any] = [
-            MPNowPlayingInfoPropertyExternalContentIdentifier: "amp://player",
+            MPNowPlayingInfoPropertyExternalContentIdentifier: "amp.track.\(song.id)",
             MPNowPlayingInfoPropertyMediaType: MPNowPlayingInfoMediaType.audio.rawValue,
             MPNowPlayingInfoPropertyIsLiveStream: false,
             MPMediaItemPropertyTitle: song.title,
