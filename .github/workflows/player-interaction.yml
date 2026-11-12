@@ -1,7 +1,19 @@
 name: amp cover interaction verification
 'on':
-  workflow_dispatch: {}
-  workflow_call: {}
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: macOS runner for simulator verification
+        type: choice
+        default: macos-15-intel
+        options:
+        - macos-15-intel
+        - macos-15
+  workflow_call:
+    inputs:
+      runner:
+        type: string
+        default: macos-15-intel
 permissions:
   contents: read
 concurrency:
@@ -10,7 +22,7 @@ concurrency:
 jobs:
   tests:
     if: github.event.deleted != true
-    runs-on: ${{ 'macos-15-intel' }}
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
     timeout-minutes: 40
     env:
       HOMEBREW_NO_AUTO_UPDATE: '1'
