@@ -6,7 +6,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
-    if: (github.ref == 'refs/heads/without-animated-art' || github.event_name == 'workflow_dispatch') && github.event.deleted != true
+    if: ${{ !inputs.artifact_run && (github.ref == 'refs/heads/without-animated-art' || github.event_name == 'workflow_dispatch') && github.event.deleted != true }}
     runs-on: ${{ inputs.runner || 'macos-15-intel' }}
     timeout-minutes: 30
     env:
@@ -133,12 +133,12 @@ jobs:
           build/resolve.log
         if-no-files-found: warn
   cover-checks:
-    if: github.ref == 'refs/heads/without-animated-art' && github.event.deleted != true
+    if: ${{ !inputs.artifact_run && github.ref == 'refs/heads/without-animated-art' && github.event.deleted != true }}
     uses: ./.github/workflows/player-interaction.yml
     permissions:
       contents: read
   publish:
-    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.cover-checks.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.cover-checks.result == 'skipped')) }}
+    if: ${{ !cancelled() && ((needs.build.result == 'success' && (needs.cover-checks.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.cover-checks.result == 'skipped'))) || (github.event_name == 'workflow_dispatch' && inputs.artifact_run != '')) }}
     needs:
     - build
     - cover-checks
@@ -148,41 +148,42 @@ jobs:
       contents: write
       actions: read
     steps:
+    - uses: actions/checkout@v5
+    - name: Resolve original IPA build
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+        SOURCE_RUN_ID: ${{ inputs.artifact_run || github.run_id }}
+        REUSE_ARTIFACT: ${{ inputs.artifact_run != '' }}
+      run: |
+        set -euo pipefail
+        [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]]
+        gh api "repos/$GH_REPO/actions/runs/$SOURCE_RUN_ID" > source-run.json
+        python3 - <<'PYRESOLVE'
+        import json, os, re
+        source = json.load(open('source-run.json'))
+        assert source['repository']['full_name'] == os.environ['GH_REPO']
+        assert source['path'] == '.github/workflows/ios.yml'
+        assert re.fullmatch('[0-9a-f]{40}', source['head_sha'])
+        if os.environ['REUSE_ARTIFACT'] == 'true':
+            assert source['conclusion'] == 'success', 'Only successful device builds can be published'
+        with open(os.environ['GITHUB_ENV'], 'a') as output:
+            output.write('IPA_SOURCE_RUN=' + str(source['id']) + '\n')
+            output.write('IPA_BUILD_NUMBER=' + str(source['run_number']) + '\n')
+            output.write('IPA_SOURCE_SHA=' + source['head_sha'] + '\n')
+        PYRESOLVE
     - uses: actions/download-artifact@v4
       with:
         name: amp-ipa
         path: dist
+        run-id: ${{ env.IPA_SOURCE_RUN }}
+        github-token: ${{ github.token }}
     - name: Publish a direct IPA download
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
         NATIVE_CHECKS_RESULT: ${{ needs.cover-checks.result }}
-      run: |
-        set -euo pipefail
-        tag="v0.1.0-amp.${GITHUB_RUN_NUMBER}"
-        notes=$(mktemp)
-        cat > "$notes" <<EOF
-        Static-artwork development IPA. Re-sign before installing, preserving a matching authorized App Group for the app and widget.
-        File deletion, scrolling waveform, widget storage/launch, cover-transition checks, Release compilation and embedded signing-request verification passed.
-        Source: ${GITHUB_SHA}.
-        EOF
-        if [ "$NATIVE_CHECKS_RESULT" = "success" ]; then
-          echo 'Native player interaction and rendered blend verification passed.' >> "$notes"
-        else
-          echo 'Manual device build: native simulator checks were not selected in this workflow. Full simulator validation is available separately.' >> "$notes"
-        fi
-        if ! gh release view "$tag" >/dev/null 2>&1; then
-          gh release create "$tag" --verify-tag --draft --prerelease \
-            --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" --notes-file "$notes"
-        fi
-        count=$(gh release view "$tag" --json assets --jq '[.assets[] | select(.name == "amp.ipa")] | length')
-        if [ "$count" = "0" ]; then
-          gh release upload "$tag" dist/amp.ipa
-        fi
-        if [ "$(gh release view "$tag" --json isDraft --jq '.isDraft')" = "true" ]; then
-          gh release edit "$tag" --draft=false
-        fi
-        printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
+      run: bash Tools/publish_ipa.sh dist/amp.ipa
 'on':
   push:
     branches:
@@ -196,6 +197,7 @@ jobs:
     - .github/workflows/ios.yml
     - .github/actions/setup-ios/**
     - Tools/report_app_size.py
+    - Tools/publish_ipa.sh
     - Tools/restore_source_timestamps.py
     - Tools/Tests/LibraryFileDeletion/**
     - Tools/Tests/ScrollingWaveform/**
@@ -205,6 +207,10 @@ jobs:
     - ErhuTests/Playback/PlayerRenderingTests.swift
   workflow_dispatch:
     inputs:
+      artifact_run:
+        description: Successful iOS run ID to publish without rebuilding (empty creates a new IPA)
+        type: string
+        default: ''
       runner:
         description: macos-15 is Apple Silicon; choose it when ARM capacity is available.
         type: choice
