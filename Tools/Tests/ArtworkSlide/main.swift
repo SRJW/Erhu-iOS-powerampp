@@ -38,7 +38,7 @@ for progress in [0.0, 0.1, 0.5, 0.9, 1.0] {
 }
 check(ArtworkSlidePose.sample(progress: 0, direction: 1, incoming: false).x == 0, "Departing cover starts at the visible position")
 let arrivalOffset = ArtworkSlidePose.sample(progress: 0, direction: 1, incoming: true).x
-check(arrivalOffset > 0 && arrivalOffset <= 0.03, "New cover approaches subtly from the right")
+check(arrivalOffset == 0, "New cover keeps the same fixed frame without a lateral offset")
 check(ArtworkSlidePose.sample(progress: 1, direction: 1, incoming: true).x == 0, "Incoming cover settles without a leftover offset")
 check(ArtworkSlidePose.sample(progress: 5, direction: -1, incoming: true).x == 0, "Clamp completion overshoot")
 let halfIn = ArtworkSlidePose.sample(progress: 0.5, direction: 1, incoming: true)

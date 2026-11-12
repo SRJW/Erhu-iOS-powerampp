@@ -11,6 +11,8 @@ final class PlayerRenderingTests: XCTestCase {
     // Use explicit primaries for assertions about blend weights and coverage.
     private let blendRed = Color(.sRGB, red: 1, green: 0, blue: 0, opacity: 1)
     private let blendBlue = Color(.sRGB, red: 0, green: 0, blue: 1, opacity: 1)
+    private let redPalette = PlayerArtworkPalette(source: 0xFFFF0000, topLuminance: 0.2126)
+    private let bluePalette = PlayerArtworkPalette(source: 0xFF0000FF, topLuminance: 0.0722)
     @MainActor
     func testFullBleedCoverCropsEdgesAndDissolvesIntoMutedBackground() async throws {
         let url = TagFixtures.write(TagFixtures.mp3(v4: true), name: "player-cover-composition.mp3")
@@ -25,11 +27,11 @@ final class PlayerRenderingTests: XCTestCase {
         try TagWriter.write(edit, to: url)
         ArtworkLoader.shared.forget(path: url.path)
         _ = await ArtworkLoader.shared.image(for: url, maxPixels: 600)
-        let backdrop = PlayerFullBleedBackground(dominant: Color(.sRGB, red: 0, green: 0, blue: 1)) {
-            SongArtworkView(url: url, maxPixels: 1200, contentMode: .fill).scaleEffect(1.10)
+        let backdrop = PlayerFullBleedBackground(palette: bluePalette) {
+            SongArtworkView(url: url, maxPixels: 1200, contentMode: .fill)
         }
         let rendered = try pixels(backdrop, size: CGSize(width: 200, height: 500))
-        // The 55%-height fill crop plus zoom removes the source's side stripes.
+        // The fixed 57%-height fill crop removes these source side stripes without zoom.
         // Its visible image reaches both screen edges, without a card border.
         assertColor(rendered, at: CGPoint(x: 8, y: 60), dominant: 2)
         assertColor(rendered, at: CGPoint(x: 192, y: 60), dominant: 2)
@@ -51,7 +53,7 @@ final class PlayerRenderingTests: XCTestCase {
         var previousBlue = -1.0
         var endpoints: [[Double]] = []
         for amount in [0.0, 0.25, 0.5, 0.75, 1.0] {
-            let view = PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: amount) { Color.clear }
+            let view = PlayerFullBleedBackground(palette: redPalette, secondaryPalette: bluePalette, blend: amount) { Color.clear }
             let rendered = try pixels(view, size: CGSize(width: 200, height: 500))
             let sample = rendered.color(x: 100, y: 300)
             XCTAssertLessThanOrEqual(sample[0], previousRed + 0.02, "The old cover colour must fade: \(sample)")
@@ -68,9 +70,9 @@ final class PlayerRenderingTests: XCTestCase {
     @MainActor
     func testPaletteDissolveFormsAGradientFromTheCoverIntoTheControls() throws {
         let size = CGSize(width: 200, height: 500)
-        let start = try pixels(PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: 0) { Color.clear }, size: size)
-        let middle = try pixels(PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: 0.5) { Color.clear }, size: size)
-        let end = try pixels(PlayerFullBleedBackground(dominant: blendRed, secondaryDominant: blendBlue, blend: 1) { Color.clear }, size: size)
+        let start = try pixels(PlayerFullBleedBackground(palette: redPalette, secondaryPalette: bluePalette, blend: 0) { Color.clear }, size: size)
+        let middle = try pixels(PlayerFullBleedBackground(palette: redPalette, secondaryPalette: bluePalette, blend: 0.5) { Color.clear }, size: size)
+        let end = try pixels(PlayerFullBleedBackground(palette: redPalette, secondaryPalette: bluePalette, blend: 1) { Color.clear }, size: size)
         // Normalize against each position's endpoints to exclude the permanent
         // darkening towards the home indicator from the transition measurement.
         func arrival(at y: Int) -> Double {
@@ -163,8 +165,8 @@ final class PlayerRenderingTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(250))
         let first = try sample()
         selection.song = songs[1]
-        // Sample near the middle of the eased 880 ms fade, not in its slow start.
-        try await Task.sleep(for: .milliseconds(440))
+        // The palette fades over 300 ms independently of the cover dissolve.
+        try await Task.sleep(for: .milliseconds(150))
         let middle = try sample()
         try await Task.sleep(for: .milliseconds(850))
         let last = try sample()

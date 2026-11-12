@@ -10,6 +10,7 @@ struct NowPlayingView: View {
     @Environment(LibraryStore.self) private var library
     @Environment(\.palette) private var palette
     @Environment(\.playerReduceMotion) private var reduceMotion
+    @State private var darkStatusText = false
     @State private var artworkDrag = 0.0
     @State private var artworkGestureMode = 0
     @State private var artworkGestureEntry: UUID?
@@ -34,16 +35,16 @@ struct NowPlayingView: View {
                     Color.clear.contentShape(Rectangle())
                         .accessibilityAction(named: "Close player") { close() }
                     artworkInteraction(width: width)
-                        .frame(width: width, height: height * 0.55)
-                        .position(x: width / 2, y: height * 0.275)
+                        .frame(width: width, height: height * PlayerReferenceStyle.coverHeightFraction)
+                        .position(x: width / 2, y: height * PlayerReferenceStyle.coverHeightFraction / 2)
                     Text(song.title)
                         .font(.custom("AvenirNext-Bold", size: 22))
-                        .lineLimit(1).minimumScaleFactor(0.75)
+                        .lineLimit(1).minimumScaleFactor(PlayerReferenceStyle.textMinimumScale).truncationMode(.tail)
                         .accessibilityIdentifier("nowPlayingTitle")
                         .frame(width: width - 32).position(x: width / 2, y: height * 0.60)
                     Text("\(song.artist) - \(song.album)")
                         .font(.custom("AvenirNext-DemiBold", size: 14))
-                        .lineLimit(1)
+                        .lineLimit(1).minimumScaleFactor(PlayerReferenceStyle.textMinimumScale)
                         .truncationMode(.tail)
                         .multilineTextAlignment(.center)
                         .frame(width: width - 32).position(x: width / 2, y: height * 0.633)
@@ -92,7 +93,10 @@ struct NowPlayingView: View {
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { toast }
         .animation(.easeInOut(duration: 0.2), value: actions.message)
-        .preferredColorScheme(.dark)
+        // Keep player content dark/white while the scene controls system status text.
+        .environment(\.colorScheme, .dark)
+        .preference(key: PlayerSystemAppearancePreference.self, value: darkStatusText ? .light : .dark)
+        .onPreferenceChange(PlayerStatusBarPreference.self) { darkStatusText = $0 }
         .routerSheets(active: true)
         .sheet(isPresented: $showsQueue) { QueueSheet() }
         .sheet(item: $artworkTarget) { ArtworkPickerSheet(target: $0) }
@@ -255,17 +259,18 @@ struct NowPlayingView: View {
         ZStack {
             Button { actions.toggleFavorite(song) } label: {
                 Image(systemName: song.isFavorite ? "heart.fill" : "heart")
-                    .font(.system(size: 25, weight: .bold)).frame(width: 44, height: 44)
+                    .font(.system(size: width * PlayerReferenceStyle.heartSymbolFraction, weight: .bold))
+                    .foregroundStyle(.white).frame(width: 44, height: 44)
             }
             .accessibilityLabel(song.isFavorite ? "Remove from favorites" : "Add to favorites")
             .position(x: width * 0.12, y: 24)
-            Button { showsAudioDetails = true } label: { PlayerOutputBadge() }
+            Button { showsAudioDetails = true } label: { PlayerOutputBadge(screenWidth: width) }
                 .accessibilityLabel("Audio output details")
                 .position(x: width * 0.31, y: 24)
-            ToggleIcon(systemImage: "shuffle", active: state.shuffleModeEnabled) {
+            ToggleIcon(systemImage: "shuffle", active: state.shuffleModeEnabled, symbolSize: width * PlayerReferenceStyle.secondarySymbolFraction) {
                 player.setShuffleModeEnabled(!state.shuffleModeEnabled)
             }.accessibilityLabel("Shuffle").position(x: width * 0.69, y: 24)
-            ToggleIcon(systemImage: state.repeatMode == .one ? "repeat.1" : "repeat", active: state.repeatMode != .off) {
+            ToggleIcon(systemImage: state.repeatMode == .one ? "repeat.1" : "repeat", active: state.repeatMode != .off, symbolSize: width * PlayerReferenceStyle.secondarySymbolFraction) {
                 player.cycleRepeatMode()
             }.accessibilityLabel("Repeat").position(x: width * 0.88, y: 24)
         }
@@ -291,9 +296,13 @@ struct NowPlayingView: View {
                                 .font(.system(size: size * 0.25, weight: .black))
                         }
                     }
-                } else { Image(systemName: symbol) }
+                } else {
+                    Image(systemName: symbol)
+                        .font(.system(size: size * PlayerReferenceStyle.transportIconFraction
+                            * (["backward.fill", "forward.fill"].contains(symbol) ? PlayerReferenceStyle.innerTransportIconScale : 1), weight: .black))
+                }
             }
-                .font(.system(size: size * 0.43, weight: .black))
+                .font(.system(size: size * PlayerReferenceStyle.transportIconFraction, weight: .black))
                 .foregroundStyle(.white)
                 .frame(width: size, height: size)
                 .background(.black, in: Circle())
@@ -339,13 +348,14 @@ struct NowPlayingView: View {
 private struct ToggleIcon: View {
     let systemImage: String
     let active: Bool
+    let symbolSize: CGFloat
     let action: () -> Void
     @Environment(\.palette) private var palette
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage).font(.system(size: 25, weight: .black))
-                .foregroundStyle(.white.opacity(active ? 1 : 0.5))
+            Image(systemName: systemImage).font(.system(size: symbolSize, weight: .heavy))
+                .foregroundStyle(.white.opacity(active ? 1 : PlayerReferenceStyle.inactiveSymbolOpacity))
                 .frame(width: 48, height: 48)
                 .background(Circle().fill(palette.primary.opacity(active ? 0.18 : 0)))
                 .contentShape(Circle())

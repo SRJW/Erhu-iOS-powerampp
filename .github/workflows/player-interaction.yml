@@ -148,6 +148,7 @@ jobs:
           -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/BlendResults.xcresult \
           CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests/PlayerRenderingTests \
           -only-testing:ErhuTests/CarouselMotionTests \
+          -only-testing:ErhuTests/PlayerArtworkPaletteTests \
           -parallel-testing-enabled NO > build/blend-tests.log 2>&1; then
           python3 Tools/report_native_interactions.py build/blend-tests.log
           tail -n 35 build/blend-tests.log
