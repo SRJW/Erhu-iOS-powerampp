@@ -110,7 +110,7 @@ final class ReleaseChecker {
         }
     }
 
-    static func result(_ releases: [AppRelease], installed: String, animated: Bool) -> ReleaseCheckState {
+    nonisolated static func result(_ releases: [AppRelease], installed: String, animated: Bool) -> ReleaseCheckState {
         guard let current = ReleaseVersion(installed) else { return .failed("This build has no valid release version.") }
         let compatible = releases.filter { !$0.draft && AppRelease.official($0.html_url) && $0.download(animated: animated) != nil && ReleaseVersion($0.tag_name) != nil }
         guard !compatible.isEmpty else { return .failed("No published IPA for this artwork variant was found.") }

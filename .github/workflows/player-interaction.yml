@@ -56,7 +56,7 @@ jobs:
           exit 1
         fi
     - name: Save compiled products and module caches
-      if: steps.setup.outputs.build-cache-hit != 'true'
+      if: ${{ always() && steps.setup.outcome == 'success' && steps.setup.outputs.build-cache-hit != 'true' }}
       uses: actions/cache/save@v4
       with:
         path: |
@@ -88,6 +88,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests/PlayerRenderingTests/testCoverBackgroundActuallyBlendsBothArtworkColours \
           -only-testing:ErhuTests/PlayerRenderingTests/testCoverLayersDissolveAtTheSameVisibleProgress \
           -only-testing:ErhuTests/PlayerRenderingTests/testChangingCoverRendersAnIntermediateColourFrame \
+          -only-testing:ErhuTests/ReleaseAndDiscoveryTests/testAmpReleaseOffersDirectIPAAndComparesBuildNumbers \
           -parallel-testing-enabled NO > build/blend-tests.log 2>&1; then
           python3 Tools/report_native_interactions.py build/blend-tests.log
           tail -n 35 build/blend-tests.log

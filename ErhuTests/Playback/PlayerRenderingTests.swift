@@ -107,7 +107,7 @@ final class PlayerRenderingTests: XCTestCase {
         window.makeKeyAndVisible()
         defer { window.isHidden = true; window.rootViewController = nil; previous?.makeKeyAndVisible() }
         window.layoutIfNeeded(); controller.view.layoutIfNeeded()
-        func sample() throws -> [Double] {
+        @MainActor func sample() throws -> [Double] {
             let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
             let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
                 controller.view.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
