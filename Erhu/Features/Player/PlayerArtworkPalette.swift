@@ -51,7 +51,7 @@ struct PlayerArtworkPalette: Equatable, Sendable {
             : min(hsv.s * PlayerReferenceStyle.saturationMultiplier, PlayerReferenceStyle.maximumSaturation)
         let brightness = min(max(hsv.v * PlayerReferenceStyle.brightnessMultiplier,
                                  PlayerReferenceStyle.minimumBrightness), PlayerReferenceStyle.maximumBrightness)
-        // A nearly black cover stays neutral and above pure black. Its lower end
+        // Very dark covers stay above pure black. Their lower end
         // never becomes brighter merely to reach the normal 0.12–0.18 range.
         let lower = min(brightness, max(PlayerReferenceStyle.minimumBrightness,
             min(PlayerReferenceStyle.maximumBottomBrightness,
@@ -70,11 +70,15 @@ struct PlayerArtworkPalette: Equatable, Sendable {
         let average = mean(lower)
         let averageSaturation = lower.map { hsv($0).s }.reduce(0, +) / Double(lower.count)
         let components = channels(average)
-        let variance = lower.reduce(0.0) { sum, pixel in
+        var summedVariance = 0.0
+        for pixel in lower {
             let p = channels(pixel)
-            return sum + ((p.r - components.r) * (p.r - components.r)
-                + (p.g - components.g) * (p.g - components.g) + (p.b - components.b) * (p.b - components.b)) / 3
-        } / Double(lower.count)
+            let redDelta = p.r - components.r
+            let greenDelta = p.g - components.g
+            let blueDelta = p.b - components.b
+            summedVariance += (redDelta * redDelta + greenDelta * greenDelta + blueDelta * blueDelta) / 3
+        }
+        let variance = summedVariance / Double(lower.count)
         let distribution = dominantColour(lower)
         let cancelledHue = hsv(average).s < averageSaturation * PlayerReferenceStyle.saturationCancellationRatio
         let unrepresentative = averageSaturation >= PlayerReferenceStyle.neutralSaturation
@@ -136,7 +140,10 @@ struct PlayerArtworkPalette: Equatable, Sendable {
     static func dominantColour(_ pixels: [UInt32]) -> (colour: UInt32, share: Double) {
         var buckets: [UInt32: [UInt32]] = [:]
         for p in pixels where p >> 24 >= 128 {
-            let key = ((p >> 20) & 15) << 8 | ((p >> 12) & 15) << 4 | ((p >> 4) & 15)
+            let red = (p >> 20) & 15
+            let green = (p >> 12) & 15
+            let blue = (p >> 4) & 15
+            let key = (red << 8) | (green << 4) | blue
             buckets[key, default: []].append(p)
         }
         guard let key = buckets.keys.sorted().max(by: { buckets[$0]!.count < buckets[$1]!.count }),
@@ -192,7 +199,11 @@ actor PlayerArtworkPaletteCache {
             let alpha = UInt32(rgba[i + 3])
             guard alpha > 0 else { return 0 }
             func unpremultiply(_ c: UInt8) -> UInt32 { min(UInt32(c) * 255 / alpha, 255) }
-            return alpha << 24 | unpremultiply(rgba[i]) << 16 | unpremultiply(rgba[i + 1]) << 8 | unpremultiply(rgba[i + 2])
+            let red = unpremultiply(rgba[i])
+            let green = unpremultiply(rgba[i + 1])
+            let blue = unpremultiply(rgba[i + 2])
+            let colour = (red << 16) | (green << 8) | blue
+            return (alpha << 24) | colour
         }
     }
 }
