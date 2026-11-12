@@ -179,7 +179,7 @@ final class PlayerArtworkPaletteTests: XCTestCase {
         try await waitFor { probe.contentScheme == .dark && controller.view.traitCollection.userInterfaceStyle == .dark }
     }
 
-    @MainActor @Observable private final class AppearanceProbe {
+    @MainActor @Observable final class AppearanceProbe {
         var systemScheme: ColorScheme?
         var contentScheme: ColorScheme?
     }
