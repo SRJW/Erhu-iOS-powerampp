@@ -1,7 +1,15 @@
 name: amp cover interaction verification
+run-name: Player verification — ${{ inputs.scope || 'full-player' }} (${{ inputs.runner || 'macos-15-intel' }})
 'on':
   workflow_dispatch:
     inputs:
+      scope:
+        description: Full player gestures or animation regressions only
+        type: choice
+        default: full-player
+        options:
+        - full-player
+        - animation-only
       runner:
         description: macOS runner for simulator verification
         type: choice
@@ -11,13 +19,16 @@ name: amp cover interaction verification
         - macos-15
   workflow_call:
     inputs:
+      scope:
+        type: string
+        default: full-player
       runner:
         type: string
         default: macos-15-intel
 permissions:
   contents: read
 concurrency:
-  group: amp-cover-verification-${{ github.workflow }}-${{ github.ref }}-${{ inputs.runner || 'macos-15-intel' }}
+  group: amp-cover-verification-${{ github.workflow }}-${{ github.ref }}-${{ inputs.runner || 'macos-15-intel' }}-${{ inputs.scope || 'full-player' }}
   cancel-in-progress: true
 jobs:
   tests:
@@ -70,6 +81,7 @@ jobs:
           exit 1
         fi
     - name: Start a fresh simulator immediately before UI testing
+      if: ${{ inputs.scope != 'animation-only' }}
       run: |
         # A long compile can leave a previously booted simulator's AX service stale.
         xcrun simctl shutdown "$UI_SIMULATOR_ID" >/dev/null 2>&1 || true
@@ -77,6 +89,7 @@ jobs:
         open -a Simulator --args -CurrentDeviceUDID "$UI_SIMULATOR_ID"
         xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
     - name: Run real cover swipe and dismissal checks
+      if: ${{ inputs.scope != 'animation-only' }}
       run: |
         run_interactions() {
           xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
@@ -110,7 +123,7 @@ jobs:
           fi
         fi
     - name: Report native interaction status
-      if: always()
+      if: ${{ always() && inputs.scope != 'animation-only' }}
       run: python3 Tools/report_native_interactions.py build/ui-tests.log
     - name: Save compiled products and module caches
       if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' && steps.setup.outputs.build-cache-hit != 'true' }}
@@ -125,6 +138,11 @@ jobs:
     - name: Verify the actual rendered colour blend
       if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
       run: |
+        if [ "${{ inputs.scope }}" = "animation-only" ]; then
+          echo "Animation-only run: UI gesture tests are intentionally not selected."
+          xcrun simctl boot "$UI_SIMULATOR_ID"
+          xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/unit-boot.log 2>&1
+        fi
         if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
           -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/BlendResults.xcresult \
@@ -147,6 +165,7 @@ jobs:
           build/ui-tests.log
           build/ui-tests-attempt-1.log
           build/ui-boot*.log
+          build/unit-boot.log
           build/blend-tests.log
           build/simulator-build.log
           build/render-build.log

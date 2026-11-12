@@ -387,6 +387,7 @@ final class PlayerDragState {
         let duration = reduceMotion ? 0.16 : target == 0
             ? (PlayerMotionTiming.duration * sqrt(Double(abs(delta)))).clamped(0.18, PlayerMotionTiming.duration)
             : PlayerMotionTiming.duration
+        let deadline = ContinuousClock.now.advanced(by: .seconds(duration))
         withAnimation(PlayerMotionTiming.presentation(reduceMotion: reduceMotion, duration: duration, delta: delta, velocity: velocity)) {
             isMoving = true
             translation = 0
@@ -397,7 +398,7 @@ final class PlayerDragState {
         // screen that completion fires at once, so a close reversed mid-way would already have
         // removed the player and the reopen would restart from nothing.
         settlement = Task { @MainActor [weak self] in
-            do { try await Task.sleep(for: .seconds(duration)) } catch { return }
+            do { try await Task.sleep(until: deadline, clock: .continuous) } catch { return }
             guard let self, self.animationID == id, !Task.isCancelled else { return }
             self.settlement = nil
             self.meter.record(target)

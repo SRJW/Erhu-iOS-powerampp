@@ -88,6 +88,26 @@ final class CarouselMotionTests: XCTestCase {
     }
 
     @MainActor
+    func testBusyMainActorDoesNotRestartAnimationCleanupTimers() async throws {
+        let motion = CarouselMotion()
+        let drag = PlayerDragState()
+        var completed = 0
+        motion.settle(center: 1, stacked: true, reduceMotion: false) { completed += 1 }
+        drag.setPresented(true, reduceMotion: false)
+        drag.finishEntrance()
+        // Reproduce synchronous startup work that keeps both cleanup tasks queued
+        // past their animation deadlines. Keep the blocking call in a sync closure.
+        let busyStartup: () -> Void = { Thread.sleep(forTimeInterval: 0.65) }
+        busyStartup()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertFalse(motion.moving)
+        XCTAssertEqual(motion.frontOrdinal, 1)
+        XCTAssertEqual(completed, 1)
+        XCTAssertFalse(drag.isMoving)
+        XCTAssertTrue(drag.isPresented)
+    }
+
+    @MainActor
     func testHostedSlidesAndModeChangesHaveIntermediateFramesAndFinishPromptly() async throws {
         let motion = CarouselMotion()
         try await hosted(MotionProbe(motion: motion)) {

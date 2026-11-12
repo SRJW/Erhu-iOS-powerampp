@@ -48,6 +48,7 @@ final class CarouselMotion {
         let targetStack: CGFloat = stacked ? 1 : 0
         let timing = CarouselSettlementTiming(delta: CGFloat(center) - focus, layoutDelta: targetStack - stack,
                                              velocity: velocity, reduceMotion: reduceMotion, depth: stacked)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(timing.duration))
         withAnimation(timing.animation) {
             moving = true
             focus = CGFloat(center)
@@ -56,7 +57,9 @@ final class CarouselMotion {
         // Cleanup is bounded independently of SwiftUI's render/visibility completion callbacks.
         // Native interpolation still draws every frame; this task only releases interaction state.
         settlement = Task { @MainActor [weak self] in
-            do { try await Task.sleep(for: .seconds(timing.duration)) } catch { return }
+            // Scheduling this task can itself be delayed by main-actor startup work.
+            // That delay must not restart the animation's cleanup clock.
+            do { try await Task.sleep(until: deadline, clock: .continuous) } catch { return }
             guard let self, self.generation == token, !Task.isCancelled else { return }
             self.settlement = nil
             self.meter.record(self.focus, stack: self.stack)
