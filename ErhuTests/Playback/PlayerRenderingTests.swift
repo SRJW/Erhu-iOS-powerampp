@@ -100,7 +100,9 @@ final class PlayerRenderingTests: XCTestCase {
         let player = PlayerController(database: try LibraryDatabase.inMemory(), transitions: TransitionSettingsStore())
         let previous = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first(where: \.isKeyWindow)
         let size = CGSize(width: 200, height: 500)
-        let window = UIWindow(frame: CGRect(origin: .zero, size: size))
+        let scene = try XCTUnwrap(previous?.windowScene ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+        let window = UIWindow(windowScene: scene)
+        window.frame = CGRect(origin: .zero, size: size)
         let controller = UIHostingController(rootView: CoverRenderHost(selection: selection).environment(player).environment(\.playerReduceMotion, false))
         controller.safeAreaRegions = []
         window.rootViewController = controller
