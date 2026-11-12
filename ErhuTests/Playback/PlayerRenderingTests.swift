@@ -89,8 +89,8 @@ final class PlayerRenderingTests: XCTestCase {
         let size = CGSize(width: 200, height: 200)
         let mixed = ZStack {
             Color.black
-            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: false, reduceMotion: false, size: size) { blendRed }
-            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: true, reduceMotion: false, size: size) { blendBlue }
+            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: false, reduceMotion: false, size: size) { self.blendRed }
+            ArtworkSlideLayer(progress: 0.5, direction: 1, incoming: true, reduceMotion: false, size: size) { self.blendBlue }
         }
         let image = try pixels(mixed, size: size)
         let centre = image.color(x: 100, y: 100)
@@ -105,8 +105,8 @@ final class PlayerRenderingTests: XCTestCase {
         }
         for direction in [-1, 1] {
             let layers = ZStack {
-                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: false, reduceMotion: false, size: size) { blendRed }
-                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: true, reduceMotion: false, size: size) { blendBlue }
+                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: false, reduceMotion: false, size: size) { self.blendRed }
+                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: true, reduceMotion: false, size: size) { self.blendBlue }
             }
             let rendered = try pixels(layers, size: size)
             for x in [0, 199] {
