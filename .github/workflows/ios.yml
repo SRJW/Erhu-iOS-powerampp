@@ -96,7 +96,7 @@ jobs:
         app = Path('dist/Payload/Erhu.app')
         for bundle, declared in [(app, 'Support/Erhu.entitlements'),
                                  (app / 'PlugIns/ErhuPlayerWidget.appex', 'Support/ErhuPlayerWidget.entitlements')]:
-            result = subprocess.run(['codesign', '--display', '--entitlements', '-', str(bundle)],
+            result = subprocess.run(['codesign', '--display', '--xml', '--entitlements', '-', str(bundle)],
                                     check=True, capture_output=True)
             actual = plistlib.loads(result.stdout)
             expected = plistlib.loads(Path(declared).read_bytes())
