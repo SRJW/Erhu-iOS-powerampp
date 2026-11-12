@@ -42,7 +42,20 @@ struct ArtworkSlidePose {
         let p = min(max(progress, 0), 1)
         let sign = direction < 0 ? -1.0 : 1.0
         return incoming
-            ? Self(x: sign * (1 - p), scale: 0.98 + 0.02 * p, opacity: 0.8 + 0.2 * p)
-            : Self(x: -sign * p, scale: 1 - 0.02 * p, opacity: 1 - 0.2 * p)
+            ? Self(x: sign * (1 - p) * 0.85, scale: 0.98 + 0.02 * p, opacity: p)
+            : Self(x: -sign * p * 0.85, scale: 1 - 0.02 * p, opacity: 1 - p)
+    }
+}
+
+/// Commit only a deliberate horizontal swipe; keep vertical dismissal independent.
+enum ArtworkSwipeIntent {
+    static func direction(translation: Double, velocity: Double, width: Double,
+                          canNext: Bool, canPrevious: Bool) -> Int {
+        guard translation.isFinite, velocity.isFinite, width.isFinite, width > 0 else { return 0 }
+        let deliberate = abs(translation) >= width * 0.18 || (abs(translation) >= 20 && abs(velocity) >= 650 && translation * velocity > 0)
+        guard deliberate else { return 0 }
+        if translation < 0 && canNext { return 1 }
+        if translation > 0 && canPrevious { return -1 }
+        return 0
     }
 }

@@ -6,11 +6,13 @@ struct NowPlayingView: View {
     @Environment(\.vybeEnabled) private var vybeEnabled
     @Environment(PlayerController.self) private var player
     @Environment(LibraryActions.self) private var actions
-    @Environment(MixStore.self) private var mixes
     @Environment(AppRouter.self) private var router
     @Environment(LibraryStore.self) private var library
     @Environment(\.palette) private var palette
     @Environment(\.playerReduceMotion) private var reduceMotion
+    @State private var artworkDrag = 0.0
+    @State private var artworkGestureMode = 0
+    @State private var artworkGestureEntry: UUID?
     @State private var artworkTarget: ArtworkTarget?
     let drag: PlayerDragState
     @State private var showsQueue = false
@@ -31,6 +33,9 @@ struct NowPlayingView: View {
                 ZStack {
                     Color.clear.contentShape(Rectangle()).gesture(pullGesture)
                         .accessibilityAction(named: "Close player") { close() }
+                    artworkInteraction(width: width)
+                        .frame(width: width, height: height * 0.55)
+                        .position(x: width / 2, y: height * 0.275)
                     Text(song.title)
                         .font(.custom("AvenirNext-Bold", size: 18))
                         .lineLimit(1).minimumScaleFactor(0.75)
@@ -92,6 +97,55 @@ struct NowPlayingView: View {
         }
     }
 
+    private func artworkInteraction(width: CGFloat) -> some View {
+        PanInteraction(canBegin: { _, delta in
+            HorizontalGestureIntent.accepts(delta) || (delta.height > 0 && abs(delta.height) > abs(delta.width))
+        }, change: { sample in
+            if artworkGestureMode == 0 {
+                artworkGestureMode = HorizontalGestureIntent.accepts(sample.translation) ? 1 : 2
+                artworkGestureEntry = player.state.currentEntry?.id
+            }
+            guard artworkGestureEntry == player.state.currentEntry?.id else { return }
+            if artworkGestureMode == 1 {
+                let direction = sample.translation.width < 0 ? 1 : -1
+                let available = canSwipeArtwork(direction)
+                artworkDrag = Double(sample.translation.width / max(width, 1)).clamped(-0.95, 0.95) * (available ? 1 : 0.12)
+            } else { pulled(sample.translation.height) }
+        }, end: { sample in
+            defer { artworkGestureMode = 0; artworkGestureEntry = nil }
+            guard artworkGestureEntry == player.state.currentEntry?.id else { restoreArtworkDrag(); return }
+            if artworkGestureMode == 1 {
+                let direction = ArtworkSwipeIntent.direction(translation: Double(sample.translation.width),
+                    velocity: Double(sample.velocity.width), width: Double(width),
+                    canNext: canSwipeArtwork(1), canPrevious: canSwipeArtwork(-1))
+                if direction > 0 { player.skipNext() }
+                else if direction < 0 { player.skipToPreviousItem() }
+                else { restoreArtworkDrag() }
+            } else {
+                pullEnded(sample.translation.height, sample.translation.height + sample.velocity.height * 0.18)
+            }
+        }, cancel: {
+            artworkGestureMode = 0
+            artworkGestureEntry = nil
+            restoreArtworkDrag()
+            drag.cancelGesture(reduceMotion: reduceMotion)
+        }, tap: { _ in })
+        .accessibilityElement()
+        .accessibilityLabel("Album artwork")
+        .accessibilityIdentifier("nowPlayingArtwork")
+        .accessibilityAction(named: "Next track") { player.skipNext() }
+        .accessibilityAction(named: "Previous track") { player.skipToPreviousItem() }
+    }
+
+    private func canSwipeArtwork(_ direction: Int) -> Bool {
+        guard let entry = direction > 0 ? nextEntry(player.state) : previousEntry(player.state) else { return false }
+        return entry.id != player.state.currentEntry?.id
+    }
+
+    private func restoreArtworkDrag() {
+        withAnimation(reduceMotion ? nil : .easeOut(duration: 0.28)) { artworkDrag = 0 }
+    }
+
     /// Pull the artwork down to close the player.
     private var pullGesture: some Gesture {
         DragGesture(minimumDistance: 8, coordinateSpace: .global)
@@ -140,7 +194,6 @@ struct NowPlayingView: View {
 
     private var menu: some View {
         let song = player.state.currentSong
-        let hidden = song.map { mixes.hidden.contains($0.id) } ?? false
         return Menu {
             Section("Track") {
                 Button { router.songForDetails = song } label: { Label("Music information", systemImage: "info.circle") }
@@ -155,11 +208,7 @@ struct NowPlayingView: View {
                     Label(player.state.abLoop?.enabled == true ? "Bookmarks & A–B loop (on)" : "Bookmarks & A–B loop", systemImage: "bookmark.square")
                 }
                 Button { if let song { router.songsForPlaylist = [song] } } label: { Label("Add to playlist", systemImage: "text.badge.plus") }
-                if let song {
-                    Button { mixes.setHidden(song.id, !hidden) } label: {
-                        Label(hidden ? "Show in Smart Playlists again" : "Hide from Smart Playlists", systemImage: hidden ? "eye" : "eye.slash")
-                    }
-                }
+
             }
             Section("Playback") {
                 Button { showsLyrics = true } label: { Label("Lyrics", systemImage: "quote.bubble") }
@@ -274,7 +323,7 @@ struct NowPlayingView: View {
     }
 
     private func backdrop(_ song: Song?) -> some View {
-        ReferencePlayerBackdrop(song: song)
+        ReferencePlayerBackdrop(song: song, artworkDrag: $artworkDrag)
     }
 
 }

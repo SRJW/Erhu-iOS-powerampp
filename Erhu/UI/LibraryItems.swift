@@ -10,8 +10,6 @@ struct SongActions {
     var viewDetails: ((Song) -> Void)?
     var editTags: ((Song) -> Void)?
     var fixTags: ((Song) -> Void)?
-    /// Smart playlist pages only: hide the song from (or return it to) the smart mixes.
-    var hideFromMixes: ((Song) -> Void)?
     /// Playlist pages only.
     var removeFromPlaylist: ((Song) -> Void)?
     var deleteFromDevice: ((Song) -> Void)?
@@ -46,9 +44,7 @@ struct SongActionItems: View {
         if let delete = actions.deleteFromDevice {
             Button(role: .destructive) { delete(song) } label: { Label("Delete from device", systemImage: "trash") }
         }
-        if let hide = actions.hideFromMixes {
-            Button(role: .destructive) { hide(song) } label: { Label("Hide from Smart Playlists", systemImage: "eye.slash") }
-        }
+
     }
 }
 

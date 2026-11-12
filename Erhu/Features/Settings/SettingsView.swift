@@ -418,10 +418,11 @@ private struct AboutSettingsView: View {
         SettingsPage {
             SettingsGroup("amp") {
                 HStack(spacing: Spacing.lg) {
-                    Image("ErhuLogo")
+                    Image("AmpLogo")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 56, height: 56)
+                        .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
                         .accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: Spacing.xs) {
                         Text("amp").font(.title3.weight(.semibold))
@@ -431,6 +432,9 @@ private struct AboutSettingsView: View {
                 }.padding(Spacing.lg).frame(maxWidth: .infinity, alignment: .leading)
                 LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–").padding(Spacing.lg)
                 LabeledContent("Build", value: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–").padding(Spacing.lg)
+                LabeledContent("Release", value: Bundle.main.infoDictionary?["ErhuReleaseTag"] as? String ?? "Development").padding(Spacing.lg)
+                Text("amp plays your local music with full-screen artwork, playlists, synced lyrics, an equalizer, Transition Studio and Home Screen widgets.")
+                    .font(.footnote).foregroundStyle(.secondary).padding([.horizontal, .bottom], Spacing.lg)
             }
             PlayerWidgetStatusSettings()
             SettingsGroup("Privacy") {
@@ -451,17 +455,16 @@ private struct AboutSettingsView: View {
                     SettingsActionLabel(title: "Source code on GitHub", icon: "chevron.left.forwardslash.chevron.right", accessory: "arrow.up.right")
                 }
             }
-            #if !ERHU_APP_STORE
-            // External donation links are fine for sideloaded builds. An App Store build must
-            // hide this (guideline 3.1.1) and offer an In-App Purchase tip jar instead.
-            SettingsGroup("Support") {
-                Link(destination: URL(string: "https://ko-fi.com/erhu")!) {
-                    SettingsActionLabel(title: "Support erhu on Ko-fi", icon: "cup.and.saucer.fill", accessory: "arrow.up.right")
+            SettingsGroup("amp project") {
+                Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases")!) {
+                    SettingsActionLabel(title: "Download amp releases", icon: "shippingbox", accessory: "arrow.up.right")
                 }
-                Text("amp is free. If you'd like to help get it onto the App Store, you can buy me a coffee.")
-                    .font(.footnote).foregroundStyle(.secondary).padding([.horizontal, .bottom], Spacing.lg)
+                Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/issues")!) {
+                    SettingsActionLabel(title: "Report an amp issue", icon: "bubble.left", accessory: "arrow.up.right")
+                }
+                Text("amp is maintained in SRJW/Erhu-iOS-powerampp. Based on Erhu for iOS by Mohammed Azeemulla Khan, with original Android contributions by Lochan Thakke and Kshitij Kekunnaya. Original licences and image credits remain applicable.")
+                    .font(.footnote).foregroundStyle(.secondary).padding(Spacing.lg)
             }
-            #endif
             SettingsGroup("Updates") { ReleaseCheckView() }
         }
         .navigationTitle("About amp")

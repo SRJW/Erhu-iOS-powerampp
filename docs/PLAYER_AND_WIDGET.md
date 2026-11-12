@@ -136,3 +136,21 @@ request cannot display a late result for a skipped track. Rapid selections prese
 visual pair and replace one pending destination, so images do not snap halfway through a slide
 or accumulate in an unbounded animation queue. Closing the player releases departing layers.
 The fast export checks the production queue/geometry, including reversal and rapid skipping.
+
+## Blended, interactive covers and amp navigation
+
+Cover transitions now last 0.62 s with a true dissolve of both cover images and both artwork-colour
+gradients. Drag the upper cover left/right to preview the adjacent track and its colour. Release
+a deliberate swipe to change tracks; a short drag returns to the current cover. Gesture velocity
+allows an intentional flick, queue boundaries resist dragging, and vertical pulls still close
+the player. Neighbour covers are decoded asynchronously and the release continues from the
+finger's progress rather than restarting the animation.
+
+Smart Playlists, their Home banner, navigation page, hide/show actions and automatic rebuilds
+have been removed. User-created playlists remain. The legacy playback-source case is retained
+only so existing saved queues can still be restored; it opens Home instead of a removed page.
+Radio generation remains on demand, using the shared track-analysis engine.
+
+About amp uses the amp icon, installed release/build, current repository/Releases/issue links and
+amp's feature information, while retaining original attribution. The unrelated Erhu donation
+section is removed.

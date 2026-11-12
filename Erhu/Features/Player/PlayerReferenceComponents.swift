@@ -4,11 +4,13 @@ import AVFoundation
 
 struct PlayerFullBleedBackground<Artwork: View>: View {
     let dominant: Color
+    var secondaryDominant: Color? = nil
+    var blend = 0.0
     @ViewBuilder var artwork: () -> Artwork
 
-    private var muted: UIColor {
+    private func muted(_ color: Color) -> UIColor {
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
-        guard UIColor(dominant).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) else {
+        guard UIColor(color).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) else {
             return UIColor(red: 0.50, green: 0.31, blue: 0.29, alpha: 1)
         }
         let mutedHue = hue < 0.12 ? hue * 0.5 : hue
@@ -17,11 +19,17 @@ struct PlayerFullBleedBackground<Artwork: View>: View {
     }
     var body: some View {
         GeometryReader { geometry in
-            let base = Color(uiColor: muted)
+            let base = Color(uiColor: muted(dominant))
             ZStack(alignment: .top) {
                 LinearGradient(colors: [base, base, base.opacity(0.18)],
                                startPoint: .top, endPoint: .bottom)
                     .background(Color(red: 0.10, green: 0.045, blue: 0.035))
+                if let secondaryDominant {
+                    let next = Color(uiColor: muted(secondaryDominant))
+                    LinearGradient(colors: [next, next, next.opacity(0.18)], startPoint: .top, endPoint: .bottom)
+                        .background(Color(red: 0.10, green: 0.045, blue: 0.035))
+                        .opacity(blend)
+                }
                 artwork()
                     .frame(width: geometry.size.width, height: geometry.size.height * 0.55)
                     .clipped()

@@ -18,7 +18,7 @@ Esta rama, **`without-animated-art`**, publica la versión con carátulas estát
 ## Funciones
 
 - Biblioteca de canciones, álbumes, artistas, favoritos y playlists, con pestañas reordenables.
-- Reproductor con portada de borde a borde, fondo basado en sus colores, degradados suaves, waveform y controles de reproducción.
+- Reproductor con portada de borde a borde, mezcla de colores entre canciones, cambios de pista deslizando la portada, waveform y controles de reproducción.
 - Cola, reproducción aleatoria, repetición, búsqueda dentro de la pista, marcadores y bucles A–B.
 - Letras sincronizadas, archivos LRC y búsqueda de letras en línea.
 - Ecualizador, visualizador y Transition Studio para configurar transiciones entre canciones.
@@ -28,6 +28,8 @@ Esta rama, **`without-animated-art`**, publica la versión con carátulas estát
 - Comprobación de actualizaciones desde las publicaciones de este repositorio.
 
 MP3, AAC, ALAC, FLAC, WAV, AIFF, CAF y Ogg Vorbis/Opus, con contenedores compatibles como M4A, M4B y MP4. No reproduce archivos protegidos mediante DRM.
+
+Smart Playlists se ha retirado. Las playlists creadas por el usuario se conservan.
 
 ## Eliminar canciones del teléfono
 

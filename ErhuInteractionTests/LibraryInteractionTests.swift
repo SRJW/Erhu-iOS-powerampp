@@ -249,38 +249,7 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [hidden], timeout: 3), .completed)
     }
 
-    @MainActor func testCarouselWrapKeepsExactlyThreeDotsAndOneHighlight() {
-        let app = launch("carousel")
-        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "smartPlaylistDot-0").firstMatch.waitForExistence(timeout: 10))
-        func swipe(left: Bool) {
-            // Swipe across the banner, not a small nested Play button with an inherited ID.
-            let start = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.85 : 0.15, dy: 0.20))
-            let end = app.coordinate(withNormalizedOffset: CGVector(dx: left ? 0.15 : 0.85, dy: 0.20))
-            start.press(forDuration: 0.05, thenDragTo: end)
-        }
-        func check() {
-            let dots = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "smartPlaylistDot-"))
-            XCTAssertEqual(dots.count, 3)
-            let selected = (0..<dots.count).filter { (dots.element(boundBy: $0).value as? String) == "Current" }
-            XCTAssertEqual(selected.count, 1)
-        }
-        func currentPage() -> Int? {
-            (0..<3).first {
-                let dot = app.descendants(matching: .any).matching(identifier: "smartPlaylistDot-\($0)").firstMatch
-                return (dot.value as? String) == "Current"
-            }
-        }
-        check()
-        let initial = currentPage()
-        swipe(left: true); check()
-        XCTAssertNotEqual(currentPage(), initial)
-        for _ in 0..<2 { swipe(left: true); check() }
-        XCTAssertEqual(currentPage(), initial, "Swiping past the last playlist returns the one selected dot to the start")
-        for _ in 0..<3 { swipe(left: false); check() }
-        XCTAssertEqual(currentPage(), initial)
-    }
 
-    #if ERHU_ANIMATED_ART
     @MainActor func testAnimatedCoverSearchStaysInTheTopNavigationDrawer() {
         let app = launch("animated-covers")
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 10))
@@ -307,6 +276,34 @@ final class LibraryInteractionTests: XCTestCase {
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [compact], timeout: 3), .completed,
                        "Chrome fraction after list scrolling: \(fraction.label)")
+    }
+
+    @MainActor func testCoverSwipesChangeTracksAndVerticalPullClosesPlayer() {
+        let app = launch("player")
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 20))
+        mini.tap()
+        let cover = app.otherElements["nowPlayingArtwork"]
+        XCTAssertTrue(cover.waitForExistence(timeout: 10))
+        func swipe(from: CGFloat, to: CGFloat) {
+            cover.coordinate(withNormalizedOffset: CGVector(dx: from, dy: 0.5))
+                .press(forDuration: 0.05, thenDragTo: cover.coordinate(withNormalizedOffset: CGVector(dx: to, dy: 0.5)))
+        }
+        swipe(from: 0.8, to: 0.2)
+        let next = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            app.staticTexts["nowPlayingTitle"].label == "Second player track"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [next], timeout: 10), .completed)
+        swipe(from: 0.2, to: 0.8)
+        let previous = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            app.staticTexts["nowPlayingTitle"].label == "Player presentation regression"
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [previous], timeout: 10), .completed)
+        cover.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))
+            .press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85)))
+        let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !cover.exists }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: 10), .completed)
+        XCTAssertTrue(mini.isHittable)
     }
 
     @MainActor func testTransitionRowHasOnlyItsTitleSummaryAndSwitch() {

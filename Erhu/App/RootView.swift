@@ -156,7 +156,6 @@ struct RootView: View {
             case .album(let id): AlbumDetailView(albumId: id)
             case .artist(let id): ArtistDetailView(artistId: id)
             case .playlist(let id): PlaylistDetailView(playlistId: id)
-            case .smartPlaylist(let key): SmartPlaylistDetailView(mixKey: key)
             case .radio(let seed): RadioStationView(seed: seed)
             case .shelf(let shelf): LibraryShelfView(shelf: shelf)
             case .allSongs: AllSongsView()

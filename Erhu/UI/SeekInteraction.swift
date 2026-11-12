@@ -23,6 +23,7 @@ struct PanInteraction: UIViewRepresentable {
         let startLocation: CGPoint
         let location: CGPoint
         let translation: CGSize
+        let velocity: CGSize
     }
     let canBegin: (CGPoint, CGSize) -> Bool
     let change: (Sample) -> Void
@@ -39,7 +40,8 @@ struct PanInteraction: UIViewRepresentable {
             let point = pan.location(in: pan.view)
             let delta = pan.translation(in: pan.view)
             return Sample(startLocation: CGPoint(x: point.x - delta.x, y: point.y - delta.y), location: point,
-                          translation: CGSize(width: delta.x, height: delta.y))
+                          translation: CGSize(width: delta.x, height: delta.y),
+                          velocity: CGSize(width: pan.velocity(in: pan.view).x, height: pan.velocity(in: pan.view).y))
         }
 
         func gestureRecognizerShouldBegin(_ recognizer: UIGestureRecognizer) -> Bool {

@@ -38,13 +38,6 @@ struct InteractionProbeView: View {
                 #if ERHU_ANIMATED_ART
                 NavigationStack { AnimatedArtworkView() }
                 #endif
-            } else if page == "carousel" {
-                ScrollView {
-                    SmartMixHero(mixes: [MixKind.chill, .lateNight, .throwbacks].map {
-                        SmartMix(kind: $0, songIds: [1], description: "One playlist")
-                    }, needsMoreListening: false, isActive: false, onOpen: { _ in }, onPlay: { _ in })
-                        .accessibilityIdentifier("smartPlaylistCarousel")
-                }
             } else {
                 NavigationStack { TransitionStudioRow(collection: .album(42)) }
             }

@@ -79,12 +79,6 @@ final class LibraryActions {
         player.playCollection(songs, startIndex: Int.random(in: 0..<songs.count), origin: origin, slots: slots, source: source)
     }
 
-    /// Plays the smart mix [key] in mix order, as its page's Play button does.
-    func playMix(_ key: String) {
-        guard let mix = mixes.mix(key) else { return }
-        playInOrder(songs(mix.songIds), source: .smartPlaylist(key))
-    }
-
     func playNext(_ song: Song, source: PlaybackSource? = nil) {
         player.playNext(song, source: source)
         show("\"\(song.title)\" will play next")

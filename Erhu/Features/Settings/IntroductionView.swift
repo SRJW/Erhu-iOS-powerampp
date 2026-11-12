@@ -37,7 +37,7 @@ struct IntroductionView: View {
                         ScrollView {
                             VStack(spacing: Spacing.xl) {
                                 if page.id == "welcome" {
-                                    Image("ErhuLogo").resizable().scaledToFit().frame(width: 120, height: 120).accessibilityHidden(true)
+                                    Image("AmpLogo").resizable().scaledToFit().frame(width: 120, height: 120).accessibilityHidden(true)
                                 } else {
                                     Image(systemName: page.symbol).font(.system(size: 72)).foregroundStyle(palette.primary).padding(.vertical, 30).accessibilityHidden(true)
                                 }

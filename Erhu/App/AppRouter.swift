@@ -82,7 +82,6 @@ enum Route: Hashable {
     case album(Int64)
     case artist(Int64)
     case playlist(Int64)
-    case smartPlaylist(String)
     case radio(RadioSeed)
     case shelf(LibraryShelf)
     case allSongs
@@ -136,7 +135,7 @@ final class AppRouter {
         case .album(let id): section = .albums; destination = .album(id)
         case .playlist(let id): section = .library; destination = .playlist(id)
         case .artist(let id): section = .library; destination = .artist(id)
-        case .smartPlaylist(let key): section = .home; destination = .smartPlaylist(key)
+        case .smartPlaylist: section = .home; destination = nil
         case .library: section = .library; destination = .allSongs
         case .favorites: section = .library; destination = .shelf(.favorites)
         case .vybe: section = vybeEnabled ? .vybe : .home; destination = nil
@@ -147,7 +146,7 @@ final class AppRouter {
         showsNowPlaying = false
     }
 
-    func songActions(_ actions: LibraryActions, hideFromMixes: ((Song) -> Void)? = nil, source: PlaybackSource? = nil) -> SongActions {
+    func songActions(_ actions: LibraryActions, source: PlaybackSource? = nil) -> SongActions {
         SongActions(
             toggleFavorite: { actions.toggleFavorite($0) },
             playNext: { actions.playNext($0, source: source) },
@@ -160,7 +159,6 @@ final class AppRouter {
             viewDetails: { [weak self] song in self?.songForDetails = song },
             editTags: { [weak self] song in self?.songForTagEdit = song },
             fixTags: { song in actions.fixTags([song]) },
-            hideFromMixes: hideFromMixes,
             deleteFromDevice: { actions.songPendingDeletion = $0 }
         )
     }
