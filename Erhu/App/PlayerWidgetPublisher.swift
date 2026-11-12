@@ -15,6 +15,7 @@ enum PlayerWidgetPublisher {
         let image = song.flatMap { ArtworkLoader.shared.cachedImage(for: $0.url, maxPixels: 600, fallbackSizes: [1200, 400, 300, 150, 120, 80]) }
         var value = PlayerWidgetSnapshot(title: song?.title ?? "amp", artist: song?.artist ?? "Open your music",
                                         isPlaying: playing, songID: song?.id, hasArtwork: image != nil)
+        value.album = song?.album
         value.artworkFileName = previous?.artworkFileName
         guard forceReload || value != previous || image !== previousImage else { return }
         do {

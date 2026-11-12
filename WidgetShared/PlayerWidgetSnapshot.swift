@@ -7,6 +7,7 @@ struct PlayerWidgetSnapshot: Codable, Equatable {
     var songID: Int64?
     var hasArtwork: Bool
     var artworkFileName: String? = nil
+    var album: String? = nil
     static let empty = Self(title: "amp", artist: "Open your music", isPlaying: false, songID: nil, hasArtwork: false)
     static let kind = "ErhuPlayerWidget"
     static var folder: URL? {

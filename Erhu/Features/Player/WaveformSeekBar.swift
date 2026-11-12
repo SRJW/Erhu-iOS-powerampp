@@ -55,6 +55,17 @@ struct WaveformSeekBar: View {
                 }
             }
         }
+        .overlay {
+            if referenceStyle {
+                Rectangle().fill(.white.opacity(0.7))
+                    .frame(width: 1)
+                    .opacity(previewMs == nil ? 0 : 1)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.16)
+                        .delay(previewMs == nil ? 0 : 0.30), value: previewMs != nil)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         .frame(height: barHeight)
         .accessibilityElement()
         .accessibilityLabel("Seek")

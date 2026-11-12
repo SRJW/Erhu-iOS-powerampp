@@ -29,6 +29,12 @@ struct ErhuApp: App {
                     playerLaunch.request(request)
                     openRequestedPlayer()
                 }
+                .onReceive(NotificationCenter.default.publisher(for: PlayerLaunchSignal.notification)) { _ in
+                    if PlayerLaunchSignal.consume() {
+                        playerLaunch.request()
+                        openRequestedPlayer()
+                    }
+                }
                 .onContinueUserActivity("com.erhu.nowplaying") { _ in
                     playerLaunch.request()
                     openRequestedPlayer()
@@ -47,6 +53,7 @@ struct ErhuApp: App {
                 .onChange(of: scenePhase, initial: true) { _, phase in
                     if phase == .inactive || phase == .background { playerLaunch.resume() }
                     if phase == .active {
+                        if PlayerLaunchSignal.consume() { playerLaunch.request() }
                         openRequestedPlayer()
                         services.player.refreshSystemPlayback()
                     }
@@ -58,6 +65,8 @@ struct ErhuApp: App {
         guard let request = playerLaunch.take(restored: services.player.restoreFinished) else { return }
         switch request.command {
         case .toggle: services.player.togglePlayPause()
+        case .play: services.player.play()
+        case .pause: services.player.pause()
         case .next: services.player.skipNext()
         case .previous: services.player.skipPrevious()
         case nil: break

@@ -29,9 +29,10 @@ let old = try JSONDecoder().decode(PlayerWidgetSnapshot.self, from: legacy)
 check(old.title == "Track" && old.artworkFileName == nil, "Existing widget snapshots still load")
 var updated = old
 updated.artworkFileName = "cover-track.jpg"
+updated.album = "Recent album"
 let roundTrip = try JSONDecoder().decode(PlayerWidgetSnapshot.self, from: JSONEncoder().encode(updated))
 check(roundTrip == updated, "Current-track snapshot round trip retains its artwork identity")
-for command in [PlayerLaunchRequest.Command.toggle, .previous, .next] {
+for command in [PlayerLaunchRequest.Command.toggle, .play, .pause, .previous, .next] {
     check(PlayerLaunchRequest(url: PlayerLaunchRequest.url(command: command))?.command == command, "Widget links match the app's command routing")
 }
 check(PlayerLaunchRequest(url: URL(string: "erhu://player")!) != nil, "Legacy player links remain valid")
@@ -46,4 +47,11 @@ check(gate.take(restored: true)?.command == .next, "Scene activation does not ov
 check(gate.take(restored: true) == nil, "Execute each widget command exactly once")
 gate.resume() // Control Center uses inactive -> active, without entering background.
 check(gate.take(restored: true) == PlayerLaunchRequest(), "Resume opens the restored player after Control Center")
+let suite = "amp-control-test-\(UUID().uuidString)"
+let defaults = UserDefaults(suiteName: suite)!
+defer { defaults.removePersistentDomain(forName: suite) }
+check(!PlayerLaunchSignal.consume(defaults: defaults), "No launch request initially")
+PlayerLaunchSignal.request(defaults: defaults)
+check(PlayerLaunchSignal.consume(defaults: defaults), "Foreground control requests the player without an App Group")
+check(!PlayerLaunchSignal.consume(defaults: defaults), "Consume a control launch request only once")
 print("Passed \(checks) widget storage and playback launch checks")

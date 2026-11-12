@@ -334,7 +334,7 @@ private struct ProgressSection<Controls: View>: View {
                         .opacity(previewMs == nil ? 1 : 0)
                         .allowsHitTesting(previewMs == nil)
                         .accessibilityHidden(previewMs != nil)
-                        .animation(reduceMotion ? nil : .easeInOut(duration: previewMs == nil ? 0.18 : 0.10), value: previewMs != nil)
+                        .animation(reduceMotion ? nil : .easeInOut(duration: previewMs == nil ? 0.42 : 0.30), value: previewMs != nil)
                 }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: entryID)
                 .overlay(alignment: .bottom) {

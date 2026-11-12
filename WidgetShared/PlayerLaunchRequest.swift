@@ -1,7 +1,7 @@
 import Foundation
 
 struct PlayerLaunchRequest: Equatable {
-    enum Command: String { case toggle, previous, next }
+    enum Command: String { case toggle, play, pause, previous, next }
     var command: Command?
 
     init(command: Command? = nil) { self.command = command }
@@ -34,6 +34,21 @@ struct PlayerLaunchGate {
     mutating func take(restored: Bool) -> PlayerLaunchRequest? {
         guard restored else { return nil }
         defer { pending = nil }
+        return pending
+    }
+}
+
+/// A foreground App Intent can request the player without relying on a widget App Group.
+enum PlayerLaunchSignal {
+    static let notification = Notification.Name("amp.open-player-requested")
+    private static let key = "amp.control.open-player"
+    static func request(defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: key)
+        NotificationCenter.default.post(name: notification, object: nil)
+    }
+    static func consume(defaults: UserDefaults = .standard) -> Bool {
+        let pending = defaults.bool(forKey: key)
+        defaults.removeObject(forKey: key)
         return pending
     }
 }

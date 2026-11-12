@@ -18,7 +18,7 @@ retain their full-track timeline. No file bitrate, timestamp or battery values a
 ## Waveform touch behaviour
 
 The waveform follows the supplied Poweramp recording: time is fixed at the centre and bars
-translate continuously underneath, without drawing a vertical centre line. Each bar represents a stable slice of the audio rather than
+translate continuously underneath, with a vertical centre line visible only during scrubbing. Each bar represents a stable slice of the audio rather than
 a screen column whose height is replaced on each tick. Playback renders at up to 30 fps, stopping
 the animation clock while paused, scrubbing or moving the player.
 
@@ -62,8 +62,11 @@ app notification handler.
 The IPA embeds `ErhuPlayerWidget.appex`, a WidgetKit extension for small and medium Home Screen
 widgets. It shows the current title, artist, artwork and play/pause state. The app publishes
 snapshots only when these values change, rather than reloading the widget on every clock tick.
-The medium widget's previous/play/next links **open the app** to control its actual player. They do not
-pretend to control AVAudioEngine inside the widget extension. The small widget opens the player with a single tap.
+The medium widget uses a dark card with a large cover on the left, current/recently played metadata
+on the right and a single Play/Pause pill. A paused snapshot shows the recently played album when
+available; a playing snapshot shows the current track. Play and Pause are explicit commands, so
+a stale Play label cannot accidentally pause playback. These links **open the app** to control its
+actual player. The small widget opens the player with a single tap.
 
 Both targets declare the App Group `group.com.erhu.player`. A signing/provisioning setup must
 allow that group for both the app and the widget extension. If your signing tool rewrites bundle
@@ -106,3 +109,16 @@ remote control events and handles inactive → active and user-activity restorat
 controls whether a tap on its media panel launches the signed installation; verify that behaviour
 on device with the installed signature. The external content identifier is a track ID, not an
 invented launch-URL API.
+
+## Control Center and scrub feedback
+
+On iOS 18+, the widget extension also offers **Open amp** in the Control Center control gallery.
+Add that control explicitly; it is separate from iOS's native Now Playing media panel. Its
+foreground App Intent is included in both the app and extension, signals the player to open,
+and waits for queue restoration. Opening this control does not require the widget App Group.
+The native panel's own app-launch behaviour is still controlled by iOS and has not been verified
+on the user's signed installation; adding this control does not claim to override that panel.
+
+The transport buttons fade out over 0.30 s during scrubbing and return over 0.42 s. The thin
+centre line fades in after the buttons have disappeared and fades out on release or
+cancellation. It is hidden during ordinary playback. Reduced Motion skips these animations.

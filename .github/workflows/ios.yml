@@ -94,6 +94,8 @@ jobs:
         mkdir -p dist/Payload
         cp -R build/DerivedData/Build/Products/Release-iphoneos/Erhu.app dist/Payload/
         test -d dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex
+        test -d dist/Payload/Erhu.app/Metadata.appintents
+        test -d dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex/Metadata.appintents
         test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' dist/Payload/Erhu.app/Info.plist)" = "amp"
         test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' dist/Payload/Erhu.app/PlugIns/ErhuPlayerWidget.appex/Info.plist)" = "amp Player"
         (cd dist && zip -qry amp.ipa Payload)
