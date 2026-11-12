@@ -112,6 +112,7 @@ final class CarouselMotionTests: XCTestCase {
         let motion = CarouselMotion()
         try await hosted(MotionProbe(motion: motion)) {
             var completed = 0
+            let slideDeadline = ContinuousClock.now.advanced(by: .milliseconds(430))
             motion.settle(center: 1, stacked: false, reduceMotion: false) { completed += 1 }
             let middle = try await firstIntermediateFrame {
                 motion.meter.sample(fallback: CarouselPresentationSample(focus: motion.focus, stack: motion.stack)).focus
@@ -119,16 +120,17 @@ final class CarouselMotionTests: XCTestCase {
             XCTAssertGreaterThan(middle, 0)
             XCTAssertLessThan(middle, 1)
             XCTAssertTrue(motion.moving)
-            try await Task.sleep(for: .milliseconds(350))
+            try await Task.sleep(until: slideDeadline, clock: .continuous)
             XCTAssertFalse(motion.moving)
             XCTAssertEqual(completed, 1)
+            let layoutDeadline = ContinuousClock.now.advanced(by: .milliseconds(450))
             motion.settle(center: 1, stacked: true, reduceMotion: false)
             let layout = try await firstIntermediateFrame {
                 motion.meter.sample(fallback: CarouselPresentationSample(focus: motion.focus, stack: motion.stack)).stack
             }
             XCTAssertGreaterThan(layout, 0)
             XCTAssertLessThan(layout, 1)
-            try await Task.sleep(for: .milliseconds(350))
+            try await Task.sleep(until: layoutDeadline, clock: .continuous)
             XCTAssertFalse(motion.moving)
             XCTAssertEqual(motion.stack, 1)
         }
@@ -218,7 +220,7 @@ final class CarouselMotionTests: XCTestCase {
         window.layoutIfNeeded()
         controller.view.layoutIfNeeded()
         // Layout alone does not guarantee that SwiftUI has drawn its initial
-        // frame. Warm the hosted renderer before measuring an 80 ms sample;
+        // frame. Warm the hosted renderer before measuring a short animation;
         // otherwise a cold simulator can still report the unpainted origin.
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
