@@ -138,8 +138,12 @@ struct NowPlayingView: View {
     }
 
     private func canSwipeArtwork(_ direction: Int) -> Bool {
-        guard let entry = direction > 0 ? nextEntry(player.state) : previousEntry(player.state) else { return false }
-        return entry.id != player.state.currentEntry?.id
+        let state = player.state
+        let index = direction > 0
+            ? PlayOrder.next(after: state.currentIndex, count: state.queue.count, repeatMode: state.repeatMode, userSkip: true)
+            : PlayOrder.previous(before: state.currentIndex, count: state.queue.count, repeatMode: state.repeatMode)
+        guard let index, state.queue.indices.contains(index) else { return false }
+        return state.queue[index].id != state.currentEntry?.id
     }
 
     private func restoreArtworkDrag() {
