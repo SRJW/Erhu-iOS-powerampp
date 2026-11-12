@@ -17,7 +17,7 @@ name: amp cover interaction verification
 permissions:
   contents: read
 concurrency:
-  group: amp-cover-verification-${{ github.workflow }}-${{ github.ref }}
+  group: amp-cover-verification-${{ github.workflow }}-${{ github.ref }}-${{ inputs.runner || 'macos-15-intel' }}
   cancel-in-progress: true
 jobs:
   tests:
