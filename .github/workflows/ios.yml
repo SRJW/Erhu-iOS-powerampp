@@ -14,7 +14,6 @@ jobs:
     steps:
     - uses: actions/checkout@v5
     - name: Reserve the release tag at the source revision
-      if: github.ref == 'refs/heads/without-animated-art'
       env:
         RELEASE_TAG: v0.1.0-amp.${{ github.run_number }}
       run: |
@@ -139,7 +138,7 @@ jobs:
     permissions:
       contents: read
   publish:
-    if: github.ref == 'refs/heads/without-animated-art'
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.cover-checks.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.cover-checks.result == 'skipped')) }}
     needs:
     - build
     - cover-checks
@@ -157,11 +156,33 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-      run: "set -euo pipefail\ntag=\"v0.1.0-amp.${GITHUB_RUN_NUMBER}\"\nif ! gh release view \"$tag\" >/dev/null 2>&1; then\n  gh release create \"$tag\" dist/amp.ipa\
-        \ --verify-tag --prerelease \\\n    --title \"amp \u2014 static artwork build ${GITHUB_RUN_NUMBER}\" \\\n    --notes \"Unsigned development IPA with static\
-        \ artwork. File deletion boundary checks, scrolling waveform checks, widget storage/launch checks, cover transition checks and Release compilation passed.\
-        \ Native cover swipe, dismissal and rendered blend verification passed. Full simulator validation remains available separately. Source: ${GITHUB_SHA}.\"\n\
-        fi\nprintf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\\n' \"$GH_REPO\" \"$tag\" >> \"$GITHUB_STEP_SUMMARY\"\n"
+        NATIVE_CHECKS_RESULT: ${{ needs.cover-checks.result }}
+      run: |
+        set -euo pipefail
+        tag="v0.1.0-amp.${GITHUB_RUN_NUMBER}"
+        notes=$(mktemp)
+        cat > "$notes" <<EOF
+        Static-artwork development IPA. Re-sign before installing, preserving a matching authorized App Group for the app and widget.
+        File deletion, scrolling waveform, widget storage/launch, cover-transition checks, Release compilation and embedded signing-request verification passed.
+        Source: ${GITHUB_SHA}.
+        EOF
+        if [ "$NATIVE_CHECKS_RESULT" = "success" ]; then
+          echo 'Native player interaction and rendered blend verification passed.' >> "$notes"
+        else
+          echo 'Manual device build: native simulator checks were not selected in this workflow. Full simulator validation is available separately.' >> "$notes"
+        fi
+        if ! gh release view "$tag" >/dev/null 2>&1; then
+          gh release create "$tag" --verify-tag --draft --prerelease \
+            --title "amp — static artwork build ${GITHUB_RUN_NUMBER}" --notes-file "$notes"
+        fi
+        count=$(gh release view "$tag" --json assets --jq '[.assets[] | select(.name == "amp.ipa")] | length')
+        if [ "$count" = "0" ]; then
+          gh release upload "$tag" dist/amp.ipa
+        fi
+        if [ "$(gh release view "$tag" --json isDraft --jq '.isDraft')" = "true" ]; then
+          gh release edit "$tag" --draft=false
+        fi
+        printf '[Download amp.ipa directly](https://github.com/%s/releases/download/%s/amp.ipa)\n' "$GH_REPO" "$tag" >> "$GITHUB_STEP_SUMMARY"
 'on':
   push:
     branches:
