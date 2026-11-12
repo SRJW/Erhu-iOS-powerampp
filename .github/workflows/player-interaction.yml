@@ -14,7 +14,7 @@ concurrency:
 jobs:
   tests:
     if: github.event.deleted != true
-    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
+    runs-on: macos-15-intel
     timeout-minutes: 40
     env:
       HOMEBREW_NO_AUTO_UPDATE: '1'
