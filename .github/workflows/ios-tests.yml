@@ -27,7 +27,7 @@ jobs:
       id: setup
       with:
         cache-suffix: simulator-debug
-    - name: Create and start the interaction simulator
+    - name: Create the interaction simulator
       run: |
         newest_ios_runtime() {
           xcrun simctl list runtimes available -j | jq -r '
@@ -49,8 +49,6 @@ jobs:
         echo "SIMULATOR_RUNTIME=$RUNTIME" >> "$GITHUB_ENV"
         echo "SIMULATOR_DEVICE_TYPE=$DEVICE_TYPE" >> "$GITHUB_ENV"
         defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
-        # Boot while build-for-testing compiles, rather than blocking compilation on boot.
-        xcrun simctl boot "$DEVICE"
     - name: Compile app and both test bundles once
       id: simulator-build
       run: |
@@ -72,8 +70,12 @@ jobs:
           build/DerivedData/SDKStatCaches.noindex
           build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
-    - name: Wait for the interaction simulator
-      run: xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
+    - name: Start a fresh simulator immediately before UI testing
+      run: |
+        xcrun simctl shutdown "$UI_SIMULATOR_ID" >/dev/null 2>&1 || true
+        xcrun simctl boot "$UI_SIMULATOR_ID"
+        open -a Simulator --args -CurrentDeviceUDID "$UI_SIMULATOR_ID"
+        xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
     - name: Run all native interaction checks
       run: |
         if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
