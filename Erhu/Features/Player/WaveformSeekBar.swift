@@ -128,9 +128,6 @@ struct WaveformSeekBar: View {
                 context.fill(Path(roundedRect: rect, cornerRadius: barWidth / 2), with: .color(color))
             }
         }
-        if referenceStyle {
-            context.fill(Path(CGRect(x: size.width / 2 - 0.5, y: 0, width: 1, height: size.height)), with: .color(.white.opacity(0.75)))
-        }
         for ms in bookmarks {
             let x = timelineX(CGFloat(WaveformTimeline.fractionOf(ms, durationMs)))
             context.fill(Path(ellipseIn: CGRect(x: x - 2.5, y: size.height - 5, width: 5, height: 5)), with: .color(palette.onSurface))

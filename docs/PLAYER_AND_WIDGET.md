@@ -18,7 +18,7 @@ retain their full-track timeline. No file bitrate, timestamp or battery values a
 ## Waveform touch behaviour
 
 The waveform follows the supplied Poweramp recording: time is fixed at the centre and bars
-translate continuously underneath. Each bar represents a stable slice of the audio rather than
+translate continuously underneath, without drawing a vertical centre line. Each bar represents a stable slice of the audio rather than
 a screen column whose height is replaced on each tick. Playback renders at up to 30 fps, stopping
 the animation clock while paused, scrubbing or moving the player.
 
