@@ -200,6 +200,17 @@ final class CarouselMotionTests: XCTestCase {
         window.makeKeyAndVisible()
         defer { window.isHidden = true; window.rootViewController = nil; previous?.makeKeyAndVisible() }
         window.layoutIfNeeded()
+        controller.view.layoutIfNeeded()
+        // Layout alone does not guarantee that SwiftUI has drawn its initial
+        // frame. Warm the hosted renderer before measuring an 80 ms sample;
+        // otherwise a cold simulator can still report the unpainted origin.
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        var drewInitialFrame = false
+        _ = UIGraphicsImageRenderer(size: window.bounds.size, format: format).image { _ in
+            drewInitialFrame = controller.view.drawHierarchy(in: controller.view.bounds, afterScreenUpdates: true)
+        }
+        XCTAssertTrue(drewInitialFrame, "The hosted renderer must draw before timing its animation")
         try await Task.sleep(for: .milliseconds(100))
         try await operation()
     }
