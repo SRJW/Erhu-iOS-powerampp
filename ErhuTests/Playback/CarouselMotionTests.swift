@@ -113,19 +113,21 @@ final class CarouselMotionTests: XCTestCase {
         try await hosted(MotionProbe(motion: motion)) {
             var completed = 0
             motion.settle(center: 1, stacked: false, reduceMotion: false) { completed += 1 }
-            try await Task.sleep(for: .milliseconds(80))
-            let middle = motion.meter.sample(fallback: CarouselPresentationSample(focus: motion.focus, stack: motion.stack))
-            XCTAssertGreaterThan(middle.focus, 0)
-            XCTAssertLessThan(middle.focus, 1)
+            let middle = try await firstIntermediateFrame {
+                motion.meter.sample(fallback: CarouselPresentationSample(focus: motion.focus, stack: motion.stack)).focus
+            }
+            XCTAssertGreaterThan(middle, 0)
+            XCTAssertLessThan(middle, 1)
             XCTAssertTrue(motion.moving)
             try await Task.sleep(for: .milliseconds(350))
             XCTAssertFalse(motion.moving)
             XCTAssertEqual(completed, 1)
             motion.settle(center: 1, stacked: true, reduceMotion: false)
-            try await Task.sleep(for: .milliseconds(80))
-            let layout = motion.meter.sample(fallback: CarouselPresentationSample(focus: motion.focus, stack: motion.stack))
-            XCTAssertGreaterThan(layout.stack, 0)
-            XCTAssertLessThan(layout.stack, 1)
+            let layout = try await firstIntermediateFrame {
+                motion.meter.sample(fallback: CarouselPresentationSample(focus: motion.focus, stack: motion.stack)).stack
+            }
+            XCTAssertGreaterThan(layout, 0)
+            XCTAssertLessThan(layout, 1)
             try await Task.sleep(for: .milliseconds(350))
             XCTAssertFalse(motion.moving)
             XCTAssertEqual(motion.stack, 1)
@@ -184,6 +186,20 @@ final class CarouselMotionTests: XCTestCase {
                 Color.blue.frame(width: 280, height: 350)
             }
         }
+    }
+
+    @MainActor
+    private func firstIntermediateFrame(_ sample: () -> CGFloat) async throws -> CGFloat {
+        // Observe a rendered frame, rather than assuming a display tick happens
+        // exactly 80 ms after the model update. The bound is shorter than either
+        // animation, and a direct jump to its endpoint still fails the assertions.
+        let deadline = ContinuousClock.now.advanced(by: .milliseconds(220))
+        var value = sample()
+        while (value <= 0 || value >= 1), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(16))
+            value = sample()
+        }
+        return value
     }
 
     @MainActor
