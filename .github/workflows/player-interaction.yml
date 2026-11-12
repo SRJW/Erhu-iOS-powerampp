@@ -82,14 +82,16 @@ jobs:
         fi
     - name: Start a fresh simulator immediately before UI testing
       if: ${{ inputs.scope != 'animation-only' }}
+      timeout-minutes: 7
       run: |
         # A long compile can leave a previously booted simulator's AX service stale.
         xcrun simctl shutdown "$UI_SIMULATOR_ID" >/dev/null 2>&1 || true
         xcrun simctl boot "$UI_SIMULATOR_ID"
         open -a Simulator --args -CurrentDeviceUDID "$UI_SIMULATOR_ID"
-        xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
+        python3 Tools/wait_for_simulator.py build/ui-boot.log
     - name: Run real cover swipe and dismissal checks
       if: ${{ inputs.scope != 'animation-only' }}
+      timeout-minutes: 15
       run: |
         run_interactions() {
           xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
@@ -112,7 +114,7 @@ jobs:
             echo "UI_SIMULATOR_ID=$UI_SIMULATOR_ID" >> "$GITHUB_ENV"
             xcrun simctl boot "$UI_SIMULATOR_ID"
             open -a Simulator --args -CurrentDeviceUDID "$UI_SIMULATOR_ID"
-            xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot-retry.log 2>&1
+            python3 Tools/wait_for_simulator.py build/ui-boot-retry.log
             if ! run_interactions; then
               python3 Tools/report_native_interactions.py build/ui-tests.log
               exit 1
@@ -137,11 +139,12 @@ jobs:
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Verify the actual rendered colour blend
       if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
+      timeout-minutes: 15
       run: |
         if [ "${{ inputs.scope }}" = "animation-only" ]; then
           echo "Animation-only run: UI gesture tests are intentionally not selected."
           xcrun simctl boot "$UI_SIMULATOR_ID"
-          xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/unit-boot.log 2>&1
+          python3 Tools/wait_for_simulator.py build/unit-boot.log
         fi
         if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
