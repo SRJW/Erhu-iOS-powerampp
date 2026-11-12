@@ -40,6 +40,26 @@ final class PlayerRenderingTests: XCTestCase {
 
     }
 
+    @MainActor
+    func testCoverBackgroundActuallyBlendsBothArtworkColours() throws {
+        var previousRed = 2.0
+        var previousBlue = -1.0
+        var endpoints: [[Double]] = []
+        for amount in [0.0, 0.25, 0.5, 0.75, 1.0] {
+            let view = PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: amount) { Color.clear }
+            let rendered = try pixels(view, size: CGSize(width: 200, height: 500))
+            let sample = rendered.color(x: 100, y: 300)
+            XCTAssertLessThanOrEqual(sample[0], previousRed + 0.02, "The old cover colour must fade: \(sample)")
+            XCTAssertGreaterThanOrEqual(sample[2], previousBlue - 0.02, "The next cover colour must enter: \(sample)")
+            previousRed = sample[0]; previousBlue = sample[2]
+            endpoints.append(sample)
+        }
+        XCTAssertGreaterThan(endpoints[0][0] - endpoints[4][0], 0.10)
+        XCTAssertGreaterThan(endpoints[4][2] - endpoints[0][2], 0.10)
+        XCTAssertGreaterThan(endpoints[2][0], 0.10, "Midpoint must retain the outgoing colour")
+        XCTAssertGreaterThan(endpoints[2][2], 0.10, "Midpoint must retain the incoming colour")
+    }
+
     func testPlayerDominantColourIsNotReplacedByTheDarkLyricsSurface() {
         let original: UInt32 = 0xFF56_887F
         let pixels = Array(repeating: original, count: 900) + Array(repeating: UInt32(0xFFFF_FFFF), count: 124)

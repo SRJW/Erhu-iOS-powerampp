@@ -1,0 +1,113 @@
+name: amp cover interaction verification
+'on':
+  push:
+    branches:
+    - without-animated-art
+    paths:
+    - .github/workflows/player-interaction.yml
+  workflow_dispatch: {}
+permissions:
+  contents: read
+concurrency:
+  group: amp-cover-verification-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  tests:
+    if: github.event.deleted != true
+    runs-on: ${{ inputs.runner || 'macos-15-intel' }}
+    timeout-minutes: 40
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: '1'
+    steps:
+    - uses: actions/checkout@v5
+    - uses: ./.github/actions/setup-ios
+      id: setup
+      with:
+        cache-suffix: simulator-debug
+    - name: Create and start the interaction simulator
+      run: |
+        newest_ios_runtime() {
+          xcrun simctl list runtimes available -j | jq -r '
+            [.runtimes[] | select(.platform == "iOS")]
+            | sort_by(.version | split(".") | map(tonumber)) | last | .identifier // empty'
+        }
+        RUNTIME=$(newest_ios_runtime)
+        if [ -z "$RUNTIME" ]; then
+          echo "No iOS simulator runtime installed for this Xcode; downloading one."
+          xcodebuild -downloadPlatform iOS
+          RUNTIME=$(newest_ios_runtime)
+        fi
+        DEVICE_TYPE=$(xcrun simctl list runtimes available -j | jq -r --arg runtime "$RUNTIME" '
+          .runtimes[] | select(.identifier == $runtime)
+          | [.supportedDeviceTypes[] | select(.productFamily == "iPhone")] | last | .identifier')
+        echo "Creating $DEVICE_TYPE on $RUNTIME"
+        DEVICE=$(xcrun simctl create "CI UI iPhone" "$DEVICE_TYPE" "$RUNTIME")
+        echo "UI_SIMULATOR_ID=$DEVICE" >> "$GITHUB_ENV"
+        echo "SIMULATOR_RUNTIME=$RUNTIME" >> "$GITHUB_ENV"
+        echo "SIMULATOR_DEVICE_TYPE=$DEVICE_TYPE" >> "$GITHUB_ENV"
+        defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
+        # Boot while build-for-testing compiles, rather than blocking compilation on boot.
+        xcrun simctl boot "$DEVICE"
+    - name: Compile app and both test bundles once
+      id: simulator-build
+      run: |
+        if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
+          -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
+          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
+          > build/simulator-build.log 2>&1; then
+          python3 Tools/report_native_interactions.py build/simulator-build.log
+          tail -n 80 build/simulator-build.log
+          exit 1
+        fi
+    - name: Save compiled products and module caches
+      if: steps.setup.outputs.build-cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          build/DerivedData/Build
+          build/DerivedData/ModuleCache.noindex
+          build/DerivedData/SDKStatCaches.noindex
+        key: ${{ steps.setup.outputs.build-cache-key }}
+    - name: Wait for the interaction simulator
+      run: xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
+    - name: Run real cover swipe and dismissal checks
+      run: |
+        if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
+          -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
+          -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/InteractionResults.xcresult \
+          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer -parallel-testing-enabled NO \
+          > build/ui-tests.log 2>&1; then
+          python3 Tools/report_native_interactions.py build/ui-tests.log
+          exit 1
+        fi
+    - name: Report native interaction status
+      if: always()
+      run: python3 Tools/report_native_interactions.py build/ui-tests.log
+    - name: Verify the actual rendered colour blend
+      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
+      run: |
+        if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
+          -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
+          -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/BlendResults.xcresult \
+          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests/PlayerRenderingTests/testCoverBackgroundActuallyBlendsBothArtworkColours \
+          -parallel-testing-enabled NO > build/blend-tests.log 2>&1; then
+          python3 Tools/report_native_interactions.py build/blend-tests.log
+          tail -n 35 build/blend-tests.log
+          exit 1
+        fi
+    - name: Upload test results and performance measurements
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: amp-cover-interaction-results
+        path: |-
+          build/InteractionResults.xcresult
+          build/BlendResults.xcresult
+          build/ui-tests.log
+          build/blend-tests.log
+          build/simulator-build.log
+        if-no-files-found: warn
+    - name: Shut down simulators
+      if: always()
+      run: |
+        xcrun simctl shutdown "$UI_SIMULATOR_ID" >/dev/null 2>&1 || true
