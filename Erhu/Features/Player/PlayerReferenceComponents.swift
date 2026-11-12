@@ -31,9 +31,18 @@ struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
                     .background(Color(red: 0.10, green: 0.045, blue: 0.035))
                 if let secondaryDominant {
                     let next = Color(uiColor: muted(secondaryDominant))
+                    let phase = min(max(blend, 0), 1)
+                    // Introduce the next palette near the cover first, then let
+                    // it flow into the controls. Both ends settle to one colour.
+                    let spread = 0.22 * sin(.pi * phase)
                     LinearGradient(colors: [next, next, next.opacity(0.18)], startPoint: .top, endPoint: .bottom)
                         .background(Color(red: 0.10, green: 0.045, blue: 0.035))
-                        .opacity(blend)
+                        .mask {
+                            LinearGradient(colors: [
+                                .white.opacity(min(phase + spread, 1)),
+                                .white.opacity(max(phase - spread, 0))
+                            ], startPoint: .top, endPoint: .bottom)
+                        }
                 }
                 artwork()
                     .frame(width: geometry.size.width, height: geometry.size.height * 0.55)

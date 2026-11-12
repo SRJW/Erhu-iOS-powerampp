@@ -62,6 +62,25 @@ final class PlayerRenderingTests: XCTestCase {
     }
 
     @MainActor
+    func testPaletteDissolveFormsAGradientFromTheCoverIntoTheControls() throws {
+        let size = CGSize(width: 200, height: 500)
+        let start = try pixels(PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: 0) { Color.clear }, size: size)
+        let middle = try pixels(PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: 0.5) { Color.clear }, size: size)
+        let end = try pixels(PlayerFullBleedBackground(dominant: .red, secondaryDominant: .blue, blend: 1) { Color.clear }, size: size)
+        // Normalize against each position's endpoints to exclude the permanent
+        // darkening towards the home indicator from the transition measurement.
+        func arrival(at y: Int) -> Double {
+            let first = start.color(x: 100, y: y)[2]
+            let last = end.color(x: 100, y: y)[2]
+            return (middle.color(x: 100, y: y)[2] - first) / (last - first)
+        }
+        XCTAssertGreaterThan(arrival(at: 150), arrival(at: 400) + 0.10,
+                             "The new palette must blend gradually from the cover into the lower background")
+        XCTAssertGreaterThan(arrival(at: 400), 0.1)
+        XCTAssertLessThan(arrival(at: 150), 0.9)
+    }
+
+    @MainActor
     func testCoverLayersDissolveAtTheSameVisibleProgress() throws {
         let size = CGSize(width: 200, height: 200)
         let mixed = ZStack {
@@ -73,6 +92,13 @@ final class PlayerRenderingTests: XCTestCase {
         let centre = image.color(x: 100, y: 100)
         XCTAssertGreaterThan(centre[0], 0.20, "The departing cover must remain visible: \(centre)")
         XCTAssertGreaterThan(centre[2], 0.40, "The arriving cover must blend over it: \(centre)")
+        XCTAssertEqual(centre[0] + centre[2], 1, accuracy: 0.05,
+                       "The dissolve must not expose the black backdrop and lose brightness")
+        for x in [5, 195] {
+            let edge = image.color(x: x, y: 100)
+            XCTAssertEqual(edge[0] + edge[2], 1, accuracy: 0.05,
+                           "The outgoing cover must keep both edges covered during the dissolve")
+        }
     }
 
     @MainActor

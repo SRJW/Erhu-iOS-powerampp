@@ -37,12 +37,20 @@ for progress in [0.0, 0.1, 0.5, 0.9, 1.0] {
     }
 }
 check(ArtworkSlidePose.sample(progress: 0, direction: 1, incoming: false).x == 0, "Departing cover starts at the visible position")
-check(ArtworkSlidePose.sample(progress: 0, direction: 1, incoming: true).x == 0.85, "New cover approaches from the right")
+let arrivalOffset = ArtworkSlidePose.sample(progress: 0, direction: 1, incoming: true).x
+check(arrivalOffset > 0 && arrivalOffset <= 0.03, "New cover approaches subtly from the right")
 check(ArtworkSlidePose.sample(progress: 1, direction: 1, incoming: true).x == 0, "Incoming cover settles without a leftover offset")
 check(ArtworkSlidePose.sample(progress: 5, direction: -1, incoming: true).x == 0, "Clamp completion overshoot")
 let halfIn = ArtworkSlidePose.sample(progress: 0.5, direction: 1, incoming: true)
 let halfOut = ArtworkSlidePose.sample(progress: 0.5, direction: 1, incoming: false)
-check(halfIn.opacity == 0.5 && halfOut.opacity == 0.5, "Mid-transition visibly blends both source covers")
+check(halfIn.opacity == 0.5 && halfOut.opacity == 1, "Mid-transition blends over a fully covered base")
+for progress in [0.0, 0.25, 0.5, 0.75, 1.0] {
+    let incoming = ArtworkSlidePose.sample(progress: progress, direction: 1, incoming: true)
+    let outgoing = ArtworkSlidePose.sample(progress: progress, direction: 1, incoming: false)
+    let coverage = incoming.opacity + outgoing.opacity * (1 - incoming.opacity)
+    check(abs(coverage - 1) < 0.00001, "The dissolve must never expose the backdrop")
+    check(outgoing.x == 0 && outgoing.scale == 1, "The base stays stationary and fills the cover bounds")
+}
 check(ArtworkSwipeIntent.direction(translation: -100, velocity: 0, width: 400, canNext: true, canPrevious: false) == 1, "Left swipe advances")
 check(ArtworkSwipeIntent.direction(translation: 100, velocity: 0, width: 400, canNext: false, canPrevious: true) == -1, "Right swipe goes back")
 check(ArtworkSwipeIntent.direction(translation: -10, velocity: -900, width: 400, canNext: true, canPrevious: true) == 0, "Tiny finger motion does not skip")

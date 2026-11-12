@@ -41,9 +41,11 @@ struct ArtworkSlidePose {
     static func sample(progress: Double, direction: Int, incoming: Bool) -> Self {
         let p = min(max(progress, 0), 1)
         let sign = direction < 0 ? -1.0 : 1.0
+        // Keep a fully covered base throughout the dissolve. Fading both layers
+        // exposes the backdrop and creates a visible dip in brightness halfway.
         return incoming
-            ? Self(x: sign * (1 - p) * 0.85, scale: 0.98 + 0.02 * p, opacity: p)
-            : Self(x: -sign * p * 0.85, scale: 1 - 0.02 * p, opacity: 1 - p)
+            ? Self(x: sign * (1 - p) * 0.025, scale: 0.99 + 0.01 * p, opacity: p)
+            : Self(x: 0, scale: 1, opacity: 1)
     }
 }
 

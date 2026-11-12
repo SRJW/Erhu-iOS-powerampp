@@ -20,7 +20,7 @@ struct ReferencePlayerBackdrop: View {
     @State private var previousCover: ArtworkSlideFrame?
     @State private var neighbourOwner: String?
     @State private var lastDragDirection = 1
-    private static let duration = 0.62
+    private static let duration = 0.78
 
     private var dragDirection: Int { artworkDrag == 0 ? lastDragDirection : (artworkDrag < 0 ? 1 : -1) }
     private var dragProgress: Double { min(abs(artworkDrag), 1) }
@@ -112,7 +112,7 @@ struct ReferencePlayerBackdrop: View {
         settlement?.cancel()
         let duration = reduceMotion ? 0.18 : max(0.18, Self.duration * (1 - start))
         let animation: Animation = reduceMotion ? .easeInOut(duration: duration)
-            : .timingCurve(0.33, 0, 0.2, 1, duration: duration)
+            : .timingCurve(0.42, 0, 0.58, 1, duration: duration)
         var instant = Transaction(animation: nil); instant.disablesAnimations = true
         withTransaction(instant) { progress = start; artworkDrag = 0 }
         settlement = Task { @MainActor in
