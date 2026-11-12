@@ -96,7 +96,12 @@ struct PlayerOutputBadge: View {
             let bits = player.engine.outputPCMBitDepth
             VStack(spacing: 2) {
                 if bluetooth { BluetoothGlyph().stroke(.white, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)).frame(width: screenWidth * PlayerReferenceStyle.outputSymbolFraction * 0.65, height: screenWidth * PlayerReferenceStyle.outputSymbolFraction) }
-                else { Image(systemName: symbol).font(.system(size: screenWidth * PlayerReferenceStyle.outputSymbolFraction, weight: .heavy)) }
+                else {
+                    Image(systemName: symbol).resizable().scaledToFit()
+                        .font(.system(size: screenWidth * PlayerReferenceStyle.outputSymbolFraction, weight: .heavy))
+                        .frame(width: screenWidth * PlayerReferenceStyle.outputSymbolFraction,
+                               height: screenWidth * PlayerReferenceStyle.outputSymbolFraction)
+                }
                 Text(bits.map { "\($0)/\(rate)" } ?? rate).font(.custom("AvenirNext-Bold", size: screenWidth * PlayerReferenceStyle.outputTextFraction))
             }
             .foregroundStyle(.white).frame(width: 64, height: 44)

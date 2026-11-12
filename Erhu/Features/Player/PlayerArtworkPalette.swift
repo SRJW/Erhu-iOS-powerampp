@@ -26,11 +26,16 @@ enum PlayerReferenceStyle {
     static let minimumDominantShare = 0.35
     static let saturationCancellationRatio = 0.55
     static let textMinimumScale: CGFloat = 0.80
+    static let referenceScreenWidth: CGFloat = 390
     static let secondarySymbolFraction: CGFloat = 0.05
-    static let heartSymbolFraction: CGFloat = 0.048
+    static let heartReferenceSize: CGFloat = 25
+    static let heartIconScale: CGFloat = 0.75
+    static let heartSymbolFraction = heartReferenceSize * heartIconScale / referenceScreenWidth
     static let inactiveSymbolOpacity = 0.50
     static let outputSymbolFraction: CGFloat = 0.025
-    static let outputTextFraction: CGFloat = 8.8 / 390.0
+    static let outputReferenceTextSize: CGFloat = 10
+    static let outputTextScale: CGFloat = 0.88
+    static let outputTextFraction = outputReferenceTextSize * outputTextScale / referenceScreenWidth
     static let transportIconFraction: CGFloat = 0.43
     static let innerTransportIconScale: CGFloat = 0.80
 }

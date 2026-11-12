@@ -354,7 +354,9 @@ private struct ToggleIcon: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage).font(.system(size: symbolSize, weight: .heavy))
+            Image(systemName: systemImage).resizable().scaledToFit()
+                .font(.system(size: symbolSize, weight: .heavy))
+                .frame(width: symbolSize, height: symbolSize)
                 .foregroundStyle(.white.opacity(active ? 1 : PlayerReferenceStyle.inactiveSymbolOpacity))
                 .frame(width: 48, height: 48)
                 .background(Circle().fill(palette.primary.opacity(active ? 0.18 : 0)))
