@@ -149,6 +149,8 @@ jobs:
     - Tools/Tests/ScrollingWaveform/**
     - Tools/Tests/PlayerWidget/**
     - Tools/Tests/ArtworkSlide/**
+    - ErhuInteractionTests/**
+    - ErhuTests/Playback/PlayerRenderingTests.swift
   workflow_dispatch:
     inputs:
       runner:

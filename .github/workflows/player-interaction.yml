@@ -44,26 +44,17 @@ jobs:
         defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool NO
         # Boot while build-for-testing compiles, rather than blocking compilation on boot.
         xcrun simctl boot "$DEVICE"
-    - name: Compile app and both test bundles once
+    - name: Compile app and the native interaction bundle
       id: simulator-build
       run: |
         if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
-          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
+          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests \
           > build/simulator-build.log 2>&1; then
           python3 Tools/report_native_interactions.py build/simulator-build.log
           tail -n 80 build/simulator-build.log
           exit 1
         fi
-    - name: Save compiled products and module caches
-      if: ${{ always() && steps.setup.outcome == 'success' && steps.setup.outputs.build-cache-hit != 'true' }}
-      uses: actions/cache/save@v4
-      with:
-        path: |
-          build/DerivedData/Build
-          build/DerivedData/ModuleCache.noindex
-          build/DerivedData/SDKStatCaches.noindex
-        key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Wait for the interaction simulator
       run: xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1
     - name: Run real cover swipe and dismissal checks
@@ -79,8 +70,28 @@ jobs:
     - name: Report native interaction status
       if: always()
       run: python3 Tools/report_native_interactions.py build/ui-tests.log
-    - name: Verify the actual rendered colour blend
+    - name: Compile the rendering test bundle
+      id: render-build
       if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
+      run: |
+        if ! xcodebuild build-for-testing -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
+          -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
+          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO -only-testing:ErhuTests \
+          > build/render-build.log 2>&1; then
+          python3 Tools/report_native_interactions.py build/render-build.log
+          exit 1
+        fi
+    - name: Save compiled products and module caches
+      if: ${{ always() && steps.setup.outcome == 'success' && steps.setup.outputs.build-cache-hit != 'true' }}
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          build/DerivedData/Build
+          build/DerivedData/ModuleCache.noindex
+          build/DerivedData/SDKStatCaches.noindex
+        key: ${{ steps.setup.outputs.build-cache-key }}
+    - name: Verify the actual rendered colour blend
+      if: ${{ !cancelled() && steps.render-build.outcome == 'success' }}
       run: |
         if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
@@ -105,6 +116,7 @@ jobs:
           build/ui-tests.log
           build/blend-tests.log
           build/simulator-build.log
+          build/render-build.log
         if-no-files-found: warn
     - name: Shut down simulators
       if: always()

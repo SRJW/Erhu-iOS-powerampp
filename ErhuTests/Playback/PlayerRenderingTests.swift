@@ -129,7 +129,7 @@ final class PlayerRenderingTests: XCTestCase {
         XCTAssertGreaterThan(middle[0], last[0] + 0.02, "The actual animation must retain red at an intermediate frame: \(first), \(middle), \(last)")
     }
 
-    @MainActor @Observable private final class CoverRenderSelection {
+    @MainActor @Observable final class CoverRenderSelection {
         var song: Song
         init(song: Song) { self.song = song }
     }
