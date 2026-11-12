@@ -21,8 +21,10 @@ struct ArtworkSlideLayer<Content: View>: View, Animatable {
         content()
             .frame(width: size.width, height: size.height).clipped()
             .scaleEffect(CGFloat(1.10 * pose.scale))
+            // Move the overscanned image before clipping, so its edge never sweeps
+            // across the dissolve as a visible vertical seam.
+            .offset(x: size.width * CGFloat(pose.x))
             .frame(width: size.width, height: size.height).clipped()
             .opacity(pose.opacity)
-            .offset(x: size.width * CGFloat(pose.x))
     }
 }

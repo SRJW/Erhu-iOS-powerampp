@@ -20,7 +20,7 @@ struct ReferencePlayerBackdrop: View {
     @State private var previousCover: ArtworkSlideFrame?
     @State private var neighbourOwner: String?
     @State private var lastDragDirection = 1
-    private static let duration = 0.78
+    private static let duration = 0.88
 
     private var dragDirection: Int { artworkDrag == 0 ? lastDragDirection : (artworkDrag < 0 ? 1 : -1) }
     private var dragProgress: Double { min(abs(artworkDrag), 1) }
@@ -31,18 +31,18 @@ struct ReferencePlayerBackdrop: View {
     private var base: Color { (frames.outgoing ?? frames.current)?.dominant ?? Color(argb: LyricsPalette.fallback.artworkDominant) }
     private var target: Color? { frames.moving ? frames.current?.dominant : neighbour?.dominant }
     private var blend: Double { frames.moving ? progress : dragProgress }
+    private var outgoingCover: ArtworkSlideFrame? { frames.moving ? frames.outgoing : frames.current }
+    private var incomingCover: ArtworkSlideFrame? { frames.moving ? frames.current : neighbour }
+    private var visibleDirection: Int { frames.moving ? frames.direction : dragDirection }
 
     var body: some View {
         PlayerFullBleedBackground(dominant: base, secondaryDominant: target, blend: blend) {
             GeometryReader { geometry in
                 ZStack {
-                    if frames.moving {
-                        if let outgoing = frames.outgoing { cover(outgoing, size: geometry.size, incoming: false, amount: progress, direction: frames.direction) }
-                        if let current = frames.current { cover(current, size: geometry.size, incoming: true, amount: progress, direction: frames.direction) }
-                    } else {
-                        if let current = frames.current { cover(current, size: geometry.size, incoming: false, amount: dragProgress, direction: dragDirection) }
-                        if let neighbour { cover(neighbour, size: geometry.size, incoming: true, amount: dragProgress, direction: dragDirection) }
-                    }
+                    // Keep the same two layer slots when a drag becomes a committed skip.
+                    // Replacing conditional branches here discards their presentation state.
+                    if let outgoingCover { cover(outgoingCover, size: geometry.size, incoming: false, amount: blend, direction: visibleDirection) }
+                    if let incomingCover { cover(incomingCover, size: geometry.size, incoming: true, amount: blend, direction: visibleDirection) }
                 }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
             }
         }
@@ -55,7 +55,12 @@ struct ReferencePlayerBackdrop: View {
         .task(id: "\(player.state.currentEntry?.id.uuidString ?? "")|\(song?.url.path ?? "")|\(artworkRevision)") {
             let direction = player.artworkDirection
             guard let url = song?.url else { settle(); frames = ArtworkSlideQueue(); return }
-            guard let frame = await load(url), !Task.isCancelled else { return }
+            let expectedID = "\(url.path)|\(ArtworkLoader.shared.revision(for: url.path))"
+            // A swipe already displays this decoded cover. Reuse it without waiting for
+            // another asynchronous load while the released finger's frame is held still.
+            let cached = [nextCover, previousCover].compactMap { $0 }.first { $0.id == expectedID }
+            let loaded = cached == nil ? await load(url) : cached
+            guard let frame = loaded, !Task.isCancelled else { return }
             let start = direction == dragDirection ? dragProgress : 0
             let began = frames.offer(frame, direction: direction)
             if began { animatePair(from: start) }
@@ -112,6 +117,7 @@ struct ReferencePlayerBackdrop: View {
         settlement?.cancel()
         let duration = reduceMotion ? 0.18 : max(0.18, Self.duration * (1 - start))
         let animation: Animation = reduceMotion ? .easeInOut(duration: duration)
+            : start > 0 ? .timingCurve(0.16, 1, 0.3, 1, duration: duration)
             : .timingCurve(0.42, 0, 0.58, 1, duration: duration)
         var instant = Transaction(animation: nil); instant.disablesAnimations = true
         withTransaction(instant) { progress = start; artworkDrag = 0 }

@@ -99,6 +99,17 @@ final class PlayerRenderingTests: XCTestCase {
             XCTAssertEqual(edge[0] + edge[2], 1, accuracy: 0.05,
                            "The outgoing cover must keep both edges covered during the dissolve")
         }
+        for direction in [-1, 1] {
+            let layers = ZStack {
+                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: false, reduceMotion: false, size: size) { Color.red }
+                ArtworkSlideLayer(progress: 0.5, direction: direction, incoming: true, reduceMotion: false, size: size) { Color.blue }
+            }
+            let rendered = try pixels(layers, size: size)
+            for x in [0, 199] {
+                XCTAssertEqual(rendered.color(x: x, y: 100)[2], rendered.color(x: 100, y: 100)[2], accuracy: 0.05,
+                               "The incoming image must cover both edges during next and previous fades")
+            }
+        }
     }
 
     @MainActor
@@ -150,11 +161,12 @@ final class PlayerRenderingTests: XCTestCase {
         selection.song = songs[1]
         try await Task.sleep(for: .milliseconds(220))
         let middle = try sample()
-        try await Task.sleep(for: .milliseconds(700))
+        try await Task.sleep(for: .milliseconds(850))
         let last = try sample()
         XCTAssertGreaterThan(first[0] - last[0], 0.10, "Red cover must change to blue: \(first) -> \(last)")
         XCTAssertGreaterThan(middle[2], first[2] + 0.02, "The actual animation must show blue before settling: \(first), \(middle), \(last)")
         XCTAssertGreaterThan(middle[0], last[0] + 0.02, "The actual animation must retain red at an intermediate frame: \(first), \(middle), \(last)")
+
     }
 
     @MainActor @Observable final class CoverRenderSelection {
