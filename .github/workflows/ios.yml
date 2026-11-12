@@ -94,6 +94,7 @@ jobs:
           build/DerivedData/Build
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
+          build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Upload device build diagnostics
       if: always()
@@ -145,6 +146,7 @@ jobs:
     - .github/workflows/ios.yml
     - .github/actions/setup-ios/**
     - Tools/report_app_size.py
+    - Tools/restore_source_timestamps.py
     - Tools/Tests/LibraryFileDeletion/**
     - Tools/Tests/ScrollingWaveform/**
     - Tools/Tests/PlayerWidget/**

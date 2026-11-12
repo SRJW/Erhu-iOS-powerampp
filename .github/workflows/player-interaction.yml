@@ -20,6 +20,10 @@ jobs:
       id: setup
       with:
         cache-suffix: simulator-debug
+    - name: Parse native gesture and rendering test sources
+      run: |
+        xcrun swiftc -frontend -parse ErhuInteractionTests/LibraryInteractionTests.swift
+        xcrun swiftc -frontend -parse ErhuTests/Playback/PlayerRenderingTests.swift
     - name: Create and start the interaction simulator
       run: |
         newest_ios_runtime() {
@@ -89,6 +93,7 @@ jobs:
           build/DerivedData/Build
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
+          build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Verify the actual rendered colour blend
       if: ${{ !cancelled() && steps.render-build.outcome == 'success' }}

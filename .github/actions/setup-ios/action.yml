@@ -69,6 +69,11 @@ runs:
           build/DerivedData/Build
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
-        key: ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-${{ hashFiles('Erhu/**', 'ErhuPlayerWidget/**', 'WidgetShared/**', 'Support/**') }}-${{ inputs.cache-suffix == 'simulator-debug' && hashFiles('ErhuTests/**', 'ErhuInteractionTests/**') || 'app-only' }}
+          build/source-file-stamps.json
+        key: ios-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-${{ hashFiles('Erhu/**', 'ErhuPlayerWidget/**', 'WidgetShared/**', 'Support/**') }}-${{ inputs.cache-suffix == 'simulator-debug' && hashFiles('ErhuTests/**', 'ErhuInteractionTests/**') || 'app-only' }}
         restore-keys: |
+          ios-build-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-
           ios-build-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.key }}-${{ inputs.cache-suffix }}-${{ hashFiles('project.yml') }}-
+    - name: Restore timestamps of content-identical build inputs
+      shell: bash
+      run: python3 Tools/restore_source_timestamps.py

@@ -70,6 +70,7 @@ jobs:
           build/DerivedData/Build
           build/DerivedData/ModuleCache.noindex
           build/DerivedData/SDKStatCaches.noindex
+          build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Wait for the interaction simulator
       run: xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b > build/ui-boot.log 2>&1

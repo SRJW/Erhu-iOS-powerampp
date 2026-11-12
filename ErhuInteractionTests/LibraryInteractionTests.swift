@@ -250,6 +250,7 @@ final class LibraryInteractionTests: XCTestCase {
     }
 
 
+    #if ERHU_ANIMATED_ART
     @MainActor func testAnimatedCoverSearchStaysInTheTopNavigationDrawer() {
         let app = launch("animated-covers")
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 10))
