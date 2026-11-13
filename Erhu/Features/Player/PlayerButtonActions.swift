@@ -17,6 +17,7 @@ enum PlayerButtonConstants {
     static let optionsSymbol = "ellipsis"
     static let iconSize: CGFloat = 25
     static let touchSize: CGFloat = 48
+    static let seekTouchSize: CGFloat = 44
     static let iconOpacity = 0.5
     static let disabledOpacity = 0.3
     static let centerFraction: CGFloat = 0.5

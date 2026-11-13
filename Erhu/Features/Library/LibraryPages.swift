@@ -298,7 +298,14 @@ struct AllSongsView: View {
     }
 
     private var actionSongs: [Song] {
-        if selecting { return library.songs.filter { selected.contains($0.id) } }
+        if selecting {
+            var selection = request
+            selection.songs = library.songs.filter { selected.contains($0.id) }
+            selection.query = ""
+            selection.genre = ""
+            selection.mood = .all
+            return selection.results()
+        }
         return results ?? []
     }
 

@@ -323,7 +323,8 @@ struct NowPlayingView: View {
                 .background(.black, in: Circle())
         }
         .buttonStyle(PlayerTransportPressStyle(reduceMotion: reduceMotion))
-        .frame(minWidth: 44, minHeight: 44)
+        .frame(minWidth: symbol.hasPrefix("seek.") ? PlayerButtonConstants.seekTouchSize : PlayerButtonConstants.touchSize,
+               minHeight: PlayerButtonConstants.touchSize)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
     }
