@@ -3,8 +3,8 @@ import UIKit
 import AVFoundation
 
 struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
-    let dominant: Color
-    var secondaryDominant: Color? = nil
+    let palette: PlayerArtworkPalette
+    var secondaryPalette: PlayerArtworkPalette? = nil
     var blend = 0.0
     @ViewBuilder var artwork: () -> Artwork
 
@@ -13,30 +13,22 @@ struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
         set { blend = newValue }
     }
 
-    private func muted(_ color: Color) -> UIColor {
-        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
-        guard UIColor(color).getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) else {
-            return UIColor(red: 0.50, green: 0.31, blue: 0.29, alpha: 1)
-        }
-        let mutedHue = hue < 0.12 ? hue * 0.5 : hue
-        return UIColor(hue: mutedHue, saturation: saturation * 0.55,
-                       brightness: min(max(brightness, 0.50), 0.58), alpha: 1)
+    private func background(_ palette: PlayerArtworkPalette) -> some View {
+        LinearGradient(stops: [
+            .init(color: Color(argb: palette.top), location: 0),
+            .init(color: Color(argb: palette.top), location: PlayerReferenceStyle.coverHeightFraction),
+            .init(color: Color(argb: palette.bottom), location: 1)
+        ], startPoint: .top, endPoint: .bottom)
     }
+
     var body: some View {
         GeometryReader { geometry in
-            let base = Color(uiColor: muted(dominant))
             ZStack(alignment: .top) {
-                LinearGradient(colors: [base, base, base.opacity(0.18)],
-                               startPoint: .top, endPoint: .bottom)
-                    .background(Color(red: 0.10, green: 0.045, blue: 0.035))
-                if let secondaryDominant {
-                    let next = Color(uiColor: muted(secondaryDominant))
+                background(palette)
+                if let secondaryPalette {
                     let phase = min(max(blend, 0), 1)
-                    // Introduce the next palette near the cover first, then let
-                    // it flow into the controls. Both ends settle to one colour.
-                    let spread = 0.22 * sin(.pi * phase)
-                    LinearGradient(colors: [next, next, next.opacity(0.18)], startPoint: .top, endPoint: .bottom)
-                        .background(Color(red: 0.10, green: 0.045, blue: 0.035))
+                    let spread = PlayerReferenceStyle.paletteBlendSpread * sin(.pi * phase)
+                    background(secondaryPalette)
                         .mask {
                             LinearGradient(colors: [
                                 .white.opacity(min(phase + spread, 1)),
@@ -45,18 +37,20 @@ struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
                         }
                 }
                 artwork()
-                    .frame(width: geometry.size.width, height: geometry.size.height * 0.55)
+                    .frame(width: geometry.size.width, height: geometry.size.height * PlayerReferenceStyle.coverHeightFraction)
                     .clipped()
                     .mask {
                         LinearGradient(stops: [.init(color: .white, location: 0),
-                                               .init(color: .white, location: 0.75),
+                                               .init(color: .white, location: PlayerReferenceStyle.coverFadeStart),
                                                .init(color: .clear, location: 1)],
                                        startPoint: .top, endPoint: .bottom)
                     }
-                LinearGradient(colors: [.black.opacity(0.40), .clear], startPoint: .top, endPoint: .bottom)
-                    .frame(height: geometry.size.height * 0.12)
+                LinearGradient(colors: [.black.opacity(PlayerReferenceStyle.statusScrimOpacity), .clear],
+                               startPoint: .top, endPoint: .bottom)
+                    .frame(height: PlayerReferenceStyle.statusScrimHeight)
             }
         }
+        .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
@@ -88,6 +82,7 @@ private struct BluetoothGlyph: Shape {
     }
 }
 struct PlayerOutputBadge: View {
+    let screenWidth: CGFloat
     @Environment(PlayerController.self) private var player
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { _ in
@@ -100,9 +95,14 @@ struct PlayerOutputBadge: View {
             // about Bluetooth codec resolution or the DAC's hardware bit depth.
             let bits = player.engine.outputPCMBitDepth
             VStack(spacing: 2) {
-                if bluetooth { BluetoothGlyph().stroke(.white, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round)).frame(width: 11, height: 17) }
-                else { Image(systemName: symbol).font(.system(size: 15, weight: .bold)) }
-                Text(bits.map { "\($0)/\(rate)" } ?? rate).font(.custom("AvenirNext-Bold", size: 10))
+                if bluetooth { BluetoothGlyph().stroke(.white, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round)).frame(width: screenWidth * PlayerReferenceStyle.outputSymbolFraction * 0.65, height: screenWidth * PlayerReferenceStyle.outputSymbolFraction) }
+                else {
+                    Image(systemName: symbol).resizable().scaledToFit()
+                        .font(.system(size: screenWidth * PlayerReferenceStyle.outputSymbolFraction, weight: .heavy))
+                        .frame(width: screenWidth * PlayerReferenceStyle.outputSymbolFraction,
+                               height: screenWidth * PlayerReferenceStyle.outputSymbolFraction)
+                }
+                Text(bits.map { "\($0)/\(rate)" } ?? rate).font(.custom("AvenirNext-Bold", size: screenWidth * PlayerReferenceStyle.outputTextFraction))
             }
             .foregroundStyle(.white).frame(width: 64, height: 44)
             .accessibilityElement(children: .ignore)

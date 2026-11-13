@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// Interpolate the source blend itself, so offset, opacity and scale share one visible phase.
+/// A stationary, full-size cover. Only its opacity changes between tracks.
 struct ArtworkSlideLayer<Content: View>: View, Animatable {
     var progress: Double
     let direction: Int
     let incoming: Bool
     let reduceMotion: Bool
     let size: CGSize
+    var outgoingLuminance: Double? = nil
+    var incomingLuminance: Double? = nil
     @ViewBuilder var content: () -> Content
 
     var animatableData: Double {
@@ -14,17 +16,19 @@ struct ArtworkSlideLayer<Content: View>: View, Animatable {
         set { progress = newValue }
     }
 
+    var usesDarkStatusText: Bool {
+        let amount = min(max(progress, 0), 1)
+        let sourceLuminance = outgoingLuminance ?? 0
+        let visibleLuminance = incoming ? sourceLuminance * (1 - amount) + (incomingLuminance ?? sourceLuminance) * amount : sourceLuminance
+        return visibleLuminance > PlayerReferenceStyle.darkStatusThreshold
+    }
+
     var body: some View {
-        let pose = reduceMotion
-            ? ArtworkSlidePose(x: 0, scale: 1, opacity: incoming ? progress : 1)
-            : ArtworkSlidePose.sample(progress: progress, direction: direction, incoming: incoming)
+        let amount = min(max(progress, 0), 1)
         content()
             .frame(width: size.width, height: size.height).clipped()
-            .scaleEffect(CGFloat(1.10 * pose.scale))
-            // Move the overscanned image before clipping, so its edge never sweeps
-            // across the dissolve as a visible vertical seam.
-            .offset(x: size.width * CGFloat(pose.x))
-            .frame(width: size.width, height: size.height).clipped()
-            .opacity(pose.opacity)
+            .opacity(incoming ? amount : 1)
+            .preference(key: PlayerStatusBarPreference.self,
+                        value: usesDarkStatusText)
     }
 }
