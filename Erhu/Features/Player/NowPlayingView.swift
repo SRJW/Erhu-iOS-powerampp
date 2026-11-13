@@ -557,8 +557,7 @@ private struct ExpandedLyrics: View {
                     .accessibilityLabel("Previous")
                     .frame(maxWidth: .infinity)
                 Button { player.togglePlayPause() } label: {
-                    Image(systemName: state.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 30)).contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
-                        .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.8), value: symbol)
+                    Image(systemName: state.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 30)).contentTransition(.symbolEffect(.replace))
                         .frame(width: 56, height: 56).contentShape(Rectangle())
                 }
                 .accessibilityLabel(state.isPlaying ? "Pause" : "Play")
