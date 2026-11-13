@@ -54,7 +54,7 @@ struct AppRelease: Codable, Equatable, Sendable, Identifiable {
     }
     static func official(_ url: URL) -> Bool {
         url.scheme == "https" && url.host == "github.com"
-            && url.path.hasPrefix("/SRJW/Erhu-iOS-powerampp/releases/")
+            && url.path.hasPrefix("/SRJW/amp/releases/")
     }
 }
 
@@ -98,7 +98,7 @@ final class ReleaseChecker {
         }
         prompt = nil
     }
-    private static let prefix = "amp.releases."
+    private static let prefix = "amp.releases.SRJW.amp."
 
     init(client: any HTTPClient = URLSessionHTTPClient(cachePolicy: .reloadIgnoringLocalCacheData),
          installed: String = Bundle.main.object(forInfoDictionaryKey: "ErhuReleaseTag") as? String ?? "v1.0-beta",
@@ -131,7 +131,7 @@ final class ReleaseChecker {
         var headers = ["Accept": "application/vnd.github+json", "User-Agent": "amp-iOS", "X-GitHub-Api-Version": "2022-11-28"]
         if let etag = defaults.string(forKey: Self.prefix + "etag") { headers["If-None-Match"] = etag }
         do {
-            let (data, response) = try await client.get(URL(string: "https://api.github.com/repos/SRJW/Erhu-iOS-powerampp/releases?per_page=30")!, headers: headers)
+            let (data, response) = try await client.get(URL(string: "https://api.github.com/repos/SRJW/amp/releases?per_page=30")!, headers: headers)
             if response.statusCode == 403 || response.statusCode == 429 {
                 let retry = response.value(forHTTPHeaderField: "Retry-After").flatMap(TimeInterval.init) ?? 3600
                 cooldown = response.value(forHTTPHeaderField: "X-RateLimit-Reset").flatMap(TimeInterval.init).map(Date.init(timeIntervalSince1970:)) ?? now.addingTimeInterval(retry)

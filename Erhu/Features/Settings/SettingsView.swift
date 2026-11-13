@@ -456,7 +456,7 @@ private struct AboutSettingsView: View {
                 }
             }
             SettingsGroup("amp project") {
-                Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases")!) {
+                Link(destination: URL(string: "https://github.com/SRJW/amp/releases")!) {
                     SettingsActionLabel(title: "Download amp releases", icon: "shippingbox", accessory: "arrow.up.right")
                 }
                 Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/issues")!) {

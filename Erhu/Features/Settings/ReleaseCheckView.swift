@@ -40,7 +40,7 @@ struct ReleaseCheckView: View {
                 SettingsActionLabel(title: "Check for updates", icon: "arrow.clockwise")
             }.disabled(checker.state == .checking)
             Divider().padding(.leading, Spacing.lg)
-            Link(destination: URL(string: "https://github.com/SRJW/Erhu-iOS-powerampp/releases")!) {
+            Link(destination: URL(string: "https://github.com/SRJW/amp/releases")!) {
                 SettingsActionLabel(title: "All releases", icon: "shippingbox", accessory: "arrow.up.right")
             }
             if let checkedAt = checker.checkedAt {
