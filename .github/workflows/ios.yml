@@ -147,6 +147,8 @@ jobs:
   cover-checks:
     if: ${{ !inputs.artifact_run && github.ref == 'refs/heads/without-animated-art' && github.event.deleted != true }}
     uses: ./.github/workflows/player-interaction.yml
+    with:
+      scope: ${{ inputs.validation_scope || 'full-player' }}
     permissions:
       contents: read
   publish:
@@ -224,6 +226,13 @@ jobs:
         description: Successful iOS run ID to publish without rebuilding (empty creates a new IPA)
         type: string
         default: ''
+      validation_scope:
+        description: Full player validation or focused waveform gesture regressions
+        type: choice
+        default: full-player
+        options:
+        - full-player
+        - waveforms-only
       runner:
         description: macos-15 is Apple Silicon; choose it when ARM capacity is available.
         type: choice

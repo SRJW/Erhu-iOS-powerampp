@@ -292,13 +292,15 @@ struct NowPlayingView: View {
     }
 
     private func controls(_ state: PlaybackState, width: CGFloat) -> some View {
-        HStack(spacing: 3) {
+        let playIntent = state.isPlaying || state.status == .buffering
+        return HStack(spacing: 3) {
             transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * PlaybackPreferences.seekSize, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
             transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * PlaybackPreferences.skipSize, action: { player.skipToPreviousItem() })
-            transport(state.isPlaying ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: state.isPlaying ? "Pause" : "Play", size: width * PlaybackPreferences.playSize, action: { player.togglePlayPause() })
+            transport(playIntent ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: playIntent ? "Pause" : "Play", size: width * (playIntent ? PlaybackPreferences.playingSize : PlaybackPreferences.playSize), action: { player.togglePlayPause() })
             transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * PlaybackPreferences.skipSize, action: next)
             transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * PlaybackPreferences.seekSize, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
         }
+        .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.75), value: playIntent)
     }
 
     private func transport(_ symbol: String, identifier: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
@@ -321,10 +323,11 @@ struct NowPlayingView: View {
                 .foregroundStyle(.white)
                 .frame(width: size, height: size)
                 .background(.black, in: Circle())
+                .frame(minWidth: symbol.hasPrefix("seek.") ? PlayerButtonConstants.seekTouchSize : PlayerButtonConstants.touchSize,
+                       minHeight: PlayerButtonConstants.touchSize)
+                .contentShape(Rectangle())
         }
         .buttonStyle(PlayerTransportPressStyle(reduceMotion: reduceMotion))
-        .frame(minWidth: symbol.hasPrefix("seek.") ? PlayerButtonConstants.seekTouchSize : PlayerButtonConstants.touchSize,
-               minHeight: PlayerButtonConstants.touchSize)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
     }

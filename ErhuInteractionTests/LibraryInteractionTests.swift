@@ -155,6 +155,9 @@ final class LibraryInteractionTests: XCTestCase {
         let dragged = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in (29...31).contains(seconds()) && transport.isHittable }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [dragged], timeout: 5), .completed)
         XCTAssertEqual(transport.label, "Play", "Seeking while paused must not start playback")
+        transport.tap()
+        let resumed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in transport.label == "Pause" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [resumed], timeout: 10), .completed, "The actual play button works after a static scrub")
     }
 
     @MainActor func testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh() {
@@ -196,6 +199,9 @@ final class LibraryInteractionTests: XCTestCase {
             app.buttons["nowPlayingTitle"].label == "Second player track" && (0...2).contains(seconds())
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 10), .completed)
+        playPause.tap()
+        let resumed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in playPause.label == "Pause" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [resumed], timeout: 10), .completed, "The actual play button works after scrolling scrubs")
     }
 
     @MainActor func testSearchClearAndCloseAreTappableWithKeyboardVisible() {

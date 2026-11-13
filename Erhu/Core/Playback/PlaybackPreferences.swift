@@ -14,6 +14,7 @@ enum PlaybackPreferences {
     static let seekSize: Double = 0.075
     static let skipSize: Double = 0.105
     static let playSize: Double = 0.15
+    static let playingSize: Double = 0.12
     static let pressedScale = 0.85
 
     /// A manual handover must fit in the audio left on both decks.

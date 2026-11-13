@@ -56,6 +56,19 @@ struct WaveformSeekBar: View {
                                     commit: { onSeek(position(at: $0, width: geometry.size.width)) })
                 }
             }
+            .accessibilityElement()
+            .accessibilityFrame(waveformAccessibilityFrame(geometry))
+            .accessibilityLabel("Seek")
+            .accessibilityIdentifier(referenceStyle ? "nowPlayingWaveform" : "waveformSeek")
+            .accessibilityValue("\(formatDuration(positionMs)) of \(formatDuration(durationMs))")
+            .accessibilityAdjustableAction { direction in
+                let step: Int64 = 10_000
+                switch direction {
+                case .increment: onSeek(min(positionMs + step, durationMs))
+                case .decrement: onSeek(max(positionMs - step, 0))
+                @unknown default: break
+                }
+            }
         }
         .overlay {
             if referenceStyle {
@@ -76,18 +89,17 @@ struct WaveformSeekBar: View {
         }
         .frame(height: barHeight)
         .onDisappear { previewMs = nil; scrubAnchorMs = nil }
-        .accessibilityElement()
-        .accessibilityLabel("Seek")
-        .accessibilityIdentifier(referenceStyle ? "nowPlayingWaveform" : "waveformSeek")
-        .accessibilityValue("\(formatDuration(positionMs)) of \(formatDuration(durationMs))")
-        .accessibilityAdjustableAction { direction in
-            let step: Int64 = 10_000
-            switch direction {
-            case .increment: onSeek(min(positionMs + step, durationMs))
-            case .decrement: onSeek(max(positionMs - step, 0))
-            @unknown default: break
-            }
+
+    }
+
+    private func waveformAccessibilityFrame(_ geometry: GeometryProxy) -> CGRect {
+        var frame = geometry.frame(in: .global)
+        if referenceStyle {
+            // The transport overlays the middle of the waveform. Expose the clear upper
+            // strip to accessibility so its seek element cannot occlude those buttons.
+            frame.size.height = min(44, geometry.size.height * 0.25)
         }
+        return frame
     }
 
     private func position(at x: CGFloat, width: CGFloat) -> Int64 {

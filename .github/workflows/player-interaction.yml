@@ -10,6 +10,7 @@ run-name: Player verification — ${{ inputs.scope || 'full-player' }} (${{ inpu
         options:
         - full-player
         - animation-only
+        - waveforms-only
       runner:
         description: macOS runner for simulator verification
         type: choice
@@ -81,6 +82,7 @@ jobs:
           exit 1
         fi
     - name: Verify player navigation and adjustable crossfade
+      if: ${{ inputs.scope == 'full-player' }}
       run: |
         xcrun simctl boot "$UI_SIMULATOR_ID"
         xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b
@@ -106,14 +108,21 @@ jobs:
     - name: Run real cover swipe and dismissal checks
       if: ${{ inputs.scope != 'animation-only' }}
       run: |
+        test_filters=(
+          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh
+          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testStaticWaveformUsesFullSongCoordinatesAndRestoresControls
+        )
+        if [ "${{ inputs.scope }}" != 'waveforms-only' ]; then
+          test_filters+=(
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack
+          )
+        fi
         run_interactions() {
           xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
           -derivedDataPath build/DerivedData -clonedSourcePackagesDirPath build/SourcePackages \
           -destination "id=$UI_SIMULATOR_ID" -resultBundlePath build/InteractionResults.xcresult \
-          CODE_SIGNING_ALLOWED=NO -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer \
-          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack \
-          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh \
-          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testStaticWaveformUsesFullSongCoordinatesAndRestoresControls \
+          CODE_SIGNING_ALLOWED=NO "${test_filters[@]}" \
           -parallel-testing-enabled NO > build/ui-tests.log 2>&1
         }
         if ! run_interactions; then
@@ -152,7 +161,7 @@ jobs:
           build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Verify the actual rendered colour blend
-      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' }}
+      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' && inputs.scope != 'waveforms-only' }}
       run: |
         if [ "${{ inputs.scope }}" = "animation-only" ]; then
           echo "Animation-only run: UI gesture tests are intentionally not selected."
