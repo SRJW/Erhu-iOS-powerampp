@@ -34,7 +34,7 @@ body = ('Development IPA from successful iPhone build ' + number + '.\n\n'
 if os.environ.get('NATIVE_CHECKS_RESULT') == 'success':
     body += '\nNative player interaction and rendered blend verification passed.'
 else:
-    body += '\nNative simulator checks were not selected for this publication; consult the original build for validation.'
+    body += '\nNative simulator validation is reported separately; this development IPA publication does not certify that those checks passed.'
 with open(sys.argv[1], 'w') as output:
     json.dump(dict(tag_name='v0.1.0-amp.' + number, target_commitish=source,
                    name='amp — static artwork build ' + number, body=body,

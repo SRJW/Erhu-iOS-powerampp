@@ -138,10 +138,11 @@ jobs:
     permissions:
       contents: read
   publish:
-    if: ${{ !cancelled() && ((needs.build.result == 'success' && (needs.cover-checks.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.cover-checks.result == 'skipped'))) || (github.event_name == 'workflow_dispatch' && inputs.artifact_run != '')) }}
+    # Development IPA publication depends on the device build. Simulator checks
+    # report independently and must not hold a completed IPA until timeout.
+    if: ${{ !cancelled() && (needs.build.result == 'success' || (github.event_name == 'workflow_dispatch' && inputs.artifact_run != '')) }}
     needs:
     - build
-    - cover-checks
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -182,7 +183,7 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-        NATIVE_CHECKS_RESULT: ${{ needs.cover-checks.result }}
+        NATIVE_CHECKS_RESULT: separate-workflow
       run: bash Tools/publish_ipa.sh dist/amp.ipa
 'on':
   push:
