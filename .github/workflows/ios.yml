@@ -45,6 +45,10 @@ jobs:
       run: |
         xcrun swiftc Erhu/Core/Playback/ArtworkSlide.swift Tools/Tests/ArtworkSlide/main.swift -o "$RUNNER_TEMP/amp-artwork-tests"
         "$RUNNER_TEMP/amp-artwork-tests"
+    - name: Test temporary audio sharing and cleanup
+      run: |
+        xcrun swiftc Erhu/Core/Common/PreparedAudioShare.swift Tools/Tests/AudioShare/main.swift -o "$RUNNER_TEMP/amp-share-tests"
+        "$RUNNER_TEMP/amp-share-tests"
     - name: Test release detection against GitHub
       run: |
         xcrun swiftc -target "$(uname -m)-apple-macosx14.0" -parse-as-library Erhu/Core/Common/HTTPClient.swift Erhu/Core/Settings/ReleaseChecker.swift Tools/Tests/ReleaseChecker/main.swift -o "$RUNNER_TEMP/amp-release-tests"

@@ -24,6 +24,8 @@ struct CollectionTransitionTrackList: View {
                          actions: rowActions) {
                     actions.play(songs, startIndex: index, origin: collection, slots: slots)
                 }
+                .id(tracks.firstIndex(where: { $0.song.id == track.song.id }) == index
+                    ? "amp-song-\(track.song.id)" : "amp-occurrence-\(index)")
                 if pairs.indices.contains(index) {
                     CollectionTransitionConnector(pair: pairs[index]) {
                         draft = EditorDraft.open(.pair(pairs[index]), config: transitions.config)

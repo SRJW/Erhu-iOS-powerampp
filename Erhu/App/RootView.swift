@@ -159,6 +159,7 @@ struct RootView: View {
             case .radio(let seed): RadioStationView(seed: seed)
             case .shelf(let shelf): LibraryShelfView(shelf: shelf)
             case .allSongs: AllSongsView()
+            case .songFolder(let path): AllSongsView(folderPath: path)
             case .tool(let tool): ToolView(tool: tool).tracksLibraryScrolling(usesUIKit: true)
             case .settingsPage(let page): SettingsDestinationView(page: page).tracksLibraryScrolling(usesUIKit: true)
             case .transitionStudio(let collection): TransitionStudioView(collection: collection).tracksLibraryScrolling(usesUIKit: true)

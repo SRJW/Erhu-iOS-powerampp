@@ -80,6 +80,18 @@ jobs:
           tail -n 80 build/simulator-build.log
           exit 1
         fi
+    - name: Verify player button navigation
+      run: |
+        xcrun simctl boot "$UI_SIMULATOR_ID"
+        xcrun simctl bootstatus "$UI_SIMULATOR_ID" -b
+        if ! xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
+          -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
+          -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
+          -only-testing:ErhuTests/PlayerButtonActionTests -parallel-testing-enabled NO \
+          -resultBundlePath build/PlayerButtonResults.xcresult > build/player-button-tests.log 2>&1; then
+          tail -n 60 build/player-button-tests.log
+          exit 1
+        fi
     - name: Start a fresh simulator immediately before UI testing
       if: ${{ inputs.scope != 'animation-only' }}
       run: |
@@ -159,6 +171,8 @@ jobs:
       with:
         name: amp-cover-interaction-results
         path: |-
+          build/PlayerButtonResults.xcresult
+          build/player-button-tests.log
           build/InteractionResults.xcresult
           build/InteractionResults-attempt-1.xcresult
           build/BlendResults.xcresult

@@ -85,6 +85,7 @@ enum Route: Hashable {
     case radio(RadioSeed)
     case shelf(LibraryShelf)
     case allSongs
+    case songFolder(String)
     case tool(Tool)
     case settingsPage(SettingsPageRoute)
     case transitionStudio(CollectionRef)
@@ -105,6 +106,8 @@ final class AppRouter {
     var songForDetails: Song?
     /// The song whose tags are being edited by hand.
     var songForTagEdit: Song?
+    var songReveal: SongRevealRequest?
+    var highlightedSongID: Int64?
     var showsNewPlaylist = false
 
     func open(_ route: Route) {
@@ -144,6 +147,32 @@ final class AppRouter {
         showsDrawer = false
         showsSearch = false
         showsNowPlaying = false
+    }
+
+    /// Resolve the current database entry before navigating; never alter playback.
+    @discardableResult
+    func revealSong(_ song: Song, album: Bool, source: PlaybackSource?, library: LibraryStore) -> Bool {
+        showsNowPlaying = false
+        showsSearch = false
+        songReveal = nil
+        highlightedSongID = nil
+        select(.library)
+        guard let current = library.songs.first(where: { $0.id == song.id }),
+              PreparedAudioShare.available(current.url) else { return false }
+        let destination: Route
+        if album, !current.album.trimmed.isEmpty, current.album != unknownAlbum,
+           library.album(current.albumId) != nil {
+            destination = .album(current.albumId)
+        } else if !album, case .playlist(let id) = source,
+                  library.playlist(id) != nil,
+                  (try? library.database.playlistEntries(id).contains(where: { $0.song.id == current.id })) == true {
+            destination = .playlist(id)
+        } else {
+            destination = .songFolder((current.path as NSString).deletingLastPathComponent)
+        }
+        songReveal = SongRevealRequest(songID: current.id, destination: destination)
+        open(destination)
+        return true
     }
 
     func songActions(_ actions: LibraryActions, source: PlaybackSource? = nil) -> SongActions {

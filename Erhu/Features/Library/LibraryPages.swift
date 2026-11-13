@@ -217,6 +217,7 @@ struct LibraryShelfView: View {
 
 /// Every track, with a local query, remembered sorting, and tag-based genre/mood filters.
 struct AllSongsView: View {
+    var folderPath: String? = nil
     @Environment(LibraryStore.self) private var library
     @AppStorage("library.songs.sort") private var sort = LibrarySort.title.rawValue
     @State private var query = ""
@@ -227,38 +228,40 @@ struct AllSongsView: View {
     @State private var genres: [String] = []
 
     private var request: SongBrowseRequest {
-        SongBrowseRequest(songs: library.songs, facts: library.browseFacts, query: query,
+        SongBrowseRequest(songs: library.songs.filter { folderPath == nil || ($0.path as NSString).deletingLastPathComponent == folderPath }, facts: library.browseFacts, query: query,
                           sort: LibrarySort(rawValue: sort) ?? .title, genre: genre, mood: mood)
     }
 
     var body: some View {
-        LibraryBrowseScrollView(title: "Songs", query: $query, showsSearch: $showsSearch) {
-            LibrarySortMenu(selection: $sort, options: LibrarySort.songs)
-            genreMenu
-            Menu {
-                Picker("Mood", selection: $mood) {
-                    Text("All moods").tag(LibraryMood.all)
-                    ForEach(LibraryMood.allCases.filter { $0 != .all }, id: \.rawValue) { Text($0.label).tag($0) }
+        PlayerSongReveal(destination: folderPath.map(Route.songFolder) ?? .allSongs, songs: results ?? []) {
+            LibraryBrowseScrollView(title: folderPath.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty ? nil : $0 } ?? "Songs", query: $query, showsSearch: $showsSearch) {
+                LibrarySortMenu(selection: $sort, options: LibrarySort.songs)
+                genreMenu
+                Menu {
+                    Picker("Mood", selection: $mood) {
+                        Text("All moods").tag(LibraryMood.all)
+                        ForEach(LibraryMood.allCases.filter { $0 != .all }, id: \.rawValue) { Text($0.label).tag($0) }
+                    }
+                } label: {
+                    BrowseControlLabel(title: mood.label, icon: "sparkles", selected: mood != .all)
                 }
-            } label: {
-                BrowseControlLabel(title: mood.label, icon: "sparkles", selected: mood != .all)
-            }
-            if !genre.isEmpty || mood != .all {
-                Button { genre = ""; mood = .all } label: { BrowseControlLabel(title: "Reset", icon: "xmark") }
-                    .accessibilityLabel("Clear genre and mood filters")
-            }
-        } content: {
-            if mood != .all {
-                Text(mood == .throwback ? "Throwback uses your songs’ year tags: released \(Moods.throwbackYears) or more years ago."
-                     : "Mood matches use your songs’ genre and tempo tags.")
-                    .font(.caption).foregroundStyle(.secondary).padding(.horizontal, Spacing.gutter)
-            }
-            if let results {
-                Text(countLabel(results.count, "song")).font(.caption).foregroundStyle(.secondary)
-                    .padding(.horizontal, Spacing.gutter)
-                SongList(songs: results, emptyMessage: library.songs.isEmpty ? "No songs found." : "No songs match. Try another search, genre, or mood. Songs need genre tags to match a mood.", emptyIcon: "music.note")
-            } else {
-                ProgressView().frame(maxWidth: .infinity).padding()
+                if !genre.isEmpty || mood != .all {
+                    Button { genre = ""; mood = .all } label: { BrowseControlLabel(title: "Reset", icon: "xmark") }
+                        .accessibilityLabel("Clear genre and mood filters")
+                }
+            } content: {
+                if mood != .all {
+                    Text(mood == .throwback ? "Throwback uses your songs’ year tags: released \(Moods.throwbackYears) or more years ago."
+                         : "Mood matches use your songs’ genre and tempo tags.")
+                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, Spacing.gutter)
+                }
+                if let results {
+                    Text(countLabel(results.count, "song")).font(.caption).foregroundStyle(.secondary)
+                        .padding(.horizontal, Spacing.gutter)
+                    SongList(songs: results, emptyMessage: library.songs.isEmpty ? "No songs found." : "No songs match. Try another search, genre, or mood. Songs need genre tags to match a mood.", emptyIcon: "music.note")
+                } else {
+                    ProgressView().frame(maxWidth: .infinity).padding()
+                }
             }
         }
         .navigationTitle("")
@@ -313,6 +316,7 @@ struct SongList: View {
                 TrackRow(song: song, isCurrent: song.id == currentId, showTrackNumber: showTrackNumbers, displayTrackNumber: showTrackNumbers ? index + 1 : nil, actions: songActions) {
                     actions.play(songs, startIndex: index, origin: origin, source: source)
                 }
+                .id("amp-song-\(song.id)")
             }
         }
     }

@@ -78,35 +78,16 @@ struct PlayerQueueGlyph: View {
         }.frame(width: 32, height: 32)
     }
 }
-private struct BluetoothGlyph: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * rect.width, y: rect.minY + y * rect.height) }
-        path.move(to: p(0.1, 0.25)); path.addLine(to: p(0.85, 0.75)); path.addLine(to: p(0.5, 1))
-        path.addLine(to: p(0.5, 0)); path.addLine(to: p(0.85, 0.25)); path.addLine(to: p(0.1, 0.75))
-        return path
-    }
-}
-struct PlayerOutputBadge: View {
+struct PlayerOutputSummary: View {
     @Environment(PlayerController.self) private var player
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { _ in
-            let session = AVAudioSession.sharedInstance()
-            let ports = session.currentRoute.outputs.map(\.portType)
-            let bluetooth = ports.contains { [.bluetoothA2DP, .bluetoothHFP, .bluetoothLE].contains($0) }
-            let symbol = ports.contains(.airPlay) ? "airplayaudio" : ports.contains(.headphones) ? "headphones" : ports.contains(.usbAudio) ? "cable.connector" : "speaker.wave.2.fill"
-            let rate = session.sampleRate > 0 ? String(format: "%g", session.sampleRate / 1000) + "K" : "OUTPUT"
-            // This is the engine's PCM format supplied to the session, not a claim
-            // about Bluetooth codec resolution or the DAC's hardware bit depth.
-            let bits = player.engine.outputPCMBitDepth
-            VStack(spacing: 2) {
-                if bluetooth { BluetoothGlyph().stroke(.white, style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round)).frame(width: 11, height: 17) }
-                else { Image(systemName: symbol).font(.system(size: 15, weight: .bold)) }
-                Text(bits.map { "\($0)/\(rate)" } ?? rate).font(.custom("AvenirNext-Bold", size: 10))
-            }
-            .foregroundStyle(.white).frame(width: 64, height: 44)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Audio route: \(session.currentRoute.outputs.map(\.portName).joined(separator: ", ")). PCM supplied to session: \(bits.map(String.init) ?? "unknown") bits, \(rate). Hardware bit depth unavailable.")
+            let rate = AVAudioSession.sharedInstance().sampleRate
+            let rateText = rate > 0 ? String(format: "%g", rate / 1000) + "K" : PlayerButtonConstants.unknownOutput
+            Text(player.engine.outputPCMBitDepth.map { "\($0)/\(rateText)" } ?? rateText)
+                .font(.custom("AvenirNext-Bold", size: PlayerButtonConstants.summarySize))
+                .foregroundStyle(.white)
+                .allowsHitTesting(false)
         }
     }
 }

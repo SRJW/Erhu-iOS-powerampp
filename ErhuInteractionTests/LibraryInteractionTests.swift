@@ -20,7 +20,7 @@ final class LibraryInteractionTests: XCTestCase {
         let app = launch(page)
         let mini = app.buttons["openNowPlaying"]
         XCTAssertTrue(mini.waitForExistence(timeout: 20), "The local fixture must load into the real mini player")
-        let title = app.staticTexts["nowPlayingTitle"]
+        let title = app.buttons["nowPlayingTitle"]
         let transport = app.buttons["nowPlayingPlayPause"]
         let close = app.buttons["closeNowPlaying"]
         func waitUntilHittable(_ element: XCUIElement, timeout: TimeInterval = 10) {
@@ -87,7 +87,7 @@ final class LibraryInteractionTests: XCTestCase {
         let mini = app.buttons["openNowPlaying"]
         XCTAssertTrue(mini.waitForExistence(timeout: 20))
         mini.tap()
-        let title = app.staticTexts["nowPlayingTitle"]
+        let title = app.buttons["nowPlayingTitle"]
         XCTAssertTrue(title.waitForExistence(timeout: 10))
         let next = app.buttons["nowPlayingNextTrack"]
         let previous = app.buttons["nowPlayingPreviousTrack"]
@@ -166,7 +166,7 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [backward], timeout: 5), .completed)
         app.buttons["nowPlayingNextTrack"].tap()
         let reset = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            app.staticTexts["nowPlayingTitle"].label == "Second player track" && (0...2).contains(seconds())
+            app.buttons["nowPlayingTitle"].label == "Second player track" && (0...2).contains(seconds())
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [reset], timeout: 10), .completed)
     }
@@ -300,12 +300,12 @@ final class LibraryInteractionTests: XCTestCase {
         }
         swipe(from: 0.8, to: 0.2)
         let next = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            app.staticTexts["nowPlayingTitle"].label == "Second player track"
+            app.buttons["nowPlayingTitle"].label == "Second player track"
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [next], timeout: 10), .completed)
         swipe(from: 0.2, to: 0.8)
         let previous = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
-            app.staticTexts["nowPlayingTitle"].label == "Player presentation regression"
+            app.buttons["nowPlayingTitle"].label == "Player presentation regression"
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [previous], timeout: 10), .completed)
         cover.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.15))

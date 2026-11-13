@@ -36,16 +36,21 @@ struct NowPlayingView: View {
                     artworkInteraction(width: width)
                         .frame(width: width, height: height * 0.55)
                         .position(x: width / 2, y: height * 0.275)
-                    Text(song.title)
-                        .font(.custom("AvenirNext-Bold", size: 22))
+                    Button { reveal(song, album: false) } label: {
+                        Text(song.title)
+                        .font(.custom(PlayerButtonConstants.titleFont, size: PlayerButtonConstants.titleSize))
                         .lineLimit(1).minimumScaleFactor(0.75)
+                    }
                         .accessibilityIdentifier("nowPlayingTitle")
                         .frame(width: width - 32).position(x: width / 2, y: height * 0.60)
-                    Text("\(song.artist) - \(song.album)")
-                        .font(.custom("AvenirNext-DemiBold", size: 14))
+                    Button { reveal(song, album: true) } label: {
+                        Text(song.artist + PlayerButtonConstants.metadataSeparator + song.album)
+                        .font(.custom(PlayerButtonConstants.subtitleFont, size: PlayerButtonConstants.subtitleSize))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .multilineTextAlignment(.center)
+                    }
+                        .accessibilityIdentifier("nowPlayingAlbum")
                         .frame(width: width - 32).position(x: width / 2, y: height * 0.633)
                     referenceOptions(song, state: state, width: width)
                         .frame(width: width, height: 48).position(x: width / 2, y: height * 0.675)
@@ -176,6 +181,13 @@ struct NowPlayingView: View {
         router.showsNowPlaying = false
     }
 
+    private func reveal(_ song: Song, album: Bool) {
+        close()
+        if !router.revealSong(song, album: album, source: player.state.currentEntry?.source, library: library) {
+            actions.show(PlayerButtonConstants.locationUnavailable)
+        }
+    }
+
     private func previousEntry(_ state: PlaybackState) -> QueueEntry? {
         PlayOrder.previous(before: state.currentIndex, count: state.queue.count, repeatMode: state.repeatMode).map { state.queue[$0] }
     }
@@ -232,12 +244,16 @@ struct NowPlayingView: View {
                 Button { showsEqualizer = true } label: { Label("Equalizer", systemImage: "slider.vertical.3") }
             }
         } label: {
-            PlayerQueueGlyph().font(.title3.weight(.semibold))
-                .frame(width: 48, height: 48).contentShape(Rectangle())
+            Image(systemName: PlayerButtonConstants.optionsSymbol)
+                .rotationEffect(.degrees(PlayerButtonConstants.optionsRotation))
+                .font(.system(size: PlayerButtonConstants.iconSize, weight: .black))
+                .foregroundStyle(.white.opacity(PlayerButtonConstants.iconOpacity))
+                .frame(width: PlayerButtonConstants.touchSize, height: PlayerButtonConstants.touchSize)
+                .contentShape(Rectangle())
         }.accessibilityIdentifier("nowPlayingMenu")
         .menuStyle(.button)
         .disabled(song == nil)
-        .accessibilityLabel("More options")
+        .accessibilityLabel(PlayerButtonConstants.optionsLabel)
     }
 
     private func addBookmark() {
@@ -259,9 +275,9 @@ struct NowPlayingView: View {
             }
             .accessibilityLabel(song.isFavorite ? "Remove from favorites" : "Add to favorites")
             .position(x: width * 0.12, y: 24)
-            Button { showsAudioDetails = true } label: { PlayerOutputBadge() }
-                .accessibilityLabel("Audio output details")
+            PlayerShareButton(song: song)
                 .position(x: width * 0.31, y: 24)
+            menu.position(x: width * PlayerButtonConstants.centerFraction, y: 24)
             ToggleIcon(systemImage: "shuffle", active: state.shuffleModeEnabled) {
                 player.setShuffleModeEnabled(!state.shuffleModeEnabled)
             }.accessibilityLabel("Shuffle").position(x: width * 0.69, y: 24)
@@ -315,7 +331,16 @@ struct NowPlayingView: View {
             Button { close(); router.showsSearch = true } label: { Image(systemName: "magnifyingglass") }
                 .accessibilityLabel("Search")
             Spacer()
-            menu
+            Button {
+                close()
+                router.open(Tool.settings)
+            } label: {
+                PlayerQueueGlyph().font(.title3.weight(.semibold))
+                    .frame(width: PlayerButtonConstants.touchSize, height: PlayerButtonConstants.touchSize)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel(PlayerButtonConstants.settingsLabel)
+            .accessibilityIdentifier("nowPlayingSettings")
         }
         .font(.system(size: 28, weight: .heavy))
         .foregroundStyle(.white.opacity(0.6))

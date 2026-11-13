@@ -136,6 +136,7 @@ struct TrackRow: View {
                     .clipped()
             }
         }
+        .modifier(PlayerRevealedSong(songID: song.id))
         .onDisappear { swipe = 0 }
         .accessibilityAction(named: "Add to queue") { actions.addToQueue(song) }
         .accessibilityAction(named: song.isFavorite ? "Remove from Liked Songs" : "Add to Liked Songs") { actions.toggleFavorite(song) }

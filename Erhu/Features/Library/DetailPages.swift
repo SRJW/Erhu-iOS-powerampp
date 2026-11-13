@@ -70,23 +70,25 @@ struct AlbumDetailView: View {
 
     var body: some View {
         let origin = CollectionRef.album(albumId)
-        ScrollView {
-            if let album = library.album(albumId) {
-                let facts = collectionFacts(year: album.year, songs: songs)
-                VStack(spacing: 0) {
-                    CollectionHeroHeader(title: album.title, subtitle: album.artist, facts: songs.contains(where: \.isLossless) ? "\(facts) · Lossless" : facts,
-                                     canPlay: !songs.isEmpty, onPlay: { actions.playInOrder(songs, origin: origin) },
-                                     onShuffle: { actions.playShuffled(songs, origin: origin) }) {
-                        AlbumArtworkView(albumId: albumId, maxPixels: 1200)
+        PlayerSongReveal(destination: .album(albumId), songs: songs) {
+            ScrollView {
+                if let album = library.album(albumId) {
+                    let facts = collectionFacts(year: album.year, songs: songs)
+                    VStack(spacing: 0) {
+                        CollectionHeroHeader(title: album.title, subtitle: album.artist, facts: songs.contains(where: \.isLossless) ? "\(facts) · Lossless" : facts,
+                                         canPlay: !songs.isEmpty, onPlay: { actions.playInOrder(songs, origin: origin) },
+                                         onShuffle: { actions.playShuffled(songs, origin: origin) }) {
+                            AlbumArtworkView(albumId: albumId, maxPixels: 1200)
+                        }
+                        TransitionStudioRow(collection: origin).padding(.bottom, Spacing.sm)
+                        ScopedTagRepairSummary(songs: songs)
+                        CollectionTransitionTrackList(collection: origin,
+                                                      tracks: songs.map { StudioTrack(song: $0, occurrence: TrackOccurrence($0.id)) },
+                                                      showTrackNumbers: true)
                     }
-                    TransitionStudioRow(collection: origin).padding(.bottom, Spacing.sm)
-                    ScopedTagRepairSummary(songs: songs)
-                    CollectionTransitionTrackList(collection: origin,
-                                                  tracks: songs.map { StudioTrack(song: $0, occurrence: TrackOccurrence($0.id)) },
-                                                  showTrackNumbers: true)
+                } else {
+                    EmptyState(message: "This album is no longer in your library.", systemImage: "square.stack")
                 }
-            } else {
-                EmptyState(message: "This album is no longer in your library.", systemImage: "square.stack")
             }
         }
         .tracksLibraryScrolling()
@@ -237,23 +239,25 @@ struct PlaylistDetailView: View {
         let songs = entries.map(\.song)
         let slots = entries.map(\.position)
         let songActions = playlistSongActions()
-        ScrollView {
-            if let playlist = library.playlist(playlistId) {
-                LazyVStack(spacing: 0) {
-                    CollectionHeader(title: playlist.name, subtitle: nil, facts: collectionFacts(songs: songs), canPlay: !songs.isEmpty,
-                                     onPlay: { actions.playInOrder(songs, origin: origin, slots: slots) },
-                                     onShuffle: { actions.playShuffled(songs, origin: origin, slots: slots) }) { PlaylistCoverView(playlist: playlist) }
-                    if songs.count > 1 { TransitionStudioRow(collection: origin).padding(.bottom, Spacing.sm) }
-                    if songs.isEmpty {
-                        EmptyState(message: "This playlist is empty. Add songs from any song's menu.", systemImage: "music.note.list")
+        PlayerSongReveal(destination: .playlist(playlistId), songs: songs) {
+            ScrollView {
+                if let playlist = library.playlist(playlistId) {
+                    LazyVStack(spacing: 0) {
+                        CollectionHeader(title: playlist.name, subtitle: nil, facts: collectionFacts(songs: songs), canPlay: !songs.isEmpty,
+                                         onPlay: { actions.playInOrder(songs, origin: origin, slots: slots) },
+                                         onShuffle: { actions.playShuffled(songs, origin: origin, slots: slots) }) { PlaylistCoverView(playlist: playlist) }
+                        if songs.count > 1 { TransitionStudioRow(collection: origin).padding(.bottom, Spacing.sm) }
+                        if songs.isEmpty {
+                            EmptyState(message: "This playlist is empty. Add songs from any song's menu.", systemImage: "music.note.list")
+                        }
+                        ScopedTagRepairSummary(songs: songs)
+                        CollectionTransitionTrackList(collection: origin,
+                            tracks: entries.map { StudioTrack(song: $0.song, occurrence: TrackOccurrence($0.song.id, $0.position)) },
+                            songActions: songActions)
                     }
-                    ScopedTagRepairSummary(songs: songs)
-                    CollectionTransitionTrackList(collection: origin,
-                        tracks: entries.map { StudioTrack(song: $0.song, occurrence: TrackOccurrence($0.song.id, $0.position)) },
-                        songActions: songActions)
+                } else {
+                    EmptyState(message: "This playlist no longer exists.", systemImage: "music.note.list")
                 }
-            } else {
-                EmptyState(message: "This playlist no longer exists.", systemImage: "music.note.list")
             }
         }
         .tracksLibraryScrolling()
