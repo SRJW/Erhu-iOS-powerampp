@@ -140,7 +140,7 @@ final class LibraryInteractionTests: XCTestCase {
         let playing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in transport.label == "Pause" }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [playing], timeout: 10), .completed)
         transport.tap()
-        let waveform = app.otherElements["nowPlayingWaveform"]
+        let waveform = app.descendants(matching: .any)["nowPlayingWaveform"]
         XCTAssertTrue(waveform.waitForExistence(timeout: 5))
         let elapsed = app.staticTexts["nowPlayingElapsed"]
         func seconds() -> Int {
@@ -177,7 +177,7 @@ final class LibraryInteractionTests: XCTestCase {
             let parts = elapsed.label.split(separator: ":").compactMap { Int($0) }
             return parts.count == 2 ? parts[0] * 60 + parts[1] : -1
         }
-        let waveform = app.otherElements["nowPlayingWaveform"]
+        let waveform = app.descendants(matching: .any)["nowPlayingWaveform"]
         XCTAssertTrue(waveform.waitForExistence(timeout: 5))
         let initial = seconds()
         // Above the transport circles: an actual drag on the waveform, across their x positions.

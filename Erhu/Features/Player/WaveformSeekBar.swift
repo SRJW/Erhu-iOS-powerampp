@@ -50,25 +50,14 @@ struct WaveformSeekBar: View {
                         }, tap: { point in
                             onSeek(scrollingGeometry(geometry.size.width).tappedPosition(x: Double(point.x), anchorMs: positionMs))
                             scrubAnchorMs = nil
-                        })
+                        }, accessibility: accessibility(geometry.size.height))
                 } else {
                     SeekInteraction(preview: { x in previewMs = x.map { position(at: $0, width: geometry.size.width) } },
-                                    commit: { onSeek(position(at: $0, width: geometry.size.width)) })
+                                    commit: { onSeek(position(at: $0, width: geometry.size.width)) },
+                                    accessibility: accessibility(geometry.size.height))
                 }
             }
-            .accessibilityElement()
-            .accessibilityFrame(waveformAccessibilityFrame(geometry))
-            .accessibilityLabel("Seek")
-            .accessibilityIdentifier(referenceStyle ? "nowPlayingWaveform" : "waveformSeek")
-            .accessibilityValue("\(formatDuration(positionMs)) of \(formatDuration(durationMs))")
-            .accessibilityAdjustableAction { direction in
-                let step: Int64 = 10_000
-                switch direction {
-                case .increment: onSeek(min(positionMs + step, durationMs))
-                case .decrement: onSeek(max(positionMs - step, 0))
-                @unknown default: break
-                }
-            }
+
         }
         .overlay {
             if referenceStyle {
@@ -92,14 +81,12 @@ struct WaveformSeekBar: View {
 
     }
 
-    private func waveformAccessibilityFrame(_ geometry: GeometryProxy) -> CGRect {
-        var frame = geometry.frame(in: .global)
-        if referenceStyle {
-            // The transport overlays the middle of the waveform. Expose the clear upper
-            // strip to accessibility so its seek element cannot occlude those buttons.
-            frame.size.height = min(44, geometry.size.height * 0.25)
-        }
-        return frame
+    private func accessibility(_ height: CGFloat) -> PanInteraction.Accessibility {
+        PanInteraction.Accessibility(label: "Seek", identifier: referenceStyle ? "nowPlayingWaveform" : "waveformSeek",
+            value: "\(formatDuration(positionMs)) of \(formatDuration(durationMs))",
+            height: referenceStyle ? min(44, height * 0.25) : nil,
+            increment: { onSeek(min(positionMs + 10_000, durationMs)) },
+            decrement: { onSeek(max(positionMs - 10_000, 0)) })
     }
 
     private func position(at x: CGFloat, width: CGFloat) -> Int64 {

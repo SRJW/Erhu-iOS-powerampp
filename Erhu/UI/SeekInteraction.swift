@@ -31,6 +31,38 @@ struct PanInteraction: UIViewRepresentable {
     let cancel: () -> Void
     let tap: (CGPoint) -> Void
     var touchDown: ((CGPoint) -> Void)? = nil
+    struct Accessibility {
+        let label: String
+        let identifier: String
+        let value: String
+        var height: CGFloat? = nil
+        let increment: () -> Void
+        let decrement: () -> Void
+    }
+    var accessibility: Accessibility? = nil
+
+    final class GestureView: UIView {
+        var configuration: Accessibility? {
+            didSet {
+                isAccessibilityElement = configuration != nil
+                accessibilityLabel = configuration?.label
+                accessibilityIdentifier = configuration?.identifier
+                accessibilityValue = configuration?.value
+                accessibilityTraits = configuration == nil ? [] : .adjustable
+            }
+        }
+        override var accessibilityFrame: CGRect {
+            get {
+                guard let configuration else { return super.accessibilityFrame }
+                let region = CGRect(x: 0, y: 0, width: bounds.width,
+                                    height: min(configuration.height ?? bounds.height, bounds.height))
+                return UIAccessibility.convertToScreenCoordinates(region, in: self)
+            }
+            set { super.accessibilityFrame = newValue }
+        }
+        override func accessibilityIncrement() { configuration?.increment() }
+        override func accessibilityDecrement() { configuration?.decrement() }
+    }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var owner: PanInteraction
@@ -86,9 +118,9 @@ struct PanInteraction: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
     func makeUIView(context: Context) -> UIView {
-        let view = UIView()
+        let view = GestureView()
+        view.configuration = accessibility
         view.backgroundColor = .clear
-        view.isAccessibilityElement = false
         let pan = UIPanGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.pan(_:)))
         pan.maximumNumberOfTouches = 1
         pan.delegate = context.coordinator
@@ -106,18 +138,22 @@ struct PanInteraction: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: UIView, context: Context) { context.coordinator.owner = self }
+    func updateUIView(_ view: UIView, context: Context) {
+        context.coordinator.owner = self
+        (view as? GestureView)?.configuration = accessibility
+    }
 }
 
 struct SeekInteraction: View {
     let preview: (CGFloat?) -> Void
     let commit: (CGFloat) -> Void
+    var accessibility: PanInteraction.Accessibility? = nil
 
     var body: some View {
         PanInteraction(canBegin: { _, translation in HorizontalGestureIntent.accepts(translation) },
                        change: { preview($0.location.x) },
                        end: { commit($0.location.x); preview(nil) },
                        cancel: { preview(nil) },
-                       tap: { commit($0.x) })
+                       tap: { commit($0.x) }, accessibility: accessibility)
     }
 }
