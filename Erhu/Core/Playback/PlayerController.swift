@@ -87,7 +87,7 @@ final class PlayerController {
 
     func play() {
         guard !state.queue.isEmpty else { return }
-        if state.status == .idle || engine.currentPosition() == nil {
+        if state.status == .idle || engine.currentPosition()?.entryId != state.currentEntry?.id {
             startCurrent(at: state.positionMs, playing: true)
             return
         }
@@ -379,7 +379,8 @@ final class PlayerController {
             return
         }
         if DecodedAudioSource.requiresDecoder(entry.song.url), !DecodedAudioSource.isPrepared(entry.song.url) {
-            engine.stopAll()
+            // Keep the outgoing song audible until the incoming decoder is ready to blend.
+            if !playing { engine.stopAll() }
             listening.onPlayingChanged(false, durationMs: state.durationMs)
             stopTimer()
             state.status = .buffering
@@ -395,6 +396,7 @@ final class PlayerController {
                 guard !Task.isCancelled, state.currentEntry?.id == entry.id else { return }
                 audioPreparation = nil
                 if let failure {
+                    engine.stopAll()
                     playbackError = failure
                     state.status = .paused
                     updateNowPlaying()
@@ -404,7 +406,8 @@ final class PlayerController {
         }
         if playing && (!state.isPlaying || !engine.isRunning) { activateAudioSession() }
         do {
-            try engine.play(entryId: entry.id, url: entry.song.url, positionMs: positionMs, startPlaying: playing)
+            try engine.play(entryId: entry.id, url: entry.song.url, positionMs: positionMs, startPlaying: playing,
+                            handoffSpec: transitions.config.global.masterEnabled ? transitions.config.global.defaultChoice.specOrNil : nil)
             setPosition(positionMs)
             state.durationMs = entry.song.durationMs
             if playing { consecutiveErrors = 0 }

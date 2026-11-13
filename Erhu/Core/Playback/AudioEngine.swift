@@ -155,18 +155,23 @@ final class AudioEngine {
     // MARK: Playing
 
     /// Stops both decks and starts [url] (entry [entryId]) at [positionMs] on the active deck.
-    func play(entryId: UUID, url: URL, positionMs: Int64, startPlaying: Bool) throws {
+    func play(entryId: UUID, url: URL, positionMs: Int64, startPlaying: Bool, handoffSpec: TransitionSpec? = nil) throws {
         guard isReady else { throw EngineError.notReady }
         guard let file = try? openFile(url) else { throw EngineError.unreadable(url) }
         previewSchedule = nil
-        if startPlaying, active.player.isPlaying, currentSegment(active)?.entryId != entryId,
+        if startPlaying, active.player.isPlaying, let outgoing = currentSegment(active), outgoing.entryId != entryId,
            decks.allSatisfy({ $0.stageUnit != nil }) {
             // Prepare the idle deck while the old one is still sounding. A short render-clock
             // handoff avoids stopping audio while a new format/decoder is scheduled.
-            var handoff = TransitionSpec()
-            handoff.curve = .linear
+            var handoff = handoffSpec ?? TransitionSpec()
+            if handoffSpec == nil { handoff.curve = .linear }
+            let outgoingLength = Int64(Double(outgoing.file.length) / outgoing.file.processingFormat.sampleRate * 1000)
+            let incomingLength = Int64(Double(file.length) / file.processingFormat.sampleRate * 1000)
+            let duration = PlaybackPreferences.handoffDuration(requested: handoffSpec?.durationMs ?? 20,
+                outgoingRemaining: outgoingLength - position(of: active, in: outgoing),
+                incomingRemaining: incomingLength - positionMs)
             try startCrossfade(file: file, entryId: entryId, incomingStartMs: positionMs,
-                               spec: handoff, durationMs: 20, startHostTime: nil)
+                               spec: handoff, durationMs: duration, startHostTime: nil)
             return
         }
         stop(other)

@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-enum SettingsPageRoute: String, Hashable { case appearance, visualizer, library, metadata, about }
+enum SettingsPageRoute: String, Hashable { case appearance, visualizer, playback, library, metadata, about }
 
 struct SettingsDestinationView: View {
     let page: SettingsPageRoute
@@ -10,6 +10,7 @@ struct SettingsDestinationView: View {
             switch page {
             case .appearance: AppearanceSettingsView()
             case .visualizer: VisualizerSettingsView()
+            case .playback: PlaybackSettingsView()
             case .library: LibrarySettingsView()
             case .metadata: MetadataSettingsView()
             case .about: AboutSettingsView()
@@ -28,6 +29,7 @@ struct SettingsView: View {
                 SettingsLink("Themes & Appearance", subtitle: "Colours, themes and appearance", icon: "paintpalette.fill", page: .appearance)
             }
             SettingsGroup("Sound") {
+                SettingsLink("Playback", subtitle: "Crossfade and waveform mode", icon: "waveform", page: .playback)
                 SettingsLink("Audio & Equalizer", subtitle: "8-band equalizer, presets and audio effects", icon: "chart.bar.fill", tool: .equalizer)
                 SettingsLink("Visualizer", subtitle: "Style and feel of the Now Playing visualizer", icon: "waveform", page: .visualizer)
             }
@@ -502,5 +504,54 @@ private struct PlayerWidgetStatusSettings: View {
     private func readStatus() {
         sharedTitle = PlayerWidgetSnapshot.load().title
         error = PlayerWidgetPublisher.lastError
+    }
+}
+
+
+struct PlaybackSettingsView: View {
+    @Environment(TransitionSettingsStore.self) private var transitions
+    @AppStorage(PlaybackPreferences.waveformKey) private var waveformMode = PlaybackPreferences.defaultWaveform
+
+    private var crossfade: Binding<Double> {
+        Binding(get: {
+            transitions.config.global.masterEnabled
+                ? Double(transitions.config.global.defaultChoice.specOrNil?.durationMs ?? 0) / 1000 : 0
+        }, set: { seconds in
+            var global = transitions.config.global
+            if seconds == 0 {
+                global.defaultChoice = .off
+            } else {
+                var spec = global.defaultChoice.specOrNil ?? TransitionSpec()
+                spec.durationMs = Int(seconds * 1000)
+                global.defaultChoice = .custom(spec)
+                global.masterEnabled = true
+            }
+            transitions.setGlobal(global)
+        })
+    }
+
+    var body: some View {
+        SettingsPage {
+            SettingsGroup("Crossfade") {
+                VStack(alignment: .leading, spacing: Spacing.md) {
+                    Text(crossfade.wrappedValue == 0 ? "Off" : String(format: "%.1f seconds", crossfade.wrappedValue))
+                        .monospacedDigit()
+                    Slider(value: crossfade, in: 0...max(PlaybackPreferences.crossfadeRange.upperBound, crossfade.wrappedValue), step: PlaybackPreferences.crossfadeStep)
+                        .accessibilityLabel("Crossfade duration")
+                        .accessibilityIdentifier("crossfadeDuration")
+                    Text("Blends song changes while playing and automatic track endings. Album and playlist transition overrides are kept. Paused changes stay paused.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }.padding(Spacing.lg)
+            }
+            SettingsGroup("Waveform") {
+                Picker("Mode", selection: $waveformMode) {
+                    ForEach(PlayerWaveformMode.allCases) { mode in Text(mode.label).tag(mode.rawValue) }
+                }
+                .pickerStyle(.inline)
+                .padding(Spacing.lg)
+                .accessibilityIdentifier("waveformMode")
+            }
+        }
+        .navigationTitle("Playback")
     }
 }

@@ -1,9 +1,9 @@
 import XCTest
 
 final class LibraryInteractionTests: XCTestCase {
-    @MainActor private func launch(_ page: String) -> XCUIApplication {
+    @MainActor private func launch(_ page: String, waveform: String = "scrolling") -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--erhu-interaction-probe=" + page]
+        app.launchArguments = ["--erhu-interaction-probe=" + page, "-amp.player.waveformMode", waveform]
         app.launch()
         return app
     }
@@ -128,6 +128,33 @@ final class LibraryInteractionTests: XCTestCase {
             title.label == "Player presentation regression"
         }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: 10), .completed)
+    }
+
+    @MainActor func testStaticWaveformUsesFullSongCoordinatesAndRestoresControls() {
+        let app = launch("player", waveform: "fullTrack")
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 20))
+        mini.tap()
+        let transport = app.buttons["nowPlayingPlayPause"]
+        XCTAssertTrue(transport.waitForExistence(timeout: 10))
+        let playing = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in transport.label == "Pause" }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [playing], timeout: 10), .completed)
+        transport.tap()
+        let waveform = app.otherElements["nowPlayingWaveform"]
+        XCTAssertTrue(waveform.waitForExistence(timeout: 5))
+        let elapsed = app.staticTexts["nowPlayingElapsed"]
+        func seconds() -> Int {
+            let parts = elapsed.label.split(separator: ":").compactMap { Int($0) }
+            return parts.count == 2 ? parts[0] * 60 + parts[1] : -1
+        }
+        waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.12)).tap()
+        let tapped = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in (89...91).contains(seconds()) }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [tapped], timeout: 5), .completed)
+        waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.12))
+            .press(forDuration: 0.05, thenDragTo: waveform.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.12)))
+        let dragged = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in (29...31).contains(seconds()) && transport.isHittable }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [dragged], timeout: 5), .completed)
+        XCTAssertEqual(transport.label, "Play", "Seeking while paused must not start playback")
     }
 
     @MainActor func testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh() {

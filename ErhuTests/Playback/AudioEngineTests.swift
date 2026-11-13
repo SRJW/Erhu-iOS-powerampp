@@ -151,6 +151,16 @@ final class AudioEngineTests: XCTestCase {
 
     @MainActor
     func testManualTrackSwitchPreparesTheOtherDeckBeforeReleasingAudio() async throws {
+        try await verifyManualSwitch(duration: nil)
+    }
+
+    @MainActor
+    func testConfiguredManualCrossfadeKeepsTheOutgoingDeckForItsDuration() async throws {
+        try await verifyManualSwitch(duration: 700)
+    }
+
+    @MainActor
+    private func verifyManualSwitch(duration: Int?) async throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".caf")
         defer { try? FileManager.default.removeItem(at: url) }
         let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 2)!
@@ -166,7 +176,12 @@ final class AudioEngineTests: XCTestCase {
         try engine.play(entryId: firstID, url: url, positionMs: 0, startPlaying: true)
         try await Task.sleep(for: .milliseconds(100))
         let outgoing = engine.active
-        try engine.play(entryId: secondID, url: url, positionMs: 0, startPlaying: true)
+        let spec = duration.map { value in
+            var spec = TransitionSpec()
+            spec.durationMs = value
+            return spec
+        }
+        try engine.play(entryId: secondID, url: url, positionMs: 0, startPlaying: true, handoffSpec: spec)
         XCTAssertTrue(engine.isRunning)
         XCTAssertFalse(engine.active === outgoing)
         XCTAssertTrue(engine.other === outgoing)
@@ -177,6 +192,11 @@ final class AudioEngineTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(250))
         XCTAssertGreaterThan(try XCTUnwrap(engine.currentPosition()).positionMs, 0)
         engine.releaseFinishedOutgoing()
+        if duration != nil {
+            XCTAssertFalse(engine.other.segments.isEmpty, "The selected fade must outlast the 20 ms anti-click handover")
+            try await Task.sleep(for: .seconds(2))
+            engine.releaseFinishedOutgoing()
+        }
         XCTAssertTrue(engine.other.segments.isEmpty)
     }
 

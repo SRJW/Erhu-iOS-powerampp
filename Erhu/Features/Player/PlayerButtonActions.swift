@@ -13,18 +13,14 @@ enum PlayerButtonConstants {
     static let settingsLabel = "Settings"
     static let locationUnavailable = "No se encontró la ubicación de esta canción."
     static let shareFailed = "No se pudo preparar el archivo para compartir."
-    static let unknownOutput = "OUTPUT"
     static let shareSymbol = "square.and.arrow.up"
     static let optionsSymbol = "ellipsis"
     static let iconSize: CGFloat = 25
-    static let summarySize: CGFloat = 10
     static let touchSize: CGFloat = 48
     static let iconOpacity = 0.5
     static let disabledOpacity = 0.3
     static let centerFraction: CGFloat = 0.5
     static let optionsRotation = 90.0
-    static let shareIconOffset: CGFloat = -6
-    static let summaryOffset: CGFloat = 31
     static let highlightSeconds = 1.5
     static let revealDelaySeconds = 0.15
     static let highlightOpacity = 0.2
@@ -45,7 +41,6 @@ struct PlayerShareButton: View {
                 Image(systemName: PlayerButtonConstants.shareSymbol)
                     .font(.system(size: PlayerButtonConstants.iconSize, weight: .black))
                     .foregroundStyle(.white.opacity(PlayerButtonConstants.iconOpacity))
-                    .offset(y: PlayerButtonConstants.shareIconOffset)
                     .frame(width: PlayerButtonConstants.touchSize, height: PlayerButtonConstants.touchSize)
                     .contentShape(Rectangle())
             }
@@ -53,11 +48,6 @@ struct PlayerShareButton: View {
             .opacity(available ? 1 : PlayerButtonConstants.disabledOpacity)
             .accessibilityLabel(PlayerButtonConstants.shareLabel)
             .accessibilityIdentifier("nowPlayingShare")
-            .overlay(alignment: .top) {
-                PlayerOutputSummary()
-                    .offset(y: PlayerButtonConstants.summaryOffset)
-                    .allowsHitTesting(false)
-            }
         }
         .sheet(isPresented: $presenting, onDismiss: cleanup) {
             if let prepared {
@@ -102,4 +92,14 @@ private struct AudioFileShareSheet: UIViewControllerRepresentable {
         return controller
     }
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+struct PlayerTransportPressStyle: ButtonStyle {
+    let reduceMotion: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? PlaybackPreferences.pressedScale : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.65), value: configuration.isPressed)
+            .contentShape(Rectangle())
+    }
 }

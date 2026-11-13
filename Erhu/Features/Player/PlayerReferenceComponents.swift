@@ -78,16 +78,3 @@ struct PlayerQueueGlyph: View {
         }.frame(width: 32, height: 32)
     }
 }
-struct PlayerOutputSummary: View {
-    @Environment(PlayerController.self) private var player
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { _ in
-            let rate = AVAudioSession.sharedInstance().sampleRate
-            let rateText = rate > 0 ? String(format: "%g", rate / 1000) + "K" : PlayerButtonConstants.unknownOutput
-            Text(player.engine.outputPCMBitDepth.map { "\($0)/\(rateText)" } ?? rateText)
-                .font(.custom("AvenirNext-Bold", size: PlayerButtonConstants.summarySize))
-                .foregroundStyle(.white)
-                .allowsHitTesting(false)
-        }
-    }
-}

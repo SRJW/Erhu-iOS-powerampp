@@ -242,6 +242,10 @@ struct NowPlayingView: View {
                 Button { showsQueue = true } label: { Label("Queue", systemImage: "music.note.list") }
                 Button { showsVisualizer = true } label: { Label("Visualizer", systemImage: "waveform") }
                 Button { showsEqualizer = true } label: { Label("Equalizer", systemImage: "slider.vertical.3") }
+                Button {
+                    close()
+                    router.open(.settingsPage(.playback))
+                } label: { Label("Playback settings", systemImage: "waveform") }
             }
         } label: {
             Image(systemName: PlayerButtonConstants.optionsSymbol)
@@ -289,11 +293,11 @@ struct NowPlayingView: View {
 
     private func controls(_ state: PlaybackState, width: CGFloat) -> some View {
         HStack(spacing: 3) {
-            transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * 0.11, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
-            transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * 0.15, action: { player.skipToPreviousItem() })
-            transport(state.isPlaying ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: state.isPlaying ? "Pause" : "Play", size: width * 0.18, action: { player.togglePlayPause() })
-            transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * 0.15, action: next)
-            transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * 0.11, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
+            transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * PlaybackPreferences.seekSize, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
+            transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * PlaybackPreferences.skipSize, action: { player.skipToPreviousItem() })
+            transport(state.isPlaying ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: state.isPlaying ? "Pause" : "Play", size: width * PlaybackPreferences.playSize, action: { player.togglePlayPause() })
+            transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * PlaybackPreferences.skipSize, action: next)
+            transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * PlaybackPreferences.seekSize, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
         }
     }
 
@@ -307,14 +311,18 @@ struct NowPlayingView: View {
                                 .font(.system(size: size * 0.25, weight: .black))
                         }
                     }
-                } else { Image(systemName: symbol) }
+                } else {
+                    Image(systemName: symbol)
+                        .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                        .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.8), value: symbol)
+                }
             }
                 .font(.system(size: size * 0.43, weight: .black))
                 .foregroundStyle(.white)
                 .frame(width: size, height: size)
                 .background(.black, in: Circle())
         }
-        .buttonStyle(PressScaleStyle(scale: 0.92))
+        .buttonStyle(PlayerTransportPressStyle(reduceMotion: reduceMotion))
         .frame(minWidth: 44, minHeight: 44)
         .accessibilityLabel(label)
         .accessibilityIdentifier(identifier)
@@ -386,6 +394,7 @@ private struct ProgressSection<Controls: View>: View {
     @Environment(PlayerController.self) private var player
     @Environment(\.playerReduceMotion) private var reduceMotion
     @Environment(\.playerInMotion) private var playerInMotion
+    @AppStorage(PlaybackPreferences.waveformKey) private var waveformMode = PlaybackPreferences.defaultWaveform
     @State private var previewMs: Int64?
     @State private var levels: [Float]?
     @State private var levelsSongID: Int64?
@@ -396,40 +405,42 @@ private struct ProgressSection<Controls: View>: View {
         let entryID = state.currentEntry?.id
         let duration = max(state.durationMs > 0 ? state.durationMs : song.durationMs, 1)
         GeometryReader { geometry in
-            TimelineView(.animation(minimumInterval: 1.0 / 30,
-                                    paused: !state.isPlaying || previewMs != nil || playerInMotion)) { _ in
-                let position = player.currentPositionMs()
-                ZStack {
+            ZStack {
+                TimelineView(.animation(minimumInterval: 1.0 / 30,
+                                        paused: !state.isPlaying || previewMs != nil || playerInMotion)) { _ in
+                    let position = player.currentPositionMs()
                     WaveformSeekBar(levels: levelsSongID == song.id ? levels : nil, positionMs: position,
                                     durationMs: duration, bookmarks: bookmarks,
                                     loop: state.abLoop?.songId == song.id ? state.abLoop : nil,
                                     previewMs: $previewMs, onSeek: { target in
-                                        // A gesture on an outgoing track must never seek its replacement.
                                         guard player.state.currentEntry?.id == entryID else { return }
                                         player.seek(to: target)
-                                    }, referenceStyle: true, barHeight: geometry.size.height)
+                                    }, referenceStyle: true, scrollsWithPlayback: waveformMode == PlayerWaveformMode.scrolling.rawValue,
+                                    barHeight: geometry.size.height)
                         .id(entryID)
                         .transition(reduceMotion ? .opacity : .modifier(
                             active: WaveformArrival(amount: 0), identity: WaveformArrival(amount: 1)))
-                    controls()
-                        .opacity(previewMs == nil ? 1 : 0)
-                        .allowsHitTesting(previewMs == nil)
-                        .accessibilityHidden(previewMs != nil)
-                        .animation(reduceMotion ? nil : .easeInOut(duration: previewMs == nil ? 0.42 : 0.30), value: previewMs != nil)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: entryID)
+                        .overlay(alignment: .bottom) {
+                            HStack {
+                                timeBadge(previewMs ?? position)
+                                    .accessibilityIdentifier("nowPlayingElapsed")
+                                Spacer()
+                                timeBadge(duration)
+                            }
+                            .allowsHitTesting(false)
+                        }
                 }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: entryID)
-                .overlay(alignment: .bottom) {
-                    HStack {
-                        timeBadge(previewMs ?? position)
-                            .accessibilityIdentifier("nowPlayingElapsed")
-                        Spacer()
-                        timeBadge(duration)
-                    }
-                    .allowsHitTesting(false)
-                }
+                // Transport must react to scrub completion even when the waveform clock is paused.
+                controls()
+                    .opacity(previewMs == nil ? 1 : 0)
+                    .allowsHitTesting(previewMs == nil)
+                    .accessibilityHidden(previewMs != nil)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: previewMs == nil ? 0.22 : 0.18), value: previewMs != nil)
             }
         }
         .onChange(of: entryID) { _, _ in previewMs = nil }
+        .onChange(of: waveformMode) { _, _ in previewMs = nil }
         .task(id: entryID) {
             levels = nil
             levelsSongID = nil
@@ -545,7 +556,8 @@ private struct ExpandedLyrics: View {
                     .accessibilityLabel("Previous")
                     .frame(maxWidth: .infinity)
                 Button { player.togglePlayPause() } label: {
-                    Image(systemName: state.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 30)).contentTransition(.symbolEffect(.replace))
+                    Image(systemName: state.isPlaying ? "pause.fill" : "play.fill").font(.system(size: 30)).contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
+                        .animation(reduceMotion ? nil : .spring(response: 0.22, dampingFraction: 0.8), value: symbol)
                         .frame(width: 56, height: 56).contentShape(Rectangle())
                 }
                 .accessibilityLabel(state.isPlaying ? "Pause" : "Play")

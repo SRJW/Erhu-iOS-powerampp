@@ -12,6 +12,8 @@ struct WaveformSeekBar: View {
     @Binding var previewMs: Int64?
     let onSeek: (Int64) -> Void
     var referenceStyle = false
+    var scrollsWithPlayback = true
+    private var scrolling: Bool { referenceStyle && scrollsWithPlayback }
     @State private var scrubAnchorMs: Int64?
     var barHeight: CGFloat = 56
     @Environment(\.palette) private var palette
@@ -30,7 +32,7 @@ struct WaveformSeekBar: View {
             .clipped()
             .allowsHitTesting(false)
             .overlay {
-                if referenceStyle {
+                if scrolling {
                     PanInteraction(canBegin: { _, delta in HorizontalGestureIntent.accepts(delta) },
                         change: { sample in
                             if scrubAnchorMs == nil { scrubAnchorMs = positionMs }
@@ -39,9 +41,9 @@ struct WaveformSeekBar: View {
                         }, end: { sample in
                             let target = scrollingGeometry(geometry.size.width).draggedPosition(
                                 translation: Double(sample.translation.width), anchorMs: scrubAnchorMs ?? positionMs)
-                            onSeek(target)
                             previewMs = nil
                             scrubAnchorMs = nil
+                            onSeek(target)
                         }, cancel: {
                             previewMs = nil
                             scrubAnchorMs = nil
@@ -57,16 +59,23 @@ struct WaveformSeekBar: View {
         }
         .overlay {
             if referenceStyle {
+                GeometryReader { geometry in
                 Rectangle().fill(.white.opacity(0.7))
                     .frame(width: 1)
+                    .position(x: scrolling ? geometry.size.width / 2
+                        : geometry.size.width * CGFloat(WaveformTimeline.fractionOf(previewMs ?? positionMs, durationMs)),
+                              y: geometry.size.height / 2)
                     .opacity(previewMs == nil ? 0 : 1)
                     .animation(reduceMotion ? nil : .easeInOut(duration: 0.16)
                         .delay(previewMs == nil ? 0 : 0.30), value: previewMs != nil)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
+                }
+                .allowsHitTesting(false)
             }
         }
         .frame(height: barHeight)
+        .onDisappear { previewMs = nil; scrubAnchorMs = nil }
         .accessibilityElement()
         .accessibilityLabel("Seek")
         .accessibilityIdentifier(referenceStyle ? "nowPlayingWaveform" : "waveformSeek")
@@ -82,8 +91,7 @@ struct WaveformSeekBar: View {
     }
 
     private func position(at x: CGFloat, width: CGFloat) -> Int64 {
-        guard width > 0 else { return 0 }
-        return WaveformTimeline.positionAt(Float(min(max(x / width, 0), 1)), durationMs)
+        FullTrackWaveformGeometry(durationMs: durationMs, width: Double(width)).position(at: Double(x))
     }
 
     private func scrollingGeometry(_ width: CGFloat) -> ScrollingWaveformGeometry {
@@ -96,11 +104,11 @@ struct WaveformSeekBar: View {
         let count = max(Int((size.width + Self.barGap) / step), 1)
         let fraction = CGFloat(WaveformTimeline.fractionOf(previewMs ?? positionMs, durationMs))
         let span = CGFloat(min(1, 60_000 / Double(max(durationMs, 1))))
-        let bars = referenceStyle ? [] : Self.barLevels(levels, count)
+        let bars = scrolling ? [] : Self.barLevels(levels, count)
         func timelineX(_ f: CGFloat) -> CGFloat {
-            referenceStyle ? size.width * (0.5 + (f - fraction) / span) : f * size.width
+            scrolling ? size.width * (0.5 + (f - fraction) / span) : f * size.width
         }
-        let playedX = referenceStyle ? size.width / 2 : fraction * size.width
+        let playedX = scrolling ? size.width / 2 : fraction * size.width
         if let loop {
             let start = loop.startMs.map { timelineX(CGFloat(WaveformTimeline.fractionOf($0, durationMs))) }
             let end = loop.endMs.map { timelineX(CGFloat(WaveformTimeline.fractionOf($0, durationMs))) }
@@ -112,7 +120,7 @@ struct WaveformSeekBar: View {
                 context.fill(Path(CGRect(x: x - 1, y: 0, width: 2, height: size.height)), with: .color(palette.onSurfaceVariant))
             }
         }
-        if referenceStyle {
+        if scrolling {
             let geometry = scrollingGeometry(size.width)
             let position = previewMs ?? positionMs
             for index in geometry.visibleBars(positionMs: position) {
@@ -133,9 +141,10 @@ struct WaveformSeekBar: View {
         } else {
             for (i, level) in bars.enumerated() {
                 let x = CGFloat(i) * step
-                let height = max(CGFloat(level) * size.height, 2)
+                let height = max(CGFloat(level) * size.height * (referenceStyle ? 0.75 : 1), 2)
                 let rect = CGRect(x: x, y: (size.height - height) / 2, width: barWidth, height: height)
-                let color = x + barWidth / 2 <= playedX ? palette.primary : palette.onSurfaceVariant.opacity(0.35)
+                let color: Color = referenceStyle ? .white.opacity(x + barWidth / 2 <= playedX ? 0.25 : 0.70)
+                    : (x + barWidth / 2 <= playedX ? palette.primary : palette.onSurfaceVariant.opacity(0.35))
                 context.fill(Path(roundedRect: rect, cornerRadius: barWidth / 2), with: .color(color))
             }
         }

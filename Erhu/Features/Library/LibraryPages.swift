@@ -219,7 +219,11 @@ struct LibraryShelfView: View {
 struct AllSongsView: View {
     var folderPath: String? = nil
     @Environment(LibraryStore.self) private var library
+    @Environment(LibraryActions.self) private var actions
+    @Environment(AppRouter.self) private var router
     @AppStorage("library.songs.sort") private var sort = LibrarySort.title.rawValue
+    @State private var selecting = false
+    @State private var selected = Set<Int64>()
     @State private var query = ""
     @State private var showsSearch = false
     @State private var genre = ""
@@ -235,6 +239,18 @@ struct AllSongsView: View {
     var body: some View {
         PlayerSongReveal(destination: folderPath.map(Route.songFolder) ?? .allSongs, songs: results ?? []) {
             LibraryBrowseScrollView(title: folderPath.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty ? nil : $0 } ?? "Songs", query: $query, showsSearch: $showsSearch) {
+                Button { actions.playShuffled(actionSongs, source: .library) } label: {
+                    BrowseControlLabel(title: "", icon: "shuffle")
+                }.accessibilityLabel("Shuffle songs").disabled(actionSongs.isEmpty)
+                Button { actions.playInOrder(actionSongs, source: .library) } label: {
+                    BrowseControlLabel(title: "", icon: "play.fill")
+                }.accessibilityLabel("Play songs").disabled(actionSongs.isEmpty)
+                Button {
+                    selecting.toggle()
+                    if !selecting { selected.removeAll() }
+                } label: {
+                    BrowseControlLabel(title: selecting ? "Done" : "Select", icon: selecting ? "checkmark" : "checklist", selected: selecting)
+                }.accessibilityIdentifier("songsSelect")
                 LibrarySortMenu(selection: $sort, options: LibrarySort.songs)
                 genreMenu
                 Menu {
@@ -256,9 +272,10 @@ struct AllSongsView: View {
                         .font(.caption).foregroundStyle(.secondary).padding(.horizontal, Spacing.gutter)
                 }
                 if let results {
+                    if selecting { selectionActions(results) }
                     Text(countLabel(results.count, "song")).font(.caption).foregroundStyle(.secondary)
                         .padding(.horizontal, Spacing.gutter)
-                    SongList(songs: results, emptyMessage: library.songs.isEmpty ? "No songs found." : "No songs match. Try another search, genre, or mood. Songs need genre tags to match a mood.", emptyIcon: "music.note")
+                    SongList(songs: results, emptyMessage: library.songs.isEmpty ? "No songs found." : "No songs match. Try another search, genre, or mood. Songs need genre tags to match a mood.", emptyIcon: "music.note", selection: selecting ? $selected : nil)
                 } else {
                     ProgressView().frame(maxWidth: .infinity).padding()
                 }
@@ -277,6 +294,27 @@ struct AllSongsView: View {
             genres = updated.1
         }
         .refreshable { library.scan() }
+        .onChange(of: library.songs) { _, songs in selected.formIntersection(Set(songs.map(\.id))) }
+    }
+
+    private var actionSongs: [Song] {
+        if selecting { return library.songs.filter { selected.contains($0.id) } }
+        return results ?? []
+    }
+
+    private func selectionActions(_ visible: [Song]) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.sm) {
+            Text("\(selected.count) selected").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Button("Select all") { selected.formUnion(visible.map(\.id)) }
+                Button("Clear") { selected.removeAll() }
+                Menu {
+                    Button("Add to playlist") { router.songsForPlaylist = actionSongs }
+                    Button("Add to queue") { actionSongs.forEach { actions.addToQueue($0) } }
+                } label: { Label("Actions", systemImage: "ellipsis") }
+                .disabled(actionSongs.isEmpty)
+            }.buttonStyle(.bordered)
+        }.padding(.horizontal, Spacing.gutter)
     }
 
     private var genreMenu: some View {
@@ -301,6 +339,7 @@ struct SongList: View {
     var origin: CollectionRef?
     var showTrackNumbers = false
     var source: PlaybackSource?
+    var selection: Binding<Set<Int64>>? = nil
     @Environment(LibraryActions.self) private var actions
     @Environment(PlayerController.self) private var player
     @Environment(AppRouter.self) private var router
@@ -313,8 +352,27 @@ struct SongList: View {
                 EmptyState(message: emptyMessage, systemImage: emptyIcon)
             }
             ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                TrackRow(song: song, isCurrent: song.id == currentId, showTrackNumber: showTrackNumbers, displayTrackNumber: showTrackNumbers ? index + 1 : nil, actions: songActions) {
-                    actions.play(songs, startIndex: index, origin: origin, source: source)
+                Group {
+                    if let selection {
+                        Button {
+                            if selection.wrappedValue.contains(song.id) { selection.wrappedValue.remove(song.id) }
+                            else { selection.wrappedValue.insert(song.id) }
+                        } label: {
+                            HStack(spacing: 0) {
+                                Image(systemName: selection.wrappedValue.contains(song.id) ? "checkmark.circle.fill" : "circle")
+                                    .frame(width: 44, height: 44)
+                                TrackRow(song: song, isCurrent: song.id == currentId, actions: songActions, onTap: {})
+                                    .allowsHitTesting(false).accessibilityHidden(true)
+                            }.contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(song.title)
+                        .accessibilityValue(selection.wrappedValue.contains(song.id) ? "Selected" : "Not selected")
+                    } else {
+                        TrackRow(song: song, isCurrent: song.id == currentId, showTrackNumber: showTrackNumbers, displayTrackNumber: showTrackNumbers ? index + 1 : nil, actions: songActions) {
+                            actions.play(songs, startIndex: index, origin: origin, source: source)
+                        }
+                    }
                 }
                 .id("amp-song-\(song.id)")
             }
