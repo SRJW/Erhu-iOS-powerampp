@@ -49,6 +49,10 @@ jobs:
       run: |
         xcrun swiftc Erhu/Core/Playback/PlaybackPreferences.swift Tools/Tests/PlaybackPreferences/main.swift -o "$RUNNER_TEMP/amp-playback-preferences-tests"
         "$RUNNER_TEMP/amp-playback-preferences-tests"
+    - name: Test persistent search history and date filters
+      run: |
+        xcrun swiftc -target "$(uname -m)-apple-macosx14.0" -parse-as-library Erhu/Core/Settings/SearchHistoryStore.swift Erhu/Core/Library/SongAddedPeriod.swift Erhu/Core/Playback/QueueDeletionPlan.swift Tools/Tests/SearchHistory/main.swift -o "$RUNNER_TEMP/amp-history-tests"
+        "$RUNNER_TEMP/amp-history-tests"
     - name: Test temporary audio sharing and cleanup
       run: |
         xcrun swiftc Erhu/Core/Common/PreparedAudioShare.swift Tools/Tests/AudioShare/main.swift -o "$RUNNER_TEMP/amp-share-tests"
@@ -233,6 +237,7 @@ jobs:
         options:
         - full-player
         - waveforms-only
+        - library-only
       runner:
         description: macos-15 is Apple Silicon; choose it when ARM capacity is available.
         type: choice

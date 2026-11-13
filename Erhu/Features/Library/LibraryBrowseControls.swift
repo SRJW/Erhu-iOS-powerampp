@@ -40,6 +40,10 @@ struct LibraryBrowseScrollView<Controls: View, Content: View>: View {
             LibraryBrowseHeader(title: title, showsControls: showsControls, query: $query,
                                 focused: $searchFocused, drawer: drawer, height: drawerHeight,
                                 close: closeSearch, reveal: revealSearch, controls: controls)
+            if !drawer.collapsed && query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                RecentSearchesView(scope: "browse." + title.lowercased()) { query = $0; searchFocused = true }
+                    .padding(.horizontal, Spacing.gutter)
+            }
             content
         }
         .frame(maxWidth: .infinity, minHeight: minimumHeight, alignment: .topLeading)
@@ -88,7 +92,7 @@ private struct LibraryBrowseHeader<Controls: View>: View {
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("sectionBrowseTitle")
             GlassSearchField(text: $query, prompt: "Search \(title.lowercased())", focused: $focused,
-                             close: close, identifier: "sectionSearchField")
+                             close: close, identifier: "sectionSearchField", historyScope: "browse." + title.lowercased())
                 .padding(.horizontal, Spacing.gutter).padding(.vertical, 8)
                 .frame(height: height)
                 // Clip only the drawing. A content shape here is merged into the close button's

@@ -371,6 +371,7 @@ private struct AddSongsSheet: View {
         NavigationStack {
             List(shown) { song in
                 Button {
+                    SearchHistoryStore.shared.remember(query, in: "add-songs")
                     if selected.contains(song.id) { selected.remove(song.id) } else { selected.insert(song.id) }
                 } label: {
                     HStack {
@@ -384,6 +385,16 @@ private struct AddSongsSheet: View {
                 .buttonStyle(.plain)
             }.modifier(ToolPageAppearance())
             .searchable(text: $query)
+            .searchSuggestions {
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    ForEach(SearchHistoryStore.shared.entries("add-songs"), id: \.self) { Text($0).searchCompletion($0) }
+                    if !SearchHistoryStore.shared.entries("add-songs").isEmpty {
+                        Button("Clear history") { SearchHistoryStore.shared.clear("add-songs") }
+                    }
+                }
+            }
+            .onSubmit(of: .search) { SearchHistoryStore.shared.remember(query, in: "add-songs") }
+            .onDisappear { SearchHistoryStore.shared.remember(query, in: "add-songs") }
             .navigationTitle("Add songs")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

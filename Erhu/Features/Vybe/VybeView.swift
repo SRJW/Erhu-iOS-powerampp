@@ -21,6 +21,9 @@ struct VybeView: View {
                     .font(.subheadline)
                     .foregroundStyle(palette.onSurfaceVariant)
                 field
+                if text.isBlank {
+                    RecentSearchesView(scope: "vybe") { text = $0; submit() }
+                }
                 if router.section == .vybe { status }
                 switch vybe.query {
                 case .idle:
@@ -55,6 +58,7 @@ struct VybeView: View {
                 .onSubmit(submit)
             if !text.isEmpty {
                 Button {
+                    SearchHistoryStore.shared.remember(text, in: "vybe")
                     text = ""
                     vybe.clear()
                 } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(palette.onSurfaceVariant) }
@@ -70,6 +74,7 @@ struct VybeView: View {
 
     private func submit() {
         focused = false
+        SearchHistoryStore.shared.remember(text, in: "vybe")
         vybe.submit(text)
     }
 

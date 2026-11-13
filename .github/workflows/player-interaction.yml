@@ -11,6 +11,7 @@ run-name: Player verification — ${{ inputs.scope || 'full-player' }} (${{ inpu
         - full-player
         - animation-only
         - waveforms-only
+        - library-only
       runner:
         description: macOS runner for simulator verification
         type: choice
@@ -35,7 +36,7 @@ jobs:
   tests:
     if: github.event.deleted != true
     runs-on: ${{ inputs.runner || 'macos-15-intel' }}
-    timeout-minutes: 40
+    timeout-minutes: 60
     env:
       HOMEBREW_NO_AUTO_UPDATE: '1'
     steps:
@@ -108,15 +109,20 @@ jobs:
     - name: Run real cover swipe and dismissal checks
       if: ${{ inputs.scope != 'animation-only' }}
       run: |
-        test_filters=(
-          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh
-          -only-testing:ErhuInteractionTests/LibraryInteractionTests/testStaticWaveformUsesFullSongCoordinatesAndRestoresControls
-        )
-        if [ "${{ inputs.scope }}" != 'waveforms-only' ]; then
-          test_filters+=(
-            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
-            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack
+        if [ "${{ inputs.scope }}" = 'library-only' ]; then
+          test_filters=(-only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion)
+        else
+          test_filters=(
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testStaticWaveformUsesFullSongCoordinatesAndRestoresControls
           )
+          if [ "${{ inputs.scope }}" = 'full-player' ]; then
+            test_filters+=(
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion
+            )
+          fi
         fi
         run_interactions() {
           xcodebuild test-without-building -project Erhu.xcodeproj -scheme Erhu -configuration Debug \
@@ -161,7 +167,7 @@ jobs:
           build/source-file-stamps.json
         key: ${{ steps.setup.outputs.build-cache-key }}
     - name: Verify the actual rendered colour blend
-      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' && inputs.scope != 'waveforms-only' }}
+      if: ${{ !cancelled() && steps.simulator-build.outcome == 'success' && (inputs.scope == 'full-player' || inputs.scope == 'animation-only') }}
       run: |
         if [ "${{ inputs.scope }}" = "animation-only" ]; then
           echo "Animation-only run: UI gesture tests are intentionally not selected."

@@ -215,129 +215,6 @@ struct LibraryShelfView: View {
     }
 }
 
-/// Every track, with a local query, remembered sorting, and tag-based genre/mood filters.
-struct AllSongsView: View {
-    var folderPath: String? = nil
-    @Environment(LibraryStore.self) private var library
-    @Environment(LibraryActions.self) private var actions
-    @Environment(AppRouter.self) private var router
-    @AppStorage("library.songs.sort") private var sort = LibrarySort.title.rawValue
-    @State private var selecting = false
-    @State private var selected = Set<Int64>()
-    @State private var query = ""
-    @State private var showsSearch = false
-    @State private var genre = ""
-    @State private var mood = LibraryMood.all
-    @State private var results: [Song]?
-    @State private var genres: [String] = []
-
-    private var request: SongBrowseRequest {
-        SongBrowseRequest(songs: library.songs.filter { folderPath == nil || ($0.path as NSString).deletingLastPathComponent == folderPath }, facts: library.browseFacts, query: query,
-                          sort: LibrarySort(rawValue: sort) ?? .title, genre: genre, mood: mood)
-    }
-
-    var body: some View {
-        PlayerSongReveal(destination: folderPath.map(Route.songFolder) ?? .allSongs, songs: results ?? []) {
-            LibraryBrowseScrollView(title: folderPath.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty ? nil : $0 } ?? "Songs", query: $query, showsSearch: $showsSearch) {
-                Button { actions.playShuffled(actionSongs, source: .library) } label: {
-                    BrowseControlLabel(title: "", icon: "shuffle")
-                }.accessibilityLabel("Shuffle songs").disabled(actionSongs.isEmpty)
-                Button { actions.playInOrder(actionSongs, source: .library) } label: {
-                    BrowseControlLabel(title: "", icon: "play.fill")
-                }.accessibilityLabel("Play songs").disabled(actionSongs.isEmpty)
-                Button {
-                    selecting.toggle()
-                    if !selecting { selected.removeAll() }
-                } label: {
-                    BrowseControlLabel(title: selecting ? "Done" : "Select", icon: selecting ? "checkmark" : "checklist", selected: selecting)
-                }.accessibilityIdentifier("songsSelect")
-                LibrarySortMenu(selection: $sort, options: LibrarySort.songs)
-                genreMenu
-                Menu {
-                    Picker("Mood", selection: $mood) {
-                        Text("All moods").tag(LibraryMood.all)
-                        ForEach(LibraryMood.allCases.filter { $0 != .all }, id: \.rawValue) { Text($0.label).tag($0) }
-                    }
-                } label: {
-                    BrowseControlLabel(title: mood.label, icon: "sparkles", selected: mood != .all)
-                }
-                if !genre.isEmpty || mood != .all {
-                    Button { genre = ""; mood = .all } label: { BrowseControlLabel(title: "Reset", icon: "xmark") }
-                        .accessibilityLabel("Clear genre and mood filters")
-                }
-            } content: {
-                if mood != .all {
-                    Text(mood == .throwback ? "Throwback uses your songs’ year tags: released \(Moods.throwbackYears) or more years ago."
-                         : "Mood matches use your songs’ genre and tempo tags.")
-                        .font(.caption).foregroundStyle(.secondary).padding(.horizontal, Spacing.gutter)
-                }
-                if let results {
-                    if selecting { selectionActions(results) }
-                    Text(countLabel(results.count, "song")).font(.caption).foregroundStyle(.secondary)
-                        .padding(.horizontal, Spacing.gutter)
-                    SongList(songs: results, emptyMessage: library.songs.isEmpty ? "No songs found." : "No songs match. Try another search, genre, or mood. Songs need genre tags to match a mood.", emptyIcon: "music.note", selection: selecting ? $selected : nil)
-                } else {
-                    ProgressView().frame(maxWidth: .infinity).padding()
-                }
-            }
-        }
-        .navigationTitle("")
-        .task(id: request) {
-            let snapshot = request
-            if !snapshot.query.isEmpty { try? await Task.sleep(for: .milliseconds(120)) }
-            guard !Task.isCancelled else { return }
-            let updated = await Task.detached(priority: .userInitiated) {
-                (snapshot.results(), LibraryBrowse.genres(in: snapshot.songs))
-            }.value
-            guard !Task.isCancelled else { return }
-            results = updated.0
-            genres = updated.1
-        }
-        .refreshable { library.scan() }
-        .onChange(of: library.songs) { _, songs in selected.formIntersection(Set(songs.map(\.id))) }
-    }
-
-    private var actionSongs: [Song] {
-        if selecting {
-            var selection = request
-            selection.songs = library.songs.filter { selected.contains($0.id) }
-            selection.query = ""
-            selection.genre = ""
-            selection.mood = .all
-            return selection.results()
-        }
-        return results ?? []
-    }
-
-    private func selectionActions(_ visible: [Song]) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text("\(selected.count) selected").font(.caption).foregroundStyle(.secondary)
-            HStack {
-                Button("Select all") { selected.formUnion(visible.map(\.id)) }
-                Button("Clear") { selected.removeAll() }
-                Menu {
-                    Button("Add to playlist") { router.songsForPlaylist = actionSongs }
-                    Button("Add to queue") { actionSongs.forEach { actions.addToQueue($0) } }
-                } label: { Label("Actions", systemImage: "ellipsis") }
-                .disabled(actionSongs.isEmpty)
-            }.buttonStyle(.bordered)
-        }.padding(.horizontal, Spacing.gutter)
-    }
-
-    private var genreMenu: some View {
-        Menu {
-            Picker("Genre", selection: $genre) {
-                Text("All genres").tag("")
-                Text("Untagged").tag(LibraryBrowse.untaggedGenre)
-                ForEach(genres, id: \.self) { Text($0).tag(SectionSearch.key($0)) }
-            }
-        } label: {
-            BrowseControlLabel(title: genre.isEmpty ? "Genre" : genre == LibraryBrowse.untaggedGenre ? "Untagged" : genres.first { SectionSearch.key($0) == genre } ?? "Genre",
-                               icon: "guitars", selected: !genre.isEmpty)
-        }
-    }
-}
-
 /// A plain list of tracks that plays from the tapped one.
 struct SongList: View {
     let songs: [Song]
@@ -347,6 +224,8 @@ struct SongList: View {
     var showTrackNumbers = false
     var source: PlaybackSource?
     var selection: Binding<Set<Int64>>? = nil
+    var showsFileDetails = false
+    var onPlay: (() -> Void)? = nil
     @Environment(LibraryActions.self) private var actions
     @Environment(PlayerController.self) private var player
     @Environment(AppRouter.self) private var router
@@ -368,15 +247,16 @@ struct SongList: View {
                             HStack(spacing: 0) {
                                 Image(systemName: selection.wrappedValue.contains(song.id) ? "checkmark.circle.fill" : "circle")
                                     .frame(width: 44, height: 44)
-                                TrackRow(song: song, isCurrent: song.id == currentId, actions: songActions, onTap: {})
+                                TrackRow(song: song, isCurrent: song.id == currentId, showsFileDetails: showsFileDetails, showsActions: false, actions: songActions, onTap: {})
                                     .allowsHitTesting(false).accessibilityHidden(true)
                             }.contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel(song.title)
+                        .accessibilityLabel(SongRowText.accessibilityLabel(song, includingFileDetails: showsFileDetails))
                         .accessibilityValue(selection.wrappedValue.contains(song.id) ? "Selected" : "Not selected")
                     } else {
-                        TrackRow(song: song, isCurrent: song.id == currentId, showTrackNumber: showTrackNumbers, displayTrackNumber: showTrackNumbers ? index + 1 : nil, actions: songActions) {
+                        TrackRow(song: song, isCurrent: song.id == currentId, showTrackNumber: showTrackNumbers, displayTrackNumber: showTrackNumbers ? index + 1 : nil, showsFileDetails: showsFileDetails, actions: songActions) {
+                            onPlay?()
                             actions.play(songs, startIndex: index, origin: origin, source: source)
                         }
                     }

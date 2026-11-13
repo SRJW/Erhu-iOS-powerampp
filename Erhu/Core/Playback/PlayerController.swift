@@ -254,21 +254,27 @@ final class PlayerController {
     }
 
     /// Permanent deletion removes every occurrence and cannot be undone into a missing file.
-    func removeDeletedSong(_ songID: Int64) {
-        let current = state.currentEntry
-        let oldIndex = state.currentIndex
+    func removeDeletedSong(_ songID: Int64) { removeDeletedSongs([songID]) }
+
+    func removeDeletedSongs(_ songIDs: Set<Int64>) {
+        guard !songIDs.isEmpty else { return }
+        let oldQueue = state.queue
+        let plan = QueueDeletionPlan(songIDs: oldQueue.map { $0.song.id }, currentIndex: state.currentIndex, deletedIDs: songIDs)
+        let playing = state.isPlaying || (state.status == .buffering && preparingPlayIntent)
         removals.clear()
-        state.queue.removeAll { $0.song.id == songID }
+        state.queue = plan.retainedIndices.map { oldQueue[$0] }
+        state.currentIndex = plan.currentIndex
         if state.queue.isEmpty {
-            state.currentIndex = -1
+            audioPreparation?.cancel(); audioPreparation = nil; preparingPlayIntent = false
             engine.stopAll()
             playingChanged(false)
             currentEntryChanged(sameEntryRepeated: false)
-        } else if current?.song.id == songID {
-            state.currentIndex = min(max(oldIndex, 0), state.queue.count - 1)
-            startCurrent(at: 0, playing: state.isPlaying)
-        } else if let current, let index = state.queue.firstIndex(where: { $0.id == current.id }) {
-            state.currentIndex = index
+        } else if plan.currentWasDeleted {
+            // All deleted entries are gone before starting a replacement; never open
+            // another file from the same confirmed deletion batch.
+            startCurrent(at: 0, playing: playing)
+        } else if let current = state.currentEntry, plan.retainedIndices.count != oldQueue.count {
+            engine.dropQueuedAfterCurrent(currentEntry: current.id)
         }
         queueChanged()
     }

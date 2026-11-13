@@ -51,6 +51,27 @@ final class LibraryActions {
         AppServices.shared.library.scan()
     }
 
+    /// Called only after the Songs screen confirms its captured selection.
+    @discardableResult
+    func deleteFromDevice(_ songs: [Song]) -> Set<Int64> {
+        let result = LibraryFileDeletion.remove(relativePaths: songs.map(\.path), in: LibraryPaths.musicFolder)
+        let removed = songs.filter { result.deleted.contains($0.path) }
+        var refreshNeeded = false
+        player.removeDeletedSongs(Set(removed.map(\.id)))
+        for song in removed { ArtworkLoader.shared.forget(path: song.url.path) }
+        if !removed.isEmpty {
+            do {
+                try database.db.transaction { for song in removed { try database.deleteSong(song) } }
+            } catch { refreshNeeded = true }
+        }
+        if !removed.isEmpty { AppServices.shared.library.scan() }
+        var message = "Deleted \(countLabel(removed.count, "song")) from device."
+        if !result.failed.isEmpty { message += " \(result.failed.count) files could not be deleted and remain selected." }
+        if refreshNeeded { message += " Refreshing the library." }
+        show(message)
+        return Set(removed.map(\.id))
+    }
+
     func fixTags(_ songs: [Song]) {
         let started = AppServices.shared.fixTags.fixInPlace(songs)
         show(started ? "Fixing tags for these songs. You can keep browsing." : "A tag repair is already running, or no songs are available.")

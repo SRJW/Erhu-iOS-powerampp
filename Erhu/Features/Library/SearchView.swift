@@ -60,6 +60,7 @@ final class SearchStore {
     }
 
     func remember(_ item: RecentSearchItem) {
+        SearchHistoryStore.shared.remember(query, in: "library")
         recents.removeAll { $0.id == item.id }
         recents.insert(item, at: 0)
         recents = Array(recents.prefix(Self.recentLimit))
@@ -86,7 +87,9 @@ struct SearchView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if search.query.trimmed.isEmpty {
-                        recents
+                        RecentSearchesView(scope: "library") { search.query = $0; focused = true }
+                            .padding(.horizontal, Spacing.gutter)
+                        if !search.recents.isEmpty || SearchHistoryStore.shared.entries("library").isEmpty { recents }
                     } else if search.songs.isEmpty && search.albums.isEmpty && search.artists.isEmpty {
                         EmptyState(message: "Nothing in your library matches \"\(search.query.trimmed)\".", systemImage: "magnifyingglass")
                     } else {

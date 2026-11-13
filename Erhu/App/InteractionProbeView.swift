@@ -16,6 +16,8 @@ struct InteractionProbeView: View {
         Group {
             if page == "player" || page == "player-reduced-motion" || page == "player-artwork" {
                 PlayerInteractionProbe(reduceMotion: page == "player-reduced-motion", withArtwork: page == "player-artwork")
+            } else if page == "songs" {
+                SongsInteractionProbe()
             } else if page == "search" {
                 Button("Open search") { router.showsSearch = true }
                     .accessibilityIdentifier("openSearchProbe")
@@ -112,6 +114,61 @@ private struct PlayerInteractionProbe: View {
                         durationMs: 120_000, path: name))
                 }
                 player.playSongs(songs)
+                ready = true
+            } catch { failure = error.localizedDescription }
+        }
+    }
+}
+/// A real, owned-file library fixture for search persistence, selection and confirmed deletion.
+private struct SongsInteractionProbe: View {
+    @Environment(PlayerController.self) private var player
+    @Environment(AppSettings.self) private var settings
+    @Environment(AppRouter.self) private var router
+    @Environment(LibraryStore.self) private var library
+    @State private var ready = false
+    @State private var failure: String?
+
+    var body: some View {
+        Group {
+            if ready { RootView() }
+            else if let failure { Text(failure).accessibilityIdentifier("songsProbeFailure") }
+            else { ProgressView() }
+        }
+        .task {
+            guard !ready else { return }
+            settings.introductionCompleted = true
+            settings.theme = .dark
+            for _ in 0..<100 {
+                if player.restoreFinished { break }
+                try? await Task.sleep(for: .milliseconds(50))
+            }
+            guard player.restoreFinished else { failure = "Playback restore did not finish"; return }
+            player.pause()
+            do {
+                let folder = LibraryPaths.musicFolder.appendingPathComponent("__songs-ui-fixture", isDirectory: true)
+                try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+                let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 44_100)!
+                buffer.frameLength = buffer.frameCapacity
+                for frame in 0..<Int(buffer.frameLength) { buffer.floatChannelData![0][frame] = 0 }
+                for name in ["History fixture one", "History fixture two"] {
+                    let url = folder.appendingPathComponent(name + ".m4a")
+                    do {
+                        let file = try AVAudioFile(forWriting: url, settings: [AVFormatIDKey: kAudioFormatAppleLossless,
+                            AVSampleRateKey: 44_100.0, AVNumberOfChannelsKey: 1, AVEncoderBitDepthHintKey: 16])
+                        try file.write(from: buffer); try file.write(from: buffer)
+                    }
+                    var tags = TagWriteRequest()
+                    tags.title = name; tags.artist = "Fixture artist"; tags.album = "Fixture album"
+                    try TagWriter.write(tags, to: url)
+                }
+                _ = try LibraryScanner(database: library.database).scan()
+                if !(try library.database.playlists()).contains(where: { $0.name == "Songs UI playlist" }) {
+                    _ = try library.database.createPlaylist(name: "Songs UI playlist")
+                }
+                library.reload()
+                router.select(.library)
+                router.open(.allSongs)
                 ready = true
             } catch { failure = error.localizedDescription }
         }

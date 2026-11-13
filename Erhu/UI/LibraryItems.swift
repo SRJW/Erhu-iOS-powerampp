@@ -48,6 +48,19 @@ struct SongActionItems: View {
     }
 }
 
+enum SongRowText {
+    static func fileDetails(_ song: Song) -> String {
+        let ext = (song.path as NSString).pathExtension.lowercased()
+        let format = ext.isEmpty ? (song.codec?.lowercased() ?? "audio") : ext
+        return (song.durationMs > 0 ? formatDuration(song.durationMs) : "–:–") + " | " + format
+    }
+    static func accessibilityLabel(_ song: Song, includingFileDetails: Bool) -> String {
+        var parts = [song.title, song.artist]
+        if includingFileDetails { parts += [song.album, fileDetails(song)] }
+        return parts.filter { !$0.isBlank }.joined(separator: ", ")
+    }
+}
+
 /// A track in a list: artwork (or track number), title (highlighted when playing), "artist · album",
 /// a heart and the actions menu.
 struct TrackRow: View {
@@ -56,6 +69,8 @@ struct TrackRow: View {
     var showTrackNumber = false
     var displayTrackNumber: Int? = nil
     var subtitle: String?
+    var showsFileDetails = false
+    var showsActions = true
     let actions: SongActions
     let onTap: () -> Void
     @Environment(\.palette) private var palette
@@ -73,10 +88,15 @@ struct TrackRow: View {
                         .font(.body.weight(.semibold))
                         .foregroundStyle(isCurrent ? Color.accentColor : palette.onSurface)
                         .lineLimit(1)
-                    Text(subtitle ?? [song.artist, song.album].filter { !$0.isBlank }.joined(separator: " · "))
+                    Text(subtitle ?? [song.artist, song.album].filter { !$0.isBlank }.joined(separator: showsFileDetails ? " - " : " · "))
                         .font(.subheadline)
                         .foregroundStyle(palette.onSurfaceVariant)
                         .lineLimit(1)
+                    if showsFileDetails {
+                        Label(SongRowText.fileDetails(song), systemImage: "music.note")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(palette.primary.opacity(0.8)).lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 0)
             }
@@ -100,25 +120,27 @@ struct TrackRow: View {
                                tap: { _ in onTap() })
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel([song.title, song.artist].filter { !$0.isBlank }.joined(separator: ", "))
+            .accessibilityLabel(SongRowText.accessibilityLabel(song, includingFileDetails: showsFileDetails))
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { onTap() }
-            Button { actions.toggleFavorite(song) } label: {
-                Image(systemName: song.isFavorite ? "heart.fill" : "heart")
-                    .foregroundStyle(song.isFavorite ? palette.primary : palette.onSurfaceVariant)
-                    .frame(width: 32, height: 44)
+            if showsActions {
+                Button { actions.toggleFavorite(song) } label: {
+                    Image(systemName: song.isFavorite ? "heart.fill" : "heart")
+                        .foregroundStyle(song.isFavorite ? palette.primary : palette.onSurfaceVariant)
+                        .frame(width: 32, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(song.isFavorite ? "Remove from favorites" : "Add to favorites")
+                Menu {
+                    SongActionItems(song: song, actions: actions)
+                } label: {
+                    Image(systemName: "ellipsis").foregroundStyle(palette.onSurfaceVariant)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .accessibilityLabel("More actions")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(song.isFavorite ? "Remove from favorites" : "Add to favorites")
-            Menu {
-                SongActionItems(song: song, actions: actions)
-            } label: {
-                Image(systemName: "ellipsis").foregroundStyle(palette.onSurfaceVariant)
-                    .frame(width: 44, height: 44).contentShape(Rectangle())
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .accessibilityLabel("More actions")
         }
         .padding(.horizontal, Spacing.gutter)
         .padding(.vertical, Spacing.xs)

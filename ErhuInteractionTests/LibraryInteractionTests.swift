@@ -204,6 +204,51 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [resumed], timeout: 10), .completed, "The actual play button works after scrolling scrubs")
     }
 
+    @MainActor func testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion() {
+        let app = launch("songs")
+        let search = app.buttons["sectionSearchButton"]
+        XCTAssertTrue(search.waitForExistence(timeout: 30))
+        XCTAssertTrue(app.buttons["songsPlayAll"].exists)
+        XCTAssertTrue(app.buttons["songsShuffle"].exists)
+        let first = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "History fixture one")).firstMatch
+        let second = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "History fixture two")).firstMatch
+        XCTAssertTrue(first.waitForExistence(timeout: 20))
+        XCTAssertTrue(first.label.contains("Fixture artist"))
+        XCTAssertTrue(first.label.contains("0:02 | m4a"), "Songs expose duration and real container format")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "songs-layout-and-file-information"; screenshot.lifetime = .keepAlways; add(screenshot)
+        search.tap()
+        let field = app.textFields["sectionSearchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap(); field.typeText("History fixture\n")
+        app.terminate(); app.launch()
+        XCTAssertTrue(search.waitForExistence(timeout: 30))
+        search.tap()
+        let recent = app.buttons["recentSearch.History fixture"]
+        XCTAssertTrue(recent.waitForExistence(timeout: 10), "Search text survives a full app relaunch")
+        recent.tap()
+        field.tap(); field.typeText("\n")
+        app.buttons["songsSelect"].tap()
+        first.tap()
+        XCTAssertTrue(app.staticTexts["1 selected"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["songsPlayAll"].isEnabled, "Select is reserved for playlist and deletion actions")
+        app.buttons["songsAddToPlaylist"].tap()
+        let playlist = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Songs UI playlist")).firstMatch
+        XCTAssertTrue(playlist.waitForExistence(timeout: 10))
+        playlist.tap()
+        app.buttons["songsAddToPlaylist"].tap()
+        XCTAssertTrue(playlist.waitForExistence(timeout: 10))
+        XCTAssertTrue(playlist.label.contains("1 song"), "The selected song was actually added")
+        app.buttons["Cancel"].tap()
+        app.buttons["songsDeleteSelected"].tap()
+        app.buttons["Cancel"].tap()
+        XCTAssertTrue(first.exists, "Cancel must preserve the selected file and row")
+        app.buttons["songsDeleteSelected"].tap()
+        app.buttons["Delete from device"].tap()
+        let removed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !first.exists && second.exists }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [removed], timeout: 10), .completed, "Only the confirmed selection is removed")
+    }
+
     @MainActor func testSearchClearAndCloseAreTappableWithKeyboardVisible() {
         let app = launch("search")
         app.buttons["openSearchProbe"].tap()

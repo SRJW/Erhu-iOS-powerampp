@@ -126,7 +126,7 @@ private struct LyricsPanelContent: View {
         }
         .task(id: song.id) { store.shown(song) }
         .sheet(isPresented: $searching, onDismiss: { store.closeSearch() }) {
-            searchSheet.task { if !searchText.isBlank { store.search(searchText) } }
+            searchSheet.task { if !searchText.isBlank { searchLyrics(searchText) } }
         }
     }
 
@@ -279,14 +279,31 @@ private struct LyricsPanelContent: View {
         }
     }
 
+    private func searchLyrics(_ query: String) {
+        SearchHistoryStore.shared.remember(query, in: "lyrics")
+        store.search(query)
+    }
+
     private var searchSheet: some View {
         NavigationStack {
             List {
                 Section {
-                    TextField("Title and artist", text: $searchText)
-                        .submitLabel(.search)
-                        .onSubmit { store.search(searchText) }
-                    Button("Search") { store.search(searchText) }.disabled(searchText.isBlank)
+                    HStack {
+                        TextField("Title and artist", text: $searchText)
+                            .submitLabel(.search)
+                            .onSubmit { searchLyrics(searchText) }
+                        if !searchText.isBlank {
+                            Button {
+                                SearchHistoryStore.shared.remember(searchText, in: "lyrics")
+                                searchText = ""
+                            } label: { Image(systemName: "xmark.circle.fill").frame(width: 44, height: 44) }
+                            .buttonStyle(.plain).accessibilityLabel("Clear lyrics search")
+                        }
+                    }
+                    Button("Search") { searchLyrics(searchText) }.disabled(searchText.isBlank)
+                }
+                if searchText.isBlank {
+                    Section { RecentSearchesView(scope: "lyrics") { searchText = $0; searchLyrics($0) } }
                 }
                 Section {
                     if let url = LyricsWebSearch.url(for: searchText) {
