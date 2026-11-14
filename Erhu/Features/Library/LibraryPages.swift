@@ -1,144 +1,55 @@
 import SwiftUI
 
-private let gridColumns = [GridItem(.adaptive(minimum: ArtworkSize.gridMin), spacing: Spacing.lg, alignment: .top)]
-
-/// Albums as an artwork grid, with independent section search and a saved sort order.
 struct AlbumsView: View {
-    @Environment(LibraryStore.self) private var library
-    @Environment(AppRouter.self) private var router
-    @AppStorage("library.albums.sort") private var sort = LibrarySort.title.rawValue
-    @State private var query = ""
-    @State private var showsSearch = false
-    @State private var results: [Album]?
-
-    private var request: AlbumBrowseRequest {
-        AlbumBrowseRequest(albums: library.albums, songs: library.songs, facts: library.browseFacts,
-                           lastPlayed: library.albumLastPlayed, query: query, sort: LibrarySort(rawValue: sort) ?? .title)
-    }
-
-    var body: some View {
-        LibraryBrowseScrollView(title: "Albums", isTabRoot: true, query: $query, showsSearch: $showsSearch) {
-            LibrarySortMenu(selection: $sort, options: LibrarySort.albums)
-        } content: {
-            if library.albums.isEmpty {
-                EmptyState(message: library.isScanning ? "Scanning your music…" : "No albums yet.", systemImage: "square.stack")
-            } else if let results {
-                Text(countLabel(results.count, "album")).font(.caption).foregroundStyle(.secondary)
-                    .padding(.horizontal, Spacing.gutter)
-                if results.isEmpty {
-                    EmptyState(message: "No albums match your search.", systemImage: "magnifyingglass")
-                } else {
-                    LazyVGrid(columns: gridColumns, spacing: Spacing.xl) {
-                        ForEach(results) { album in
-                            AlbumTile(album: album) { router.open(.album(album.id)) }
-                        }
-                    }
-                    .padding(.horizontal, Spacing.gutter)
-                    .padding(.vertical, Spacing.sm)
-                }
-            } else {
-                ProgressView().frame(maxWidth: .infinity).padding()
-            }
-        }
-        .task(id: request) {
-            let snapshot = request
-            // Typing cancels the previous delivery; large libraries never sort on the UI thread.
-            if !snapshot.query.isEmpty { try? await Task.sleep(for: .milliseconds(120)) }
-            guard !Task.isCancelled else { return }
-            let updated = await Task.detached(priority: .userInitiated) { snapshot.results() }.value
-            guard !Task.isCancelled else { return }
-            results = updated
-        }
-        .refreshable { library.scan() }
-    }
+    var body: some View { EntityCategoryView(category: .albums) }
 }
 
-/// Stable persisted identifiers; unknown or duplicate values never hide a section.
-private enum LibraryOverviewSection: String, CaseIterable, Identifiable {
-    case playlists, favorites, artists, songs
-    var id: String { rawValue }
-    var title: String {
-        switch self {
-        case .playlists: "Playlists"
-        case .favorites: "Favorites"
-        case .artists: "Artists"
-        case .songs: "Songs"
-        }
-    }
-    static func ordered(_ stored: String) -> [Self] {
-        var result: [Self] = []
-        for value in stored.split(separator: ",") {
-            if let section = Self(rawValue: String(value)), !result.contains(section) { result.append(section) }
-        }
-        return result + allCases.filter { !result.contains($0) }
-    }
-}
-
-/// The Library landing page: Playlists, Favorites, Artists and Songs, each a short horizontal
-/// preview with a "More" that opens the full shelf.
+/// The single library root; migrate the previous saved section order without hiding new categories.
 struct LibraryOverviewView: View {
-    @Environment(LibraryStore.self) private var library
-    @Environment(LibraryActions.self) private var actions
     @Environment(AppRouter.self) private var router
-
-    @AppStorage("library.overview.sectionOrder") private var storedOrder = "playlists,favorites,artists,songs"
+    @Environment(LibraryStore.self) private var library
+    @State private var releases = ReleaseChecker.shared
+    @AppStorage("library.overview.sectionOrder") private var storedOrder = "songs,albums,artists,playlists,mostPlayed,recentlyPlayed,recentlyAdded,favorites,folders,albumArtists,radio"
     @State private var showsOrder = false
-    @State private var editingOrder: [LibraryOverviewSection] = []
-    private static let previewLimit = 15
-
+    @State private var editingOrder: [LibraryCategory] = []
     var body: some View {
         LibraryRootScrollView {
-            VStack(alignment: .leading, spacing: Spacing.lg) {
-                ForEach(LibraryOverviewSection.ordered(storedOrder)) { shelf in
-                    switch shelf {
-                    case .playlists:
-                        Shelf(title: LibraryShelf.playlists.label, onMore: { router.open(.shelf(.playlists)) }) {
-                            NewPlaylistTile { router.showsNewPlaylist = true }.frame(width: 136)
-                            ForEach(library.playlists.prefix(Self.previewLimit)) { playlist in
-                                PlaylistTile(playlist: playlist) { router.open(.playlist(playlist.id)) }.frame(width: 136)
-                            }
-                        }
-                    case .favorites:
-                        section(LibraryShelf.favorites.label, empty: library.favorites.isEmpty,
-                                message: "No favorites yet. Tap the heart on any song to add it here.", more: { router.open(.shelf(.favorites)) }) {
-                            ForEach(Array(library.favorites.prefix(Self.previewLimit).enumerated()), id: \.element.id) { index, song in
-                                SongTile(song: song) { actions.play(library.favorites, startIndex: index, source: .favorites) }.frame(width: 136)
-                            }
-                        }
-                    case .artists:
-                        section(LibraryShelf.artists.label, empty: library.artists.isEmpty,
-                                message: "No artists found. Pull down to rescan.", more: { router.open(.shelf(.artists)) }) {
-                            ForEach(library.artists) { artist in
-                                ArtistTile(artist: artist) { router.open(.artist(artist.id)) }.frame(width: 136)
-                            }
-                        }
-                    case .songs:
-                        section("Songs", empty: library.songs.isEmpty,
-                                message: library.isScanning ? "Scanning your music…" : "No songs found. Pull down to rescan.", more: { router.open(.allSongs) }) {
-                            ForEach(Array(library.songs.prefix(Self.previewLimit).enumerated()), id: \.element.id) { index, song in
-                                SongTile(song: song) { actions.play(library.songs, startIndex: index) }.frame(width: 136)
-                            }
-                        }
+            VStack(alignment: .leading, spacing: Spacing.sm) {
+                if case .available(let release) = releases.state {
+                    Button { router.open(.settingsPage(.about)) } label: {
+                        Label("amp \(release.tag_name) is available", systemImage: "arrow.down.circle")
+                            .padding(Spacing.lg)
                     }
                 }
-            }
-            .padding(.vertical, Spacing.sm)
+                ForEach(LibraryCategory.ordered(storedOrder)) { category in
+                    Button { router.open(category == .songs ? .allSongs : .category(category)) } label: {
+                        HStack(spacing: Spacing.lg) {
+                            Image(systemName: category.icon).font(.title2).frame(width: 36)
+                            Text(category.title).font(.headline)
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                        }.frame(minHeight: 56).padding(.horizontal, Spacing.gutter).contentShape(Rectangle())
+                    }.buttonStyle(.plain).accessibilityIdentifier("libraryCategory.\(category.rawValue)")
+                }
+            }.padding(.vertical, Spacing.md)
         }
-        .tracksLibraryScrolling()
         .refreshable { library.scan() }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    editingOrder = LibraryOverviewSection.ordered(storedOrder)
-                    showsOrder = true
-                } label: { Image(systemName: "arrow.up.arrow.down") }
-                .accessibilityLabel("Reorder library sections")
+                Menu {
+                    Button("Import music", systemImage: "plus") { router.showsImporter = true }
+                    Button("Wi-Fi Transfer", systemImage: "wifi") { router.open(Tool.wifiTransfer) }
+                    Button("Reorder categories", systemImage: "arrow.up.arrow.down") {
+                        editingOrder = LibraryCategory.ordered(storedOrder); showsOrder = true
+                    }
+                } label: { Image(systemName: "ellipsis").rotationEffect(.degrees(90)).frame(width: 44, height: 44) }
+                .accessibilityLabel("Library options")
             }
         }
         .sheet(isPresented: $showsOrder) {
             NavigationStack {
                 List {
-                    ForEach(editingOrder) { shelf in Text(shelf.title) }
+                    ForEach(editingOrder) { Text($0.title) }
                         .onMove { source, destination in
                             editingOrder.move(fromOffsets: source, toOffset: destination)
                             storedOrder = editingOrder.map(\.rawValue).joined(separator: ",")
@@ -148,70 +59,23 @@ struct LibraryOverviewView: View {
                 .navigationTitle("Library order")
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Reset") {
-                            editingOrder = LibraryOverviewSection.allCases
-                            storedOrder = editingOrder.map(\.rawValue).joined(separator: ",")
-                        }
+                        Button("Reset") { editingOrder = LibraryCategory.allCases; storedOrder = editingOrder.map(\.rawValue).joined(separator: ",") }
                     }
                     ToolbarItem(placement: .confirmationAction) { Button("Done") { showsOrder = false } }
                 }
             }
         }
     }
-
-    @ViewBuilder
-    private func section<Cards: View>(_ title: String, empty: Bool, message: String, more: @escaping () -> Void,
-                                      @ViewBuilder cards: @escaping () -> Cards) -> some View {
-        if empty {
-            VStack(alignment: .leading, spacing: 0) {
-                SectionHeading(title: title, onMore: more)
-                Text(message).font(.caption).foregroundStyle(.secondary).padding(.horizontal, Spacing.gutter)
-            }
-        } else {
-            Shelf(title: title, onMore: more, content: cards)
-        }
-    }
 }
 
-/// A full Library shelf, opened from the overview's "More".
 struct LibraryShelfView: View {
     let shelf: LibraryShelf
-    @Environment(LibraryStore.self) private var library
-    @Environment(LibraryActions.self) private var actions
-    @Environment(PlayerController.self) private var player
-    @Environment(AppRouter.self) private var router
-
-    @State private var query = ""
-    @State private var showsSearch = false
-
-    var body: some View {
-        LibraryBrowseScrollView(title: shelf.label, showsControls: false, query: $query, showsSearch: $showsSearch) {
-            EmptyView()
-        } content: {
-            switch shelf {
-            case .playlists:
-                LazyVGrid(columns: gridColumns, spacing: Spacing.xl) {
-                    NewPlaylistTile { router.showsNewPlaylist = true }
-                    ForEach(library.playlists.filter { query.isBlank || SearchNormalizer.matches($0.name, query) }) { playlist in
-                        PlaylistTile(playlist: playlist) { router.open(.playlist(playlist.id)) }
-                    }
-                }
-                .padding(.horizontal, Spacing.gutter)
-                .padding(.vertical, Spacing.sm)
-            case .favorites:
-                SongList(songs: library.favorites.filter { query.isBlank || SearchNormalizer.matches($0.title + " " + $0.artist + " " + $0.album, query) }, emptyMessage: "No favorites yet. Tap the heart on any song to add it here.",
-                         emptyIcon: "heart", source: .favorites)
-            case .artists:
-                LazyVGrid(columns: gridColumns, spacing: Spacing.xl) {
-                    ForEach(library.artists.filter { query.isBlank || SearchNormalizer.matches($0.name, query) }) { artist in
-                        ArtistTile(artist: artist) { router.open(.artist(artist.id)) }
-                    }
-                }
-                .padding(.horizontal, Spacing.gutter)
-                .padding(.vertical, Spacing.sm)
-            }
+    @ViewBuilder var body: some View {
+        switch shelf {
+        case .favorites: AllSongsView(category: .favorites)
+        case .artists: EntityCategoryView(category: .artists)
+        case .playlists: EntityCategoryView(category: .playlists)
         }
-        .navigationTitle("")
     }
 }
 

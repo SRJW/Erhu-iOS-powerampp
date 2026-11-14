@@ -88,6 +88,7 @@ enum Route: Hashable {
     case radio(RadioSeed)
     case shelf(LibraryShelf)
     case allSongs
+    case category(LibraryCategory)
     case songFolder(String)
     case tool(Tool)
     case settingsPage(SettingsPageRoute)
@@ -105,6 +106,7 @@ final class AppRouter {
         get { section == .search }
         set { if newValue { activate(.search) } }
     }
+    var showsImporter = false
     var showsDrawer = false
     var showsNowPlaying = false
     var presentedTool: Tool?
@@ -159,10 +161,13 @@ final class AppRouter {
     func reveal(_ source: PlaybackSource) {
         let destination: Route?
         switch source {
-        case .album(let id): section = .albums; destination = .album(id)
+        case .album(let id): section = .library; destination = .album(id)
         case .playlist(let id): section = .library; destination = .playlist(id)
         case .artist(let id): section = .library; destination = .artist(id)
-        case .smartPlaylist: section = .home; destination = nil
+        case .smartPlaylist(let title):
+            section = .library
+            let category: LibraryCategory = title == SmartPlaylist.mostPlayed.rawValue ? .mostPlayed : title == SmartPlaylist.recentlyAdded.rawValue ? .recentlyAdded : .recentlyPlayed
+            destination = .category(category)
         case .library: section = .library; destination = .allSongs
         case .favorites: section = .library; destination = .shelf(.favorites)
         case .vybe: section = .library; destination = .allSongs

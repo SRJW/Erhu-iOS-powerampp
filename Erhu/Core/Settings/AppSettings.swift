@@ -66,7 +66,7 @@ final class AppSettings {
         set { update { $0.typeface = newValue } }
     }
 
-    var visibleSections: [LibrarySection] { LibrarySection.allCases }
+    var visibleSections: [LibrarySection] { [.library, .equalizer, .search] }
 
     var visualizer: VisualizerSettings {
         get { stored.visualizer }

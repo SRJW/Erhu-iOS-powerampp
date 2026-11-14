@@ -294,6 +294,12 @@ extension LibraryDatabase {
 // MARK: - Albums and artists
 
 extension LibraryDatabase {
+    func albumArtistAlbumIDs() throws -> [Int64: Set<Int64>] {
+        let rows = try db.query("SELECT artist_id, album_id FROM album_artist_cross_ref", []) { ($0.int64("artist_id"), $0.int64("album_id")) }
+        var result: [Int64: Set<Int64>] = [:]
+        for (artist, album) in rows { result[artist, default: []].insert(album) }
+        return result
+    }
     func allAlbums() throws -> [Album] {
         try db.query("SELECT * FROM albums ORDER BY title COLLATE NOCASE ASC", [], Self.album)
     }

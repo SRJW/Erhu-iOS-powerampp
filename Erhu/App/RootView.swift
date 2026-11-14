@@ -16,7 +16,6 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.palette) private var palette
     @Environment(\.playerReduceMotion) private var reduceMotion
-    @State private var showsImporter = false
     @State private var releases = ReleaseChecker.shared
     @State private var chrome = LibraryChromeState()
     @State private var playerMotion = PlayerDragState()
@@ -78,7 +77,7 @@ struct RootView: View {
         .onChange(of: router.paths[router.section]?.count) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
         .routerSheets(active: !router.showsNowPlaying)
         .alert("New playlist", isPresented: $router.showsNewPlaylist) { NewPlaylistAlert() }
-        .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.audio, UTType(importedAs: "org.xiph.ogg")], allowsMultipleSelection: true) { result in
+        .fileImporter(isPresented: $router.showsImporter, allowedContentTypes: [.audio, UTType(importedAs: "org.xiph.ogg")], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { library.importFiles(urls) }
         }
         .alert("Something went wrong", isPresented: $library.isShowingError) {
@@ -117,16 +116,6 @@ struct RootView: View {
         NavigationStack(path: router.binding(for: section)) {
             sectionRoot(section)
                 .navigationTitle(section == .albums ? "" : section == .home ? "amp" : section.label)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button("Import music", systemImage: "plus") { showsImporter = true }
-                            Button("Home") { router.select(.home) }
-                            Button("Albums") { router.select(.albums) }
-                        } label: { Image(systemName: "ellipsis") }
-                            .accessibilityLabel("Library options")
-                    }
-                }
                 .navigationDestination(for: Route.self) { route in destination(route) }
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: chromeHeight) }
         }
@@ -136,8 +125,8 @@ struct RootView: View {
     @ViewBuilder
     private func sectionRoot(_ section: LibrarySection) -> some View {
         switch section {
-        case .home: HomeView()
-        case .albums: AlbumsView()
+        case .home: LibraryOverviewView()
+        case .albums: EntityCategoryView(category: .albums)
         case .library: LibraryOverviewView()
         case .equalizer: EqualizerView()
         case .search: SearchView()
@@ -153,7 +142,14 @@ struct RootView: View {
             case .playlist(let id): PlaylistDetailView(playlistId: id)
             case .radio(let seed): RadioStationView(seed: seed)
             case .shelf(let shelf): LibraryShelfView(shelf: shelf)
-            case .allSongs: AllSongsView()
+            case .allSongs: AllSongsView().navigationBarBackButtonHidden().toolbar { categoryBack }
+            case .category(let category):
+                Group {
+                    switch category {
+                    case .songs, .mostPlayed, .recentlyPlayed, .recentlyAdded, .favorites: AllSongsView(category: category)
+                    default: EntityCategoryView(category: category)
+                    }
+                }.navigationBarBackButtonHidden().toolbar { categoryBack }
             case .songFolder(let path): AllSongsView(folderPath: path)
             case .tool(let tool): ToolView(tool: tool).tracksLibraryScrolling(usesUIKit: true)
             case .settingsPage(let page): SettingsDestinationView(page: page).tracksLibraryScrolling(usesUIKit: true)
@@ -161,6 +157,13 @@ struct RootView: View {
             }
         }
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: router.presentedTool == nil ? chromeHeight : 0) }
+    }
+
+    @ToolbarContentBuilder private var categoryBack: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button { router.activate(.library) } label: { Image(systemName: "chevron.up").frame(width: 44, height: 44) }
+                .accessibilityLabel("Back to Library")
+        }
     }
 
     private var chromeHeight: CGFloat { AppNavigationMetrics.reservedHeight }

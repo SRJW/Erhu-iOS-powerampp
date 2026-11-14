@@ -9,6 +9,8 @@ final class LibraryStore {
     private(set) var songs: [Song] = []
     private(set) var albums: [Album] = []
     private(set) var artists: [Artist] = []
+    private(set) var albumArtistAlbums: [Int64: Set<Int64>] = [:]
+    var albumArtists: [Artist] { artists.filter { albumArtistAlbums[$0.id] != nil } }
     private(set) var playlists: [Playlist] = []
     private(set) var browseFacts: [Int64: LibraryBrowseFact] = [:]
     private(set) var albumLastPlayed: [Int64: Int64] = [:]
@@ -49,6 +51,7 @@ final class LibraryStore {
             songs = try database.allSongs()
             albums = try database.allAlbums()
             artists = try database.allArtists()
+            albumArtistAlbums = try database.albumArtistAlbumIDs()
             playlists = try database.playlists()
             favorites = try database.favoriteSongs()
             browseFacts = try database.libraryBrowseFacts()

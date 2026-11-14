@@ -3,17 +3,18 @@ import SwiftUI
 /// Songs keeps amp's theme, with collection-wide play, focused tools and explicit bulk actions.
 struct AllSongsView: View {
     var folderPath: String? = nil
+    var category: LibraryCategory = .songs
     @Environment(LibraryStore.self) private var library
     @Environment(LibraryActions.self) private var actions
     @Environment(AppRouter.self) private var router
-    @AppStorage("library.songs.sort") private var sort = LibrarySort.title.rawValue
+    @AppStorage private var sort: String
     @State private var selecting = false
     @State private var selected = Set<Int64>()
     @State private var pendingDeletion: [Song] = []
     @State private var confirmsDeletion = false
     @State private var query = ""
     @State private var showsSearch = false
-    @State private var showsFilters = true
+    @State private var showsFilters = false
     @State private var added = SongAddedPeriod.any
     @State private var genre = ""
     @State private var mood = LibraryMood.all
@@ -21,12 +22,26 @@ struct AllSongsView: View {
     @State private var genres: [String] = []
     @FocusState private var searchFocused: Bool
 
+    init(folderPath: String? = nil, category: LibraryCategory = .songs) {
+        self.folderPath = folderPath
+        self.category = category
+        let key = category == .songs ? "library.songs.sort" : "library.\(category.rawValue).sort"
+        _sort = AppStorage(wrappedValue: category.defaultSort.rawValue, key)
+    }
+
     private var scopedSongs: [Song] {
-        guard let folderPath else { return library.songs }
+        guard let folderPath else {
+            switch category {
+            case .favorites: return library.favorites
+            case .mostPlayed: return library.songs.filter { (library.browseFacts[$0.id]?.plays ?? 0) > 0 }
+            case .recentlyPlayed: return library.songs.filter { (library.browseFacts[$0.id]?.lastPlayedAt ?? 0) > 0 }
+            default: return library.songs
+            }
+        }
         return library.songs.filter { ($0.path as NSString).deletingLastPathComponent == folderPath }
     }
     private var title: String {
-        folderPath.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty ? nil : $0 } ?? "Songs"
+        folderPath.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty ? nil : $0 } ?? category.title
     }
     private var hasFilters: Bool { added != .any || !genre.isEmpty || mood != .all }
     private var request: SongBrowseRequest {
@@ -46,7 +61,6 @@ struct AllSongsView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     header
-                    tools
                     if showsFilters { filters }
                     if showsSearch {
                         VStack(spacing: Spacing.sm) {
@@ -60,18 +74,20 @@ struct AllSongsView: View {
                         .task { searchFocused = true }
                     }
                     if selecting { selectionActions }
+                    if category == .recentlyPlayed { recentCollections }
                     if let results {
                         if hasFilters || !query.trimmed.isEmpty {
                             Text("\(results.count) \(results.count == 1 ? "match" : "matches")").font(.caption).foregroundStyle(.secondary)
                                 .padding(.horizontal, Spacing.gutter)
                         }
                         SongList(songs: results, emptyMessage: scopedSongs.isEmpty ? "No songs found." : "No songs match these filters.",
-                                 emptyIcon: "music.note", selection: selecting ? $selected : nil, showsFileDetails: true,
+                                 emptyIcon: "music.note", source: playbackSource, selection: selecting ? $selected : nil, showsFileDetails: true,
                                  onPlay: { SearchHistoryStore.shared.remember(query, in: "songs") })
                     } else { ProgressView().frame(maxWidth: .infinity).padding() }
                 }.padding(.top, Spacing.sm)
             }
             .accessibilityIdentifier("songsPage")
+            .modifier(SongAlphabetNavigation(songs: results ?? [], enabled: sort == LibrarySort.title.rawValue || sort == LibrarySort.titleDescending.rawValue))
         }
         .tracksLibraryScrolling()
         .navigationTitle("")
@@ -101,45 +117,46 @@ struct AllSongsView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: Spacing.sm) {
-            Text(title).font(.largeTitle.bold()).accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("sectionBrowseTitle")
-            Text("\(countLabel(scopedSongs.count, "song")) in \(folderPath == nil ? "your library" : "this folder")")
-                .font(.subheadline).foregroundStyle(.secondary)
-            HStack(spacing: Spacing.md) {
-                SongsPlayButton(title: "Play All", symbol: "play.fill", filled: true) {
-                    SearchHistoryStore.shared.remember(query, in: "songs")
-                    actions.playInOrder(results ?? [], source: .library)
-                }.accessibilityIdentifier("songsPlayAll")
-                SongsPlayButton(title: "Shuffle", symbol: "shuffle") {
-                    SearchHistoryStore.shared.remember(query, in: "songs")
-                    actions.playShuffled(results ?? [], source: .library)
-                }.accessibilityIdentifier("songsShuffle")
-            }.disabled(selecting || (results ?? []).isEmpty)
-        }.padding(.horizontal, Spacing.gutter)
+    private var playbackSource: PlaybackSource {
+        switch category {
+        case .favorites: .favorites
+        case .mostPlayed: .smartPlaylist(SmartPlaylist.mostPlayed.rawValue)
+        case .recentlyPlayed: .smartPlaylist(SmartPlaylist.recentlyPlayed.rawValue)
+        case .recentlyAdded: .smartPlaylist(SmartPlaylist.recentlyAdded.rawValue)
+        default: .library
+        }
     }
 
-    private var tools: some View {
-        HStack(spacing: Spacing.sm) {
-            Button {
-                selecting.toggle()
-                if !selecting { selected.removeAll() }
-            } label: { SongsToolLabel(title: selecting ? "Done" : "Select", symbol: "checklist", active: selecting) }
-                .accessibilityIdentifier("songsSelect")
-            Divider().frame(height: 36)
-            Menu {
-                Picker("Sort by", selection: $sort) {
-                    ForEach(LibrarySort.songs, id: \.rawValue) { Text($0.label).tag($0.rawValue) }
-                }
-            } label: { SongsToolLabel(title: "Sort", symbol: "arrow.up.arrow.down") }
-            Button { showsFilters.toggle() } label: { SongsToolLabel(title: "Filter", symbol: "line.3.horizontal.decrease", active: hasFilters) }
-            Divider().frame(height: 36)
-            Button { showsSearch = true; searchFocused = true } label: { SongsToolLabel(title: "Search", symbol: "magnifyingglass", active: showsSearch) }
-                .accessibilityIdentifier("sectionSearchButton")
+    private var header: some View {
+        CategoryHeader(title: title, icon: folderPath == nil ? category.icon : "folder", count: (results ?? scopedSongs).count,
+                       selecting: selecting,
+                       shuffle: { actions.playShuffled(results ?? [], source: playbackSource) },
+                       play: { actions.playInOrder(results ?? [], source: playbackSource) },
+                       search: { showsSearch = true; searchFocused = true },
+                       select: { selecting.toggle(); if !selecting { selected.removeAll() } }) {
+            Picker("Sort by", selection: $sort) {
+                ForEach(LibrarySort.songs, id: \.rawValue) { Text($0.label).tag($0.rawValue) }
+            }
+            Button(showsFilters ? "Hide filters" : "Show filters", systemImage: "line.3.horizontal.decrease") { showsFilters.toggle() }
+            Button("Import music", systemImage: "plus") { router.showsImporter = true }
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, Spacing.gutter)
+    }
+
+    @ViewBuilder private var recentCollections: some View {
+        if !library.recentAlbums.isEmpty {
+            Shelf(title: "Recently played albums") {
+                ForEach(library.recentAlbums) { album in
+                    AlbumTile(album: album) { router.open(.album(album.id)) }.frame(width: ArtworkSize.shelf)
+                }
+            }
+        }
+        if !library.recentPlaylists.isEmpty {
+            Shelf(title: "Recently played playlists") {
+                ForEach(library.recentPlaylists) { playlist in
+                    PlaylistTile(playlist: playlist) { router.open(.playlist(playlist.id)) }.frame(width: ArtworkSize.shelf)
+                }
+            }
+        }
     }
 
     private var filters: some View {
