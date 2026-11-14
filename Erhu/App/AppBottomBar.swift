@@ -99,6 +99,7 @@ struct AppMenu: View {
             VStack(alignment: .leading, spacing: Spacing.xs) {
                 HStack {
                     Button { router.activate(.library) } label: { Label("Library", systemImage: "books.vertical") }
+                        .buttonStyle(.bordered).buttonBorderShape(.capsule)
                     Spacer()
                     Button { router.showsDrawer = false } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
                         .accessibilityLabel("Close menu")

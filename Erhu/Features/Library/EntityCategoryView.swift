@@ -26,17 +26,17 @@ struct EntityCategoryView: View {
     private var artists: [Artist] {
         let candidates = category == .albumArtists ? library.albumArtists : library.artists
         let sorted = candidates.filter { match.matches([$0.name]) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        return sort == LibrarySort.titleDescending.rawValue ? sorted.reversed() : sorted
+        return sort == LibrarySort.titleDescending.rawValue ? Array(sorted.reversed()) : sorted
     }
     private var playlists: [Playlist] {
         let sorted = library.playlists.filter { match.matches([$0.name]) }.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
-        return sort == LibrarySort.titleDescending.rawValue ? sorted.reversed() : sorted
+        return sort == LibrarySort.titleDescending.rawValue ? Array(sorted.reversed()) : sorted
     }
     private var folders: [String] {
         let sorted = Set(library.songs.map { ($0.path as NSString).deletingLastPathComponent }).filter { match.matches([$0]) }.sorted {
             $0.localizedStandardCompare($1) == .orderedAscending
         }
-        return sort == LibrarySort.titleDescending.rawValue ? sorted.reversed() : sorted
+        return sort == LibrarySort.titleDescending.rawValue ? Array(sorted.reversed()) : sorted
     }
     private var songs: [Song] {
         switch category {
