@@ -83,10 +83,16 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertEqual(XCTWaiter.wait(for: [sought], timeout: 10), .completed)
         XCTAssertFalse(app.buttons["nowPlayingTitle"].exists)
         mini.swipeLeft()
-        XCTAssertTrue(app.staticTexts["Second player track"].waitForExistence(timeout: 10))
+        let next = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (mini.value as? String)?.hasPrefix("Second player track,") == true
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [next], timeout: 10), .completed)
         XCTAssertFalse(app.buttons["nowPlayingTitle"].exists)
         mini.swipeRight()
-        XCTAssertTrue(app.staticTexts["Player presentation regression"].waitForExistence(timeout: 10))
+        let previous = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            (mini.value as? String)?.hasPrefix("Player presentation regression,") == true
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [previous], timeout: 10), .completed)
         mini.tap()
         XCTAssertTrue(app.buttons["nowPlayingTitle"].waitForExistence(timeout: 10))
     }

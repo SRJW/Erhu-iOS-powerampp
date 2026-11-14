@@ -296,7 +296,7 @@ private struct AppearanceSettingsView: View {
 private struct PlayerBackgroundSettingsGroup: View {
     @Environment(AppSettings.self) private var settings
     @Environment(PlayerController.self) private var player
-    @Environment(\.playbackPalette) private var palette
+    @State private var previewPalette = LyricsPalette.fallback
 
     private var gradientColor: Binding<Color> {
         Binding(get: { Color(argb: settings.playerBackground.gradientColor) }, set: { color in
@@ -318,10 +318,15 @@ private struct PlayerBackgroundSettingsGroup: View {
         SettingsGroup(PlayerBackgroundControls.title) {
             VStack(spacing: Spacing.lg) {
                 if let song = player.state.currentSong {
-                    PlayerFullBleedBackground(dominant: palette.primary, appearance: settings.playerBackground) {
+                    PlayerFullBleedBackground(dominant: Color(argb: previewPalette.artworkDominant), appearance: settings.playerBackground) {
                         SongArtworkView(song: song, maxPixels: 600)
                     }
-                    .frame(height: 180).clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                    .frame(height: PlayerBackgroundControls.previewHeight).clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                    .task(id: song.url) {
+                        let sampled = await LyricsPaletteCache.shared.palette(for: song.url)
+                        guard !Task.isCancelled else { return }
+                        previewPalette = sampled
+                    }
                 }
                 slider(PlayerBackgroundControls.gradient, key: \.gradient, range: PlayerBackgroundControls.unitRange)
                 ColorPicker(PlayerBackgroundControls.gradientColor, selection: gradientColor, supportsOpacity: false)

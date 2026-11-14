@@ -46,6 +46,7 @@ struct MiniPlayer: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open Now Playing")
                 .accessibilityIdentifier("openNowPlaying")
+                .accessibilityValue("\(song.title), \(song.subtitle)")
                 .accessibilityHint("Tap to open. Swipe left or right to change tracks; swipe up to open.")
                 .accessibilityAction(named: MiniPlayerMetrics.nextLabel) { player.skipNext() }
                 .accessibilityAction(named: MiniPlayerMetrics.previousLabel) { player.skipToPreviousItem() }

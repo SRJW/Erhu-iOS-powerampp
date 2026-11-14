@@ -24,6 +24,7 @@ struct PlayerBackgroundSettings: Codable, Equatable {
 }
 
 enum PlayerBackgroundControls {
+    static let previewHeight = 180.0
     static let title = "Player artwork & background"
     static let gradient = "Background gradient"
     static let gradientColor = "Gradient colour"
