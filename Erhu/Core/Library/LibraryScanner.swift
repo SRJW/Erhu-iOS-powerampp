@@ -57,7 +57,8 @@ final class LibraryScanner: @unchecked Sendable {
         for (index, file) in files.enumerated() {
             let id = Self.songId(forPath: file.path)
             if let existing = stored[id], existing.song.dateModified == file.modified, existing.song.fileSize == file.size,
-               existing.song.path == file.path {
+               existing.song.path == file.path,
+               existing.song.codec != nil, existing.song.codec != "AAC/ALAC" {
                 scanned.append(existing)
             } else {
                 var fresh = Self.read(file, id: id)
@@ -244,6 +245,8 @@ struct AudioFormatInfo: Equatable {
             return info
         }
         guard let file = try? AVAudioFile(forReading: url) else { return info }
+        let formatID = file.fileFormat.streamDescription.pointee.mFormatID
+        info.codec = MediaFormats.codecName(formatID)
         let rate = file.fileFormat.sampleRate
         info.sampleRate = Int(rate)
         info.channels = Int(file.fileFormat.channelCount)

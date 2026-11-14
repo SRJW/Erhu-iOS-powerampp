@@ -57,7 +57,8 @@ struct AllSongsView: View {
     }
 
     var body: some View {
-        PlayerSongReveal(destination: folderPath.map(Route.songFolder) ?? .allSongs, songs: results ?? []) {
+        PlayerSongReveal(destination: folderPath.map(Route.songFolder) ?? (category == .songs ? .allSongs : .category(category)),
+                         songs: results ?? [], alphabetEnabled: sort == LibrarySort.title.rawValue || sort == LibrarySort.titleDescending.rawValue) {
             ScrollView {
                 VStack(alignment: .leading, spacing: Spacing.md) {
                     header
@@ -87,7 +88,6 @@ struct AllSongsView: View {
                 }.padding(.top, Spacing.sm)
             }
             .accessibilityIdentifier("songsPage")
-            .modifier(SongAlphabetNavigation(songs: results ?? [], enabled: sort == LibrarySort.title.rawValue || sort == LibrarySort.titleDescending.rawValue))
         }
         .tracksLibraryScrolling()
         .navigationTitle("")

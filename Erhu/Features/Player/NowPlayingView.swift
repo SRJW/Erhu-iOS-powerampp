@@ -3,7 +3,7 @@ import AVFoundation
 
 /// Full-bleed artwork player with waveform transport and compact library navigation.
 struct NowPlayingView: View {
-    @Environment(\.vybeEnabled) private var vybeEnabled
+    @Environment(\.radioAvailable) private var radioAvailable
     @Environment(PlayerController.self) private var player
     @Environment(LibraryActions.self) private var actions
     @Environment(AppRouter.self) private var router
@@ -233,10 +233,10 @@ struct NowPlayingView: View {
                 Button { showsLyrics = true } label: { Label("Lyrics", systemImage: "quote.bubble") }
                 Button { close() } label: { Label("Close player", systemImage: "chevron.down") }
                     .accessibilityIdentifier("closeNowPlaying")
-                if vybeEnabled, let song {
+                if radioAvailable, let song {
                     Button { router.showsNowPlaying = false; router.open(.radio(.song(song.id))) } label: { Label("Browse radio", systemImage: "dot.radiowaves.left.and.right") }
                 }
-                if vybeEnabled, let radio = actions.radio, let song, radio.startSongId == song.id || radio.suggested.contains(song.id) {
+                if radioAvailable, let radio = actions.radio, let song, radio.startSongId == song.id || radio.suggested.contains(song.id) {
                     Button { actions.refreshRadio() } label: { Label("New radio picks", systemImage: "arrow.clockwise") }
                 }
                 Button { showsQueue = true } label: { Label("Queue", systemImage: "music.note.list") }

@@ -1,15 +1,13 @@
 import SwiftUI
 import Observation
 
-/// The primary destinations, switched by the bottom bar (Search is the separate button beside it).
+/// The primary destinations of the shared four-button navigation bar.
 enum LibrarySection: String, CaseIterable, Identifiable {
-    case home, albums, library, equalizer, search
+    case library, equalizer, search
     var id: String { rawValue }
 
     var label: String {
         switch self {
-        case .home: "Home"
-        case .albums: "Albums"
         case .library: "Library"
         case .equalizer: "Equalizer"
         case .search: "Search"
@@ -18,8 +16,6 @@ enum LibrarySection: String, CaseIterable, Identifiable {
 
     var icon: String {
         switch self {
-        case .home: "house"
-        case .albums: "square.stack"
         case .library: "music.note.house"
         case .equalizer: "slider.vertical.3"
         case .search: "magnifyingglass"
@@ -28,8 +24,6 @@ enum LibrarySection: String, CaseIterable, Identifiable {
 
     var selectedIcon: String {
         switch self {
-        case .home: "house.fill"
-        case .albums: "square.stack.fill"
         case .library: "music.note.house.fill"
         case .equalizer: "slider.vertical.3"
         case .search: "magnifyingglass"
@@ -50,7 +44,7 @@ enum LibraryShelf: String, Hashable {
     }
 }
 
-/// The tools in the side menu (Android's navigation drawer).
+/// Tools opened from the anchored bottom menu.
 enum Tool: String, CaseIterable, Identifiable, Hashable {
     case soundCapsule, equalizer, autoFixTags, libraryBuilder, artworkFetcher, wifiTransfer, settings
     var id: String { rawValue }

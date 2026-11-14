@@ -53,7 +53,7 @@ final class LibraryBrowseViewTests: XCTestCase {
         window.frame = CGRect(x: 0, y: 0, width: 350, height: 600)
         let search = SearchState()
         let router = AppRouter()
-        router.select(.albums)
+        router.select(.library)
         let host = UIHostingController(rootView: NavigationStack {
             LibraryBrowseScrollView(title: "Albums", query: Binding(get: { search.query }, set: { search.query = $0 }),
                                     showsSearch: Binding(get: { search.revealed }, set: { search.revealed = $0 })) {
@@ -61,7 +61,7 @@ final class LibraryBrowseViewTests: XCTestCase {
             } content: {
                 LazyVStack { ForEach(0..<100) { Text("Album \($0)").frame(height: 44) } }
             }
-        }.environment(router).environment(LibraryChromeState()).environment(\.artworkSection, .albums))
+        }.environment(router).environment(LibraryChromeState()).environment(\.artworkSection, .library))
         window.rootViewController = host
         window.makeKeyAndVisible()
         window.layoutIfNeeded()

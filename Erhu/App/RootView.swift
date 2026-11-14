@@ -1,9 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The app's frame (Android's MainScaffold): the four sections, each with its own back stack,
-/// a glass bottom bar with the mini player above it, Search beside the sections, and the side menu
-/// with the tools.
+/// Persistent section stacks, full player and tools share the same bottom navigation.
 struct RootView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(LibraryStore.self) private var library
@@ -115,7 +113,7 @@ struct RootView: View {
     private func sectionStack(_ section: LibrarySection) -> some View {
         NavigationStack(path: router.binding(for: section)) {
             sectionRoot(section)
-                .navigationTitle(section == .albums ? "" : section == .home ? "amp" : section.label)
+                .navigationTitle(section.label)
                 .navigationDestination(for: Route.self) { route in destination(route) }
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: chromeHeight) }
         }
@@ -125,8 +123,6 @@ struct RootView: View {
     @ViewBuilder
     private func sectionRoot(_ section: LibrarySection) -> some View {
         switch section {
-        case .home: LibraryOverviewView()
-        case .albums: EntityCategoryView(category: .albums)
         case .library: LibraryOverviewView()
         case .equalizer: EqualizerView()
         case .search: SearchView()

@@ -8,13 +8,13 @@ final class LibraryChromeTests: XCTestCase {
     func testTabsOpenTheirRootsInsteadOfRestoringTools() {
         let router = AppRouter()
         router.open(.settings)
-        router.select(.albums)
+        router.select(.equalizer)
         router.open(.artworkFetcher)
-        router.select(.home)
-        XCTAssertEqual(router.section, .home)
-        XCTAssertTrue(router.paths[.home]!.isEmpty)
-        router.select(.albums)
-        XCTAssertTrue(router.paths[.albums]!.isEmpty)
+        router.select(.library)
+        XCTAssertEqual(router.section, .library)
+        XCTAssertTrue(router.paths[.library]!.isEmpty)
+        router.select(.equalizer)
+        XCTAssertTrue(router.paths[.equalizer]!.isEmpty)
     }
 
     @MainActor
@@ -39,7 +39,7 @@ final class LibraryChromeTests: XCTestCase {
         window.frame = CGRect(x: 0, y: 0, width: 350, height: 600)
         let host = UIHostingController(rootView: LibraryRootScrollView {
             LazyVStack { ForEach(0..<100) { Text("Track \($0)").frame(height: 44) } }
-        }.environment(router).environment(\.artworkSection, .home))
+        }.environment(router).environment(\.artworkSection, .library))
         window.rootViewController = host
         window.makeKeyAndVisible()
         window.layoutIfNeeded()
@@ -56,7 +56,7 @@ final class LibraryChromeTests: XCTestCase {
         let scroll = try XCTUnwrap(scrollView(host.view))
         scroll.setContentOffset(CGPoint(x: 0, y: 800), animated: false)
         XCTAssertGreaterThan(scroll.contentOffset.y, 500)
-        router.select(.home)
+        router.select(.library)
         for _ in 0..<150 {
             if scroll.contentOffset.y + scroll.adjustedContentInset.top < 1 { break }
             try await Task.sleep(for: .milliseconds(20))
@@ -84,45 +84,6 @@ final class LibraryChromeTests: XCTestCase {
         chrome.consume(120)
         chrome.expand(reduceMotion: true)
         XCTAssertEqual(chrome.fraction, 0)
-    }
-
-    func testCompactLayoutPreservesTouchTargetsAndFitsNarrowPhones() {
-        for width in [CGFloat(296), 351, 366, 404] {
-            let layout = LibraryChromeGeometry(width: width, fraction: 1, hasSong: true)
-            XCTAssertEqual(layout.height, 60)
-            XCTAssertEqual(layout.navigation.size, CGSize(width: 56, height: 56))
-            XCTAssertEqual(layout.search.size, CGSize(width: 56, height: 56))
-            XCTAssertEqual(layout.mini.minX - layout.navigation.maxX, 8)
-            XCTAssertEqual(layout.search.minX - layout.mini.maxX, 8)
-            XCTAssertEqual(layout.search.maxX, width)
-            XCTAssertEqual(layout.mini.midY, layout.navigation.midY)
-            XCTAssertGreaterThanOrEqual(layout.mini.width, 168)
-        }
-    }
-
-    func testExpandedAndNoSongLayoutsKeepControlsInSeparateRows() {
-        let layout = LibraryChromeGeometry(width: 366, fraction: 0, hasSong: true)
-        XCTAssertEqual(layout.mini.width, 366)
-        XCTAssertEqual(layout.navigation.minY - layout.mini.maxY, 8)
-        XCTAssertEqual(layout.height, layout.navigation.maxY)
-        let empty = LibraryChromeGeometry(width: 366, fraction: 1, hasSong: false)
-        XCTAssertEqual(empty.height, 56)
-        XCTAssertEqual(empty.mini.height, 0)
-        XCTAssertEqual(empty.navigation.minY, 0)
-        XCTAssertEqual(empty.navigation.width, 302)
-    }
-
-    func testDraggingCapsuleMapsToNearestSectionAndClampsAtBothEnds() {
-        for index in 0..<4 {
-            let center = CGFloat(44 + index * 80)
-            XCTAssertEqual(SectionCapsuleGeometry.position(at: center, width: 328, count: 4), CGFloat(index))
-            XCTAssertEqual(SectionCapsuleGeometry.index(at: center, width: 328, count: 4), index)
-        }
-        XCTAssertEqual(SectionCapsuleGeometry.index(at: 83, width: 328, count: 4), 0)
-        XCTAssertEqual(SectionCapsuleGeometry.index(at: 85, width: 328, count: 4), 1)
-        XCTAssertEqual(SectionCapsuleGeometry.index(at: -100, width: 328, count: 4), 0)
-        XCTAssertEqual(SectionCapsuleGeometry.index(at: 900, width: 328, count: 4), 3)
-        XCTAssertEqual(SectionCapsuleGeometry.index(at: 10, width: 0, count: 4), 0)
     }
 
     func testPowerAndThermalRestrictionsSuspendDecorativeWork() {

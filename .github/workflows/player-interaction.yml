@@ -91,6 +91,12 @@ jobs:
           -destination "id=$UI_SIMULATOR_ID" -derivedDataPath build/DerivedData \
           -clonedSourcePackagesDirPath build/SourcePackages CODE_SIGNING_ALLOWED=NO \
           -only-testing:ErhuTests/PlayerButtonActionTests \
+          -only-testing:ErhuTests/AppNavigationTests \
+          -only-testing:ErhuTests/SongFileDetailsTests \
+          -only-testing:ErhuTests/PlaybackSourceTests \
+          -only-testing:ErhuTests/ReleaseAndDiscoveryTests \
+          -only-testing:ErhuTests/LibrarySearchTests \
+          -only-testing:ErhuTests/LibraryCategoryTests \
           -only-testing:ErhuTests/AudioEngineTests/testManualTrackSwitchPreparesTheOtherDeckBeforeReleasingAudio \
           -only-testing:ErhuTests/AudioEngineTests/testConfiguredManualCrossfadeKeepsTheOutgoingDeckForItsDuration \
           -parallel-testing-enabled NO \
@@ -110,7 +116,10 @@ jobs:
       if: ${{ inputs.scope != 'animation-only' }}
       run: |
         if [ "${{ inputs.scope }}" = 'library-only' ]; then
-          test_filters=(-only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion)
+          test_filters=(
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testUnifiedNavigationKeepsSearchWhenToolsCloseAndAppReturns
+          )
         else
           test_filters=(
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testWaveformDragSeeksInBothDirectionsAndNewTrackStartsFresh
@@ -121,6 +130,7 @@ jobs:
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testUnifiedNavigationKeepsSearchWhenToolsCloseAndAppReturns
             )
           fi
         fi

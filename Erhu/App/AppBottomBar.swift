@@ -22,7 +22,7 @@ struct AppBottomBar: View {
         VStack(spacing: Spacing.xs) {
             Group {
                 if let song = player.state.currentSong {
-                    MiniPlayer(song: song, compactness: 1) { router.openPlayer() }
+                    MiniPlayer(song: song) { router.openPlayer() }
                 } else {
                     Label(AppNavigationMetrics.emptyTitle, systemImage: "music.note")
                         .foregroundStyle(palette.onSurfaceVariant)

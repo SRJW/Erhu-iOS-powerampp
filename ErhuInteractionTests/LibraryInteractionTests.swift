@@ -1,6 +1,49 @@
 import XCTest
 
 final class LibraryInteractionTests: XCTestCase {
+    @MainActor func testUnifiedNavigationKeepsSearchWhenToolsCloseAndAppReturns() {
+        let app = launch("player")
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 30))
+        app.buttons["appSection.search"].tap()
+        let field = app.textFields["librarySearchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap(); field.typeText("Local fixture\n")
+        app.buttons["appMenu"].tap()
+        XCTAssertTrue(app.buttons["appMenu.settings"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons.matching(identifier: "appMenu.equalizer").count, 1)
+        XCTAssertFalse(app.staticTexts["VYBE"].exists)
+        app.buttons["appMenu.settings"].tap()
+        let close = app.buttons["closeTool"]
+        XCTAssertTrue(close.waitForExistence(timeout: 10))
+        close.tap()
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, "Local fixture")
+        XCUIDevice.shared.press(.home)
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 10))
+        app.activate()
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        XCTAssertEqual(field.value as? String, "Local fixture")
+        XCTAssertFalse(app.buttons["nowPlayingTitle"].isHittable)
+        app.buttons["appSection.equalizer"].tap()
+        XCTAssertTrue(app.buttons["appSection.equalizer"].isSelected)
+        app.buttons["appSection.library"].tap()
+        XCTAssertTrue(app.buttons["libraryCategory.songs"].waitForExistence(timeout: 10))
+        mini.tap()
+        XCTAssertTrue(app.buttons["nowPlayingTitle"].waitForExistence(timeout: 10))
+        XCTAssertFalse(mini.isHittable, "The redundant song strip stays hidden inside the full player")
+        app.buttons["appMenu"].tap()
+        XCTAssertTrue(app.buttons["appMenu.soundCapsule"].waitForExistence(timeout: 5))
+        app.buttons["appMenu.soundCapsule"].tap()
+        XCTAssertTrue(close.waitForExistence(timeout: 10))
+        close.tap()
+        XCTAssertTrue(app.buttons["nowPlayingTitle"].isHittable, "Closing a tool returns to the full player that opened it")
+        app.buttons["appSection.library"].tap()
+        XCTAssertTrue(app.buttons["libraryCategory.songs"].waitForExistence(timeout: 10))
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "unified-library-and-bottom-navigation"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
     @MainActor private func launch(_ page: String, waveform: String = "scrolling") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--erhu-interaction-probe=" + page, "-amp.player.waveformMode", waveform]

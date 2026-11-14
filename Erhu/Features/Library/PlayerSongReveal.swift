@@ -10,6 +10,7 @@ struct SongRevealRequest: Hashable {
 struct PlayerSongReveal<Content: View>: View {
     let destination: Route
     let songs: [Song]
+    var alphabetEnabled = false
     @ViewBuilder let content: Content
     @Environment(AppRouter.self) private var router
 
@@ -21,7 +22,14 @@ struct PlayerSongReveal<Content: View>: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            content.task(id: readyRequest) {
+            content
+                .padding(.trailing, alphabetEnabled ? 24 : 0)
+                .overlay(alignment: .trailing) {
+                    if alphabetEnabled {
+                        SongAlphabetIndex(songs: songs) { id in proxy.scrollTo(Self.anchor(id), anchor: .top) }
+                    }
+                }
+                .task(id: readyRequest) {
                 guard let request = readyRequest else { return }
                 defer {
                     if router.songReveal?.id == request.id {

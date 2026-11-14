@@ -10,7 +10,7 @@ final class AppSettings {
         var theme: ThemeChoice = .system
         /// Glass material on floating surfaces, independent of the theme.
         var glassEnabled = true
-        var startSection: String = LibrarySection.home.rawValue
+        var startSection: String = LibrarySection.library.rawValue
         var introductionCompleted = false
         var typeface: AppTypeface = .system
         var visualizer = VisualizerSettings()
@@ -26,7 +26,7 @@ final class AppSettings {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             theme = try c.decodeIfPresent(ThemeChoice.self, forKey: .theme) ?? .system
             glassEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEnabled) ?? true
-            startSection = try c.decodeIfPresent(String.self, forKey: .startSection) ?? LibrarySection.home.rawValue
+            startSection = try c.decodeIfPresent(String.self, forKey: .startSection) ?? LibrarySection.library.rawValue
             introductionCompleted = try c.decodeIfPresent(Bool.self, forKey: .introductionCompleted) ?? false
             typeface = (try? c.decodeIfPresent(AppTypeface.self, forKey: .typeface)) ?? .system
             visualizer = (try? c.decodeIfPresent(VisualizerSettings.self, forKey: .visualizer)) ?? VisualizerSettings()

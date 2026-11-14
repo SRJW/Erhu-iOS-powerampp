@@ -64,10 +64,10 @@ struct IntroductionView: View {
     }
 }
 
-private struct VybeEnabledKey: EnvironmentKey { static let defaultValue = true }
+private struct RadioAvailableKey: EnvironmentKey { static let defaultValue = true }
 extension EnvironmentValues {
-    var vybeEnabled: Bool {
-        get { self[VybeEnabledKey.self] }
-        set { self[VybeEnabledKey.self] = newValue }
+    var radioAvailable: Bool {
+        get { self[RadioAvailableKey.self] }
+        set { self[RadioAvailableKey.self] = newValue }
     }
 }

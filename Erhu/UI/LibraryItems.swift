@@ -17,14 +17,14 @@ struct SongActions {
 
 /// The song actions as menu items (a row's "…" button and its long-press menu).
 struct SongActionItems: View {
-    @Environment(\.vybeEnabled) private var vybeEnabled
+    @Environment(\.radioAvailable) private var radioAvailable
     let song: Song
     let actions: SongActions
 
     var body: some View {
         Button { actions.playNext(song) } label: { Label("Play next", systemImage: "text.line.first.and.arrowtriangle.forward") }
         Button { actions.addToQueue(song) } label: { Label("Add to queue", systemImage: "text.badge.plus") }
-        if vybeEnabled { Button { actions.startRadio(song) } label: { Label("Browse radio", systemImage: "dot.radiowaves.left.and.right") } }
+        if radioAvailable { Button { actions.startRadio(song) } label: { Label("Browse radio", systemImage: "dot.radiowaves.left.and.right") } }
         Button { actions.addToPlaylist(song) } label: { Label("Add to playlist", systemImage: "music.note.list") }
         Button { actions.toggleFavorite(song) } label: {
             Label(song.isFavorite ? "Remove from favorites" : "Add to favorites", systemImage: song.isFavorite ? "heart.slash" : "heart")

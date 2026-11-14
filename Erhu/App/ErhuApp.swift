@@ -74,7 +74,7 @@ struct ErhuApp: App {
         case .previous: services.player.skipPrevious()
         case nil: break
         }
-        if services.player.state.currentSong != nil { services.router.showsNowPlaying = true }
+        if services.player.state.currentSong != nil { services.router.openPlayer() }
         logLifecycle("openRequestedPlayer completed")
     }
 
