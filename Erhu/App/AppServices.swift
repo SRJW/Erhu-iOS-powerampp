@@ -9,7 +9,6 @@ final class AppServices {
     let library: LibraryStore
     let transitions: TransitionSettingsStore
     let player: PlayerController
-    let vybe: VybeStore
     let mixes: MixStore
     let actions: LibraryActions
     let search: SearchStore
@@ -28,8 +27,7 @@ final class AppServices {
         library = LibraryStore(database: database)
         transitions = TransitionSettingsStore()
         player = PlayerController(database: database, transitions: transitions)
-        vybe = VybeStore(database: database, player: player)
-        mixes = MixStore(database: database, vybe: vybe.engine)
+        mixes = MixStore(database: database)
         actions = LibraryActions(database: database, player: player, mixes: mixes)
         search = SearchStore(library: library)
         settings = AppSettings()
@@ -44,7 +42,6 @@ final class AppServices {
         fixTags = FixTagsStore(library: library)
         artwork = ArtworkFetcherStore(library: library, service: fixTags.service)
         waveforms = WaveformStore(database: database)
-        router.section = settings.startSection
         artwork.startAutomaticMatching()
     }
 }

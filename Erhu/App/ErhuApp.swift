@@ -14,7 +14,6 @@ struct ErhuApp: App {
                 .environment(services.player)
                 .environment(services.actions)
                 .environment(services.mixes)
-                .environment(services.vybe)
                 .environment(services.search)
                 .environment(services.router)
                 .environment(services.settings)
@@ -55,7 +54,6 @@ struct ErhuApp: App {
                 }
                 .onChange(of: scenePhase, initial: true) { previous, phase in
                     logLifecycle(previous == phase ? "scenePhase initial=\(phase)" : "scenePhase \(previous) -> \(phase)")
-                    if phase == .inactive || phase == .background { playerLaunch.resume() }
                     if phase == .active {
                         if PlayerLaunchSignal.consume() { playerLaunch.request() }
                         openRequestedPlayer()

@@ -50,11 +50,11 @@ final class ReleaseAndDiscoveryTests: XCTestCase {
     @MainActor func testOlderPreferencesKeepDiscoveryAndDoNotResetTheme() throws {
         let old = Data(#"{"theme":"dark","startSection":"vybe"}"#.utf8)
         let value = try JSONDecoder().decode(AppSettings.Stored.self, from: old)
-        XCTAssertTrue(value.vybeEnabled)
+        XCTAssertEqual(value.startSection, "vybe", "Old settings still decode without enabling the retired screen")
         XCTAssertFalse(value.introductionCompleted)
         XCTAssertEqual(value.theme, .dark)
         XCTAssertEqual(value.typeface, .system)
-        XCTAssertFalse(IntroductionPage.pages(vybe: false).contains { $0.id == "vybe" })
+        XCTAssertFalse(IntroductionPage.pages().contains { $0.id == "vybe" })
     }
 
     func testLoopingPagesWrapInBothDirectionsWithoutExtraDots() {

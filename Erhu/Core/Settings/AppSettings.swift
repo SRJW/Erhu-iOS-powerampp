@@ -11,7 +11,6 @@ final class AppSettings {
         /// Glass material on floating surfaces, independent of the theme.
         var glassEnabled = true
         var startSection: String = LibrarySection.home.rawValue
-        var vybeEnabled = true
         var introductionCompleted = false
         var typeface: AppTypeface = .system
         var visualizer = VisualizerSettings()
@@ -28,7 +27,6 @@ final class AppSettings {
             theme = try c.decodeIfPresent(ThemeChoice.self, forKey: .theme) ?? .system
             glassEnabled = try c.decodeIfPresent(Bool.self, forKey: .glassEnabled) ?? true
             startSection = try c.decodeIfPresent(String.self, forKey: .startSection) ?? LibrarySection.home.rawValue
-            vybeEnabled = try c.decodeIfPresent(Bool.self, forKey: .vybeEnabled) ?? true
             introductionCompleted = try c.decodeIfPresent(Bool.self, forKey: .introductionCompleted) ?? false
             typeface = (try? c.decodeIfPresent(AppTypeface.self, forKey: .typeface)) ?? .system
             visualizer = (try? c.decodeIfPresent(VisualizerSettings.self, forKey: .visualizer)) ?? VisualizerSettings()
@@ -54,13 +52,8 @@ final class AppSettings {
     }
 
     var startSection: LibrarySection {
-        get { visibleSection(LibrarySection(rawValue: stored.startSection) ?? .home) }
+        get { .library }
         set { update { $0.startSection = newValue.rawValue } }
-    }
-
-    var vybeEnabled: Bool {
-        get { stored.vybeEnabled }
-        set { update { $0.vybeEnabled = newValue }; store.saveNow(stored) }
     }
 
     var introductionCompleted: Bool {
@@ -73,8 +66,7 @@ final class AppSettings {
         set { update { $0.typeface = newValue } }
     }
 
-    var visibleSections: [LibrarySection] { LibrarySection.allCases.filter { vybeEnabled || $0 != .vybe } }
-    func visibleSection(_ section: LibrarySection) -> LibrarySection { !vybeEnabled && section == .vybe ? .home : section }
+    var visibleSections: [LibrarySection] { LibrarySection.allCases }
 
     var visualizer: VisualizerSettings {
         get { stored.visualizer }

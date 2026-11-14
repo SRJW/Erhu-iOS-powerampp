@@ -3,7 +3,7 @@ import Observation
 
 /// The primary destinations, switched by the bottom bar (Search is the separate button beside it).
 enum LibrarySection: String, CaseIterable, Identifiable {
-    case home, albums, library, vybe
+    case home, albums, library
     var id: String { rawValue }
 
     var label: String {
@@ -11,7 +11,6 @@ enum LibrarySection: String, CaseIterable, Identifiable {
         case .home: "Home"
         case .albums: "Albums"
         case .library: "Library"
-        case .vybe: "VYBE"
         }
     }
 
@@ -20,7 +19,6 @@ enum LibrarySection: String, CaseIterable, Identifiable {
         case .home: "house"
         case .albums: "square.stack"
         case .library: "music.note.house"
-        case .vybe: "recordingtape"
         }
     }
 
@@ -29,7 +27,6 @@ enum LibrarySection: String, CaseIterable, Identifiable {
         case .home: "house.fill"
         case .albums: "square.stack.fill"
         case .library: "music.note.house.fill"
-        case .vybe: "recordingtape"
         }
     }
 }
@@ -95,8 +92,7 @@ enum Route: Hashable {
 @MainActor
 @Observable
 final class AppRouter {
-    var section: LibrarySection = .home
-    var vybeEnabled = true
+    var section: LibrarySection = .library
     var paths: [LibrarySection: NavigationPath] = Dictionary(uniqueKeysWithValues: LibrarySection.allCases.map { ($0, NavigationPath()) })
     var scrollToTopRequests: [LibrarySection: Int] = [:]
     var showsSearch = false
@@ -141,7 +137,7 @@ final class AppRouter {
         case .smartPlaylist: section = .home; destination = nil
         case .library: section = .library; destination = .allSongs
         case .favorites: section = .library; destination = .shelf(.favorites)
-        case .vybe: section = vybeEnabled ? .vybe : .home; destination = nil
+        case .vybe: section = .library; destination = .allSongs
         }
         paths[section] = destination.map { NavigationPath([$0]) } ?? NavigationPath()
         showsDrawer = false
@@ -181,7 +177,7 @@ final class AppRouter {
             playNext: { actions.playNext($0, source: source) },
             addToQueue: { actions.addToQueue($0, source: source) },
             startRadio: { [weak self] song in
-                guard let self, self.vybeEnabled else { return }
+                guard let self else { return }
                 self.open(.radio(.song(song.id)))
             },
             addToPlaylist: { [weak self] song in self?.songsForPlaylist = [song] },

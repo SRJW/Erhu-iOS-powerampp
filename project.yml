@@ -24,7 +24,10 @@ targets:
   Erhu:
     type: application
     platform: iOS
-    sources: [Erhu, WidgetShared]
+    sources:
+      - path: Erhu
+        excludes: [Resources/Vybe]
+      - path: WidgetShared
     dependencies:
       - target: ErhuPlayerWidget
         embed: true

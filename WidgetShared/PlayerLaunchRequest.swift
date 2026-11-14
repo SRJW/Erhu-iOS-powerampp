@@ -28,9 +28,8 @@ struct PlayerLaunchRequest: Equatable {
 
 /// Retain a launch request until queue restoration actually finishes, without a timeout race.
 struct PlayerLaunchGate {
-    private var pending: PlayerLaunchRequest? = PlayerLaunchRequest()
+    private var pending: PlayerLaunchRequest?
     mutating func request(_ value: PlayerLaunchRequest = PlayerLaunchRequest()) { pending = value }
-    mutating func resume() { if pending == nil { pending = PlayerLaunchRequest() } }
     mutating func take(restored: Bool) -> PlayerLaunchRequest? {
         guard restored else { return nil }
         defer { pending = nil }

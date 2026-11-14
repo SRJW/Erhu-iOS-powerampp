@@ -40,13 +40,12 @@ for invalid in ["https://player", "amp://settings", "amp://player?action=delete"
     check(PlayerLaunchRequest(url: URL(string: invalid)!) == nil, "Reject invalid player command: \(invalid)")
 }
 var gate = PlayerLaunchGate()
+check(gate.take(restored: true) == nil, "Ordinary launch must not force the player")
 gate.request(PlayerLaunchRequest(command: .next))
 check(gate.take(restored: false) == nil, "Wait for cold-launch queue restoration")
-gate.resume()
 check(gate.take(restored: true)?.command == .next, "Scene activation does not overwrite the pending widget action")
 check(gate.take(restored: true) == nil, "Execute each widget command exactly once")
-gate.resume() // Control Center uses inactive -> active, without entering background.
-check(gate.take(restored: true) == PlayerLaunchRequest(), "Resume opens the restored player after Control Center")
+check(gate.take(restored: true) == nil, "An ordinary scene activation must preserve the current screen")
 let suite = "amp-control-test-\(UUID().uuidString)"
 let defaults = UserDefaults(suiteName: suite)!
 defer { defaults.removePersistentDomain(forName: suite) }

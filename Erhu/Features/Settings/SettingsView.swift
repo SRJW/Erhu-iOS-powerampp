@@ -34,7 +34,6 @@ struct SettingsView: View {
                 SettingsLink("Visualizer", subtitle: "Style and feel of the Now Playing visualizer", icon: "waveform", page: .visualizer)
             }
             SettingsGroup("Library") {
-                Toggle("Show VYBE and radio discovery", isOn: $settings.vybeEnabled).padding(Spacing.lg)
                 SettingsLink("Music Library", subtitle: "Music folder, scanning and your collection", icon: "folder.fill", page: .library)
                 SettingsLink("Metadata & Artwork", subtitle: "Tags, cover art and online sources", icon: "number", page: .metadata)
             }
@@ -472,7 +471,7 @@ private struct AboutSettingsView: View {
             PlayerWidgetStatusSettings()
             SettingsGroup("Privacy") {
                 Label("Music stays on your iPhone", systemImage: "iphone").padding(Spacing.lg)
-                Text("Your music files, library index and VYBE processing stay on this device. Online lyrics, metadata and artwork searches use the song or artist details needed for the request.")
+                Text("Your music files and library index stay on this device. Online lyrics, metadata and artwork searches use the song or artist details needed for the request.")
                     .font(.footnote).foregroundStyle(.secondary).padding([.horizontal, .bottom], Spacing.lg)
             }
             SettingsGroup("Project") {

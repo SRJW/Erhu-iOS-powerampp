@@ -48,7 +48,7 @@ final class PlaybackSourceTests: XCTestCase {
         router.reveal(.smartPlaylist("quick_hits"))
         XCTAssertEqual(router.section, .home)
         router.reveal(.vybe)
-        XCTAssertEqual(router.section, .vybe)
-        XCTAssertEqual(router.paths[.vybe]?.count, 0)
+        XCTAssertEqual(router.section, .library)
+        XCTAssertEqual(router.paths[.library]?.count, 1)
     }
 }

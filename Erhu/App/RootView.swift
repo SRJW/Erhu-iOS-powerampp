@@ -86,14 +86,8 @@ struct RootView: View {
         } message: {
             Text(library.errorMessage ?? "")
         }
-        .environment(\.vybeEnabled, settings.vybeEnabled)
         .fullScreenCover(isPresented: Binding(get: { !settings.introductionCompleted }, set: { if !$0 { settings.introductionCompleted = true } })) {
             IntroductionView(firstLaunch: true)
-        }
-        .onChange(of: settings.vybeEnabled, initial: true) { _, enabled in
-            router.vybeEnabled = enabled
-            router.section = settings.visibleSection(router.section)
-            if !enabled { router.paths[.vybe] = NavigationPath() }
         }
         .onChange(of: fixTags.isRunning) { wasRunning, running in
             guard wasRunning, !running, !fixTags.inPlaceScope.isEmpty else { return }
@@ -145,7 +139,6 @@ struct RootView: View {
         case .home: HomeView()
         case .albums: AlbumsView()
         case .library: LibraryOverviewView()
-        case .vybe: VybeView()
         }
     }
 

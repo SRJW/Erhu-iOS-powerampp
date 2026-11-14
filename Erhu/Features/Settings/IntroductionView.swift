@@ -5,7 +5,7 @@ struct IntroductionPage: Identifiable {
     let title: String
     let text: String
     let symbol: String
-    static func pages(vybe: Bool) -> [Self] {
+    static func pages() -> [Self] {
         var pages: [Self] = [
             .init(id: "welcome", title: "Your music. Your space.", text: "A home for the music you own. Your collection and listening history stay on this iPhone.", symbol: "music.note.house"),
             .init(id: "library", title: "Bring your collection", text: "Use + to choose files, or start Wi-Fi Transfer to send music from a computer. Browse your albums, artists and playlists.", symbol: "square.and.arrow.down"),
@@ -13,7 +13,6 @@ struct IntroductionPage: Identifiable {
             .init(id: "listen", title: "Make yourself at home", text: "Tap the mini-player to open Now Playing. Swipe the artwork to change tracks, manage Queue, and follow synced lyrics when available.", symbol: "play.rectangle"),
             .init(id: "sound", title: "Shape the handover", text: "Use the eight-band EQ for your sound. Open Transition Studio from an album or playlist to edit its crossfades, or select a track pair to inspect waveforms and preview the handover.", symbol: "waveform.path"),
         ]
-        if vybe { pages.append(.init(id: "vybe", title: "Discover your own library", text: "VYBE searches the artists, genres, tempo and lyrics saved in your collection. Radio stations offer tracks to browse before you press Play. Nothing is streamed from a radio service.", symbol: "recordingtape")) }
         pages.append(.init(id: "ready", title: "Ready when you are", text: "You can revisit this introduction in Settings → About amp. No amp account or music subscription is needed.", symbol: "checkmark.circle"))
         return pages
     }
@@ -25,7 +24,7 @@ struct IntroductionView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.palette) private var palette
     @State private var selected = "welcome"
-    private var pages: [IntroductionPage] { IntroductionPage.pages(vybe: settings.vybeEnabled) }
+    private var pages: [IntroductionPage] { IntroductionPage.pages() }
     private var index: Int { pages.firstIndex { $0.id == selected } ?? 0 }
 
     var body: some View {
@@ -43,9 +42,6 @@ struct IntroductionView: View {
                                 }
                                 Text(page.title).font(.largeTitle.bold()).multilineTextAlignment(.center)
                                 Text(page.text).font(.body).foregroundStyle(palette.onSurfaceVariant).multilineTextAlignment(.center)
-                                if page.id == "welcome" {
-                                    Toggle("Show VYBE and radio discovery", isOn: $settings.vybeEnabled).padding(.top)
-                                }
                             }.padding(Spacing.xl)
                         }.tag(page.id)
                     }
@@ -60,7 +56,6 @@ struct IntroductionView: View {
             .navigationTitle("Welcome to amp").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(firstLaunch ? "Skip" : "Done", action: finish) } }
         }
-        .onChange(of: settings.vybeEnabled) { _, _ in if !pages.contains(where: { $0.id == selected }) { selected = "ready" } }
     }
 
     private func finish() {
