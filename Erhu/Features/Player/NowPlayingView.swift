@@ -363,6 +363,7 @@ struct NowPlayingView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityAddTraits(.isButton)
+        .accessibilityActivationPoint(UnitPoint.center)
         .accessibilityAction { action() }
         .accessibilityIdentifier(identifier)
     }
