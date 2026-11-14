@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct ErhuApp: App {
+    @UIApplicationDelegateAdaptor(AppLifecycleDiagnostics.self) private var lifecycleDiagnostics
     @State private var services = AppServices.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var playerLaunch = PlayerLaunchGate()
@@ -25,6 +26,7 @@ struct ErhuApp: App {
                 .environment(services.transitions)
                 .preferredColorScheme(services.settings.colorScheme)
                 .onOpenURL { url in
+                    logLifecycle("onOpenURL scheme=\(url.scheme ?? "nil") accepted=\(PlayerLaunchRequest(url: url) != nil)")
                     guard let request = PlayerLaunchRequest(url: url) else { return }
                     playerLaunch.request(request)
                     openRequestedPlayer()
@@ -36,6 +38,7 @@ struct ErhuApp: App {
                     }
                 }
                 .onContinueUserActivity("com.erhu.nowplaying") { _ in
+                    logLifecycle("onContinueUserActivity type=com.erhu.nowplaying")
                     playerLaunch.request()
                     openRequestedPlayer()
                 }
@@ -50,7 +53,8 @@ struct ErhuApp: App {
                         services.player.refreshSystemPlayback()
                     }
                 }
-                .onChange(of: scenePhase, initial: true) { _, phase in
+                .onChange(of: scenePhase, initial: true) { previous, phase in
+                    logLifecycle(previous == phase ? "scenePhase initial=\(phase)" : "scenePhase \(previous) -> \(phase)")
                     if phase == .inactive || phase == .background { playerLaunch.resume() }
                     if phase == .active {
                         if PlayerLaunchSignal.consume() { playerLaunch.request() }
@@ -63,6 +67,7 @@ struct ErhuApp: App {
 
     private func openRequestedPlayer() {
         guard let request = playerLaunch.take(restored: services.player.restoreFinished) else { return }
+        logLifecycle("openRequestedPlayer consumed command=\(request.command?.rawValue ?? "none")")
         switch request.command {
         case .toggle: services.player.togglePlayPause()
         case .play: services.player.play()
@@ -72,6 +77,11 @@ struct ErhuApp: App {
         case nil: break
         }
         if services.player.state.currentSong != nil { services.router.showsNowPlaying = true }
+        logLifecycle("openRequestedPlayer completed")
+    }
+
+    private func logLifecycle(_ event: String) {
+        LifecycleLog.record("\(event) restored=\(services.player.restoreFinished) songLoaded=\(services.player.state.currentSong != nil) playing=\(services.player.state.isPlaying) nowPlayingVisible=\(services.router.showsNowPlaying)")
     }
 
     @ViewBuilder private var appContent: some View {

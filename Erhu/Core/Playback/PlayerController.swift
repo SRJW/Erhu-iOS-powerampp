@@ -732,11 +732,17 @@ final class PlayerController {
     // MARK: Audio session, remote commands, Now Playing
 
     private func configureAudioSession() {
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            LifecycleLog.record("audioSession.setCategory playback success")
+        } catch { LifecycleLog.record("audioSession.setCategory failed: \(error.localizedDescription)") }
     }
 
     private func activateAudioSession() {
-        try? AVAudioSession.sharedInstance().setActive(true)
+        do {
+            try AVAudioSession.sharedInstance().setActive(true)
+            LifecycleLog.record("audioSession.setActive true success")
+        } catch { LifecycleLog.record("audioSession.setActive failed: \(error.localizedDescription)") }
     }
 
     private func observeAudioSession() {
