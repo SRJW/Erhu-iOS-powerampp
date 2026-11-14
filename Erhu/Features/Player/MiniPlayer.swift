@@ -70,6 +70,7 @@ struct MiniPlayer: View {
             }
             .frame(height: MiniPlayerMetrics.rowHeight)
             MiniPlayerProgress(durationMs: state.durationMs, entryID: entry)
+                .id(entry)
                 .frame(height: MiniPlayerMetrics.progressHeight)
         }
         .foregroundStyle(palette.onSurface)

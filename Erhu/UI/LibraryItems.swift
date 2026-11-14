@@ -80,6 +80,7 @@ struct TrackRow: View {
     let actions: SongActions
     let onTap: () -> Void
     @Environment(\.palette) private var palette
+    @Environment(AppSettings.self) private var settings
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var swipe: CGFloat = 0
 
@@ -92,7 +93,7 @@ struct TrackRow: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(song.title)
                         .font(.body.weight(.semibold))
-                        .foregroundStyle(isCurrent ? Color.accentColor : palette.onSurface)
+                        .foregroundStyle(isCurrent ? (settings.theme == .artwork && settings.customTheme == nil ? palette.primary : Color.accentColor) : palette.onSurface)
                         .lineLimit(1)
                     Text(subtitle ?? [song.artist, song.album].filter { !$0.isBlank }.joined(separator: showsFileDetails ? " - " : " · "))
                         .font(.subheadline)

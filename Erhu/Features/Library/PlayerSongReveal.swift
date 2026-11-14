@@ -6,6 +6,11 @@ struct SongRevealRequest: Hashable {
     let destination: Route
 }
 
+extension Song {
+    /// ForEach and ScrollViewReader share the same identity, including rows not yet created.
+    var listScrollAnchor: String { "amp-song-\(id)" }
+}
+
 /// Wraps existing lists, rather than introducing a separate player destination screen.
 struct PlayerSongReveal<Content: View>: View {
     let destination: Route
@@ -56,11 +61,12 @@ struct PlayerSongReveal<Content: View>: View {
 
 struct PlayerRevealedSong: ViewModifier {
     let songID: Int64
+    @Environment(\.palette) private var palette
     @Environment(AppRouter.self) private var router
     func body(content: Content) -> some View {
         content.background {
             if router.highlightedSongID == songID {
-                Color.accentColor.opacity(PlayerButtonConstants.highlightOpacity)
+                palette.primary.opacity(PlayerButtonConstants.highlightOpacity)
                     .allowsHitTesting(false)
             }
         }

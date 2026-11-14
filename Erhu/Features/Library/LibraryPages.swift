@@ -130,7 +130,7 @@ struct SongList: View {
             if songs.isEmpty {
                 EmptyState(message: emptyMessage, systemImage: emptyIcon)
             }
-            ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
+            ForEach(Array(songs.enumerated()), id: \.element.listScrollAnchor) { index, song in
                 VStack(spacing: 0) {
                     if let selection {
                         Button {
@@ -156,7 +156,7 @@ struct SongList: View {
                     }
                 }
                 .modifier(PlayerRevealedSong(songID: song.id))
-                .id("amp-song-\(song.id)")
+                .id(song.listScrollAnchor)
             }
         }
         .scrollTargetLayout()
