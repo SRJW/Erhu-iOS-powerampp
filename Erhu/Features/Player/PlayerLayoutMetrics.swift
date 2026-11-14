@@ -3,7 +3,7 @@ import Foundation
 /// Fractions of the full screen width (W) / height (H), independent of waveform insets.
 enum PlayerLayoutMetrics {
     static let playDiameterW: CGFloat = 0.183
-    static let pauseDiameterW: CGFloat = 0.146
+    static let pauseDiameterW: CGFloat = 0.166
     static let innerDiameterW: CGFloat = 0.15
     static let outerDiameterW: CGFloat = 0.11
     // Together with the diameters, these centres leave about 0.005 W between circles.
