@@ -27,9 +27,9 @@ struct RootView: View {
                 .id(router.section)
                 .allowsHitTesting(!router.showsNowPlaying && router.presentedTool == nil)
                 .accessibilityHidden(router.showsNowPlaying || router.presentedTool != nil)
-            AppBottomBar().zIndex(2)
-                .allowsHitTesting(!router.showsNowPlaying && router.presentedTool == nil)
-                .accessibilityHidden(router.showsNowPlaying || router.presentedTool != nil)
+            if !router.showsNowPlaying && router.presentedTool == nil {
+                AppBottomBar().zIndex(2)
+            }
             if let message = actions.message, !router.showsNowPlaying {
                 LibraryChromeToast(text: message, id: actions.messageID, hasSong: player.state.currentSong != nil)
                     .zIndex(2)
@@ -38,7 +38,7 @@ struct RootView: View {
         .overlay {
             GeometryReader { geometry in
                 ZStack {
-                    if playerMotion.isPresented {
+                    if playerMotion.isPresented && router.presentedTool == nil {
                         PlayerPresentation(drag: playerMotion)
                             .frame(width: geometry.size.width, height: geometry.size.height)
                             .allowsHitTesting(router.presentedTool == nil)
@@ -51,7 +51,7 @@ struct RootView: View {
                 .onChange(of: geometry.size, initial: true) { _, size in playerMotion.travel = max(size.height * 0.65, 240) }
             }
             .ignoresSafeArea()
-            .allowsHitTesting(playerMotion.isPresented)
+            .allowsHitTesting(router.showsNowPlaying && router.presentedTool == nil)
         }
         .overlay {
             if let tool = router.presentedTool { toolScreen(tool).transition(.opacity) }
@@ -73,7 +73,7 @@ struct RootView: View {
         .onChange(of: router.section) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
         .onChange(of: router.showsSearch) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
         .onChange(of: router.paths[router.section]?.count) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
-        .routerSheets(active: !router.showsNowPlaying)
+        .routerSheets(active: !router.showsNowPlaying || router.presentedTool != nil)
         .alert("New playlist", isPresented: $router.showsNewPlaylist) { NewPlaylistAlert() }
         .fileImporter(isPresented: $router.showsImporter, allowedContentTypes: [.audio, UTType(importedAs: "org.xiph.ogg")], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { library.importFiles(urls) }

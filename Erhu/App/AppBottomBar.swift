@@ -30,12 +30,14 @@ struct AppBottomBar: View {
                 }
             }
             .frame(height: AppNavigationMetrics.stripHeight)
-            .chromeSurface(enabled: settings.glassEnabled)
+            .background { Color.clear.chromeSurface(enabled: settings.glassEnabled).allowsHitTesting(false) }
+            .clipShape(Capsule())
             GeometryReader { geometry in
                 AppNavigationButtons(width: geometry.size.width)
             }
             .frame(height: AppNavigationMetrics.buttonsHeight)
-            .chromeSurface(enabled: settings.glassEnabled)
+            .background { Color.clear.chromeSurface(enabled: settings.glassEnabled).allowsHitTesting(false) }
+            .clipShape(Capsule())
         }
         .padding(.horizontal, Spacing.md).padding(.bottom, Spacing.xs)
     }
