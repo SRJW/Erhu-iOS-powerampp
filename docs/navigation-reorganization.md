@@ -23,9 +23,12 @@ Plan confirmado: una barra compartida. La tira de canción aparece en las seccio
 - Sound Capsule, Equalizer, Auto Fix Tags, Artwork Fetcher, Wi-Fi Transfer y Settings permanecen en el menú inferior, una vez cada uno. Equalizer también es el segundo destino principal.
 - Anterior y siguiente permanecen en el reproductor completo. La tira lleva play/pausa. Las funciones de compartir, revelar canción/álbum, cola, letras, marcas, visualizador, reparación de etiquetas y Transition Studio se conservan.
 - No se guarda una ruta para restaurarla tras cerrar el proceso. Los enlaces `amp://player`, el widget y las userActivity explícitas conservan su destino. Un regreso normal desde segundo plano no se considera un toque de la tarjeta del Centro de control.
+- Al vaciar Queue, el reproductor sin canción conserva sus cuatro botones. Para probarlo, elimina las entradas de Queue, pulsa Done y vuelve a Library: la tira debe mostrar su estado vacío.
 
 ## Validación
 
 GitHub Actions compila y empaqueta el IPA en macOS. La comprobación nativa cubre los gestos del reproductor, compartir y navegación a canción/álbum, formatos reales AAC/ALAC, migración de ajustes, categorías, búsqueda y selección/borrado. La nueva prueba de interfaz recorre menú → Settings → ×, vuelve desde segundo plano y abre/cierra Sound Capsule sobre el reproductor.
 
 En el iPhone aún hay que comprobar el comportamiento de la tarjeta del Centro de control y bloqueo con los logs `Documents/Diagnostics/lifecycle.log`; el simulador no reproduce el re-firmado de FlareStore. Que no haya logs de primer plano indicaría que iOS no está abriendo el proceso; no se fuerza navegación en todos los regresos para ocultar esa diferencia.
+
+Entrega: `v0.1.0-amp.90`. IPA descargado y verificado: versión y build propios, modo de audio en segundo plano y ausencia del modelo de VYBE. Las tres pruebas nativas de cierre del reproductor, historial/selección/borrado y navegación/segundo plano pasaron en la revisión final. Durante la implementación también pasaron 30 pruebas de rutas, formatos y audio, y 26 de renderizado y animación; los dos modos de waveform y los controles de reproducción conservaron sus comprobaciones.
