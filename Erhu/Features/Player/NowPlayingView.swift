@@ -360,7 +360,10 @@ struct NowPlayingView: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(PlayerTransportPressStyle(reduceMotion: reduceMotion))
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { action() }
         .accessibilityIdentifier(identifier)
     }
 
