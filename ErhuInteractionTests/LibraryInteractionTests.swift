@@ -1,6 +1,12 @@
 import XCTest
 
 final class LibraryInteractionTests: XCTestCase {
+    /// The fresh iOS simulator can show its one-time QuickPath introduction over the keyboard.
+    @MainActor private func dismissKeyboardIntroduction(in app: XCUIApplication) {
+        let proceed = app.buttons["Continue"]
+        if proceed.waitForExistence(timeout: 2) { proceed.tap() }
+    }
+
     @MainActor func testUnifiedNavigationKeepsSearchWhenToolsCloseAndAppReturns() {
         let app = launch("player")
         let mini = app.buttons["openNowPlaying"]
@@ -8,6 +14,7 @@ final class LibraryInteractionTests: XCTestCase {
         app.buttons["appSection.search"].tap()
         let field = app.textFields["librarySearchField"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
+        dismissKeyboardIntroduction(in: app)
         field.tap(); field.typeText("Local fixture\n")
         app.buttons["appMenu"].tap()
         XCTAssertTrue(app.buttons["appMenu.settings"].waitForExistence(timeout: 5))
@@ -268,6 +275,7 @@ final class LibraryInteractionTests: XCTestCase {
         search.tap()
         let field = page.textFields["sectionSearchField"]
         XCTAssertTrue(field.waitForExistence(timeout: 10))
+        dismissKeyboardIntroduction(in: app)
         field.tap(); field.typeText("History fixture\n")
         app.terminate(); app.launch()
         XCTAssertTrue(search.waitForExistence(timeout: 30))

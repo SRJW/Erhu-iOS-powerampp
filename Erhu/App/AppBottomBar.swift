@@ -118,6 +118,5 @@ struct AppMenu: View {
             .glassSurface(cornerRadius: Radius.medium, enabled: settings.glassEnabled)
             .padding(.horizontal, Spacing.md).padding(.bottom, AppNavigationMetrics.menuBottom)
         }
-        .accessibilityIdentifier("appMenuPopup")
     }
 }

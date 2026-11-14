@@ -23,20 +23,18 @@ struct RootView: View {
         @Bindable var library = library
         ZStack(alignment: .bottom) {
             palette.background.ignoresSafeArea()
-            ForEach(settings.visibleSections) { section in
-                sectionStack(section)
-                    .opacity(router.section == section ? 1 : 0)
-                    .allowsHitTesting(router.section == section)
-                    .accessibilityHidden(router.section != section)
-            }
+            sectionStack(router.section)
+                .id(router.section)
+                .allowsHitTesting(!router.showsNowPlaying && router.presentedTool == nil)
+                .accessibilityHidden(router.showsNowPlaying || router.presentedTool != nil)
             AppBottomBar().zIndex(2)
+                .allowsHitTesting(!router.showsNowPlaying && router.presentedTool == nil)
+                .accessibilityHidden(router.showsNowPlaying || router.presentedTool != nil)
             if let message = actions.message, !router.showsNowPlaying {
                 LibraryChromeToast(text: message, id: actions.messageID, hasSong: player.state.currentSong != nil)
                     .zIndex(2)
             }
         }
-        .accessibilityHidden(router.showsNowPlaying || router.presentedTool != nil)
-        .allowsHitTesting(!router.showsNowPlaying && router.presentedTool == nil)
         .overlay {
             GeometryReader { geometry in
                 ZStack {

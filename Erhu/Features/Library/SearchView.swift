@@ -32,6 +32,8 @@ final class SearchStore {
     private(set) var albums: [Album] = []
     private(set) var artists: [Artist] = []
     var type: SearchType = .all
+    var selecting = false
+    var selected = Set<Int64>()
     private(set) var extras = LibrarySearchExtras()
     private(set) var recents: [RecentSearchItem] = []
 
@@ -85,8 +87,6 @@ struct SearchView: View {
     @Environment(AppRouter.self) private var router
     @Environment(\.dismiss) private var dismiss
     @FocusState private var focused: Bool
-    @State private var selecting = false
-    @State private var selected = Set<Int64>()
     @AppStorage("library.search.sort") private var sort = "relevance"
 
     private var matchingSongs: [Song] {
@@ -128,26 +128,26 @@ struct SearchView: View {
                         }
                     }.padding(.horizontal, Spacing.gutter)
                 }
-                CategoryHeader(title: "Search", icon: "magnifyingglass", count: tracks.count, selecting: selecting,
+                CategoryHeader(title: "Search", icon: "magnifyingglass", count: tracks.count, selecting: search.selecting,
                                shuffle: { rememberQuery(); actions.playShuffled(tracks) },
                                play: { rememberQuery(); actions.playInOrder(tracks) },
                                search: { focused = true },
-                               select: { selecting.toggle(); if !selecting { selected.removeAll() } }, options: {
+                               select: { search.selecting.toggle(); if !search.selecting { search.selected.removeAll() } }, options: {
                     Picker("Sort by", selection: $sort) {
                         Text("Relevance").tag("relevance")
                         ForEach(LibrarySort.songs, id: \.rawValue) { Text($0.label).tag($0.rawValue) }
                     }
                 }, showsTitle: false)
-                if selecting { SongSelectionBar(songs: tracks, selected: $selected) }
+                if search.selecting { SongSelectionBar(songs: tracks, selected: $search.selected) }
                 if search.query.trimmed.isEmpty {
                     RecentSearchesView(scope: "library") { search.query = $0; focused = true }
                         .padding(.horizontal, Spacing.gutter)
                     if !search.recents.isEmpty || SearchHistoryStore.shared.entries("library").isEmpty { recents }
                 } else {
-                    if !selecting { entityResults }
-                    if selecting || search.type == .all || search.type == .songs {
+                    if !search.selecting { entityResults }
+                    if search.selecting || search.type == .all || search.type == .songs {
                         SongList(songs: tracks, emptyMessage: "No songs match this search.", emptyIcon: "magnifyingglass",
-                                 selection: selecting ? $selected : nil, showsFileDetails: true,
+                                 selection: search.selecting ? $search.selected : nil, showsFileDetails: true,
                                  onPlay: rememberQuery, onPlaySong: { search.remember(.song($0)) })
                     } else if tracks.isEmpty { EmptyState(message: "No results for this filter.", systemImage: "magnifyingglass") }
                 }
@@ -162,7 +162,7 @@ struct SearchView: View {
         .toolbar(.hidden, for: .navigationBar)
         .onAppear { focused = router.section == .search }
         .onChange(of: router.section) { _, section in focused = section == .search }
-        .onChange(of: search.type) { _, _ in selected.removeAll() }
+        .onChange(of: search.type) { _, _ in search.selected.removeAll() }
         .task(id: library.songs) { await search.run() }
         .modifier(ToolPageAppearance())
     }
