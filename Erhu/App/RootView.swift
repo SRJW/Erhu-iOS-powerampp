@@ -43,6 +43,8 @@ struct RootView: View {
                     if playerMotion.isPresented {
                         PlayerPresentation(drag: playerMotion)
                             .frame(width: geometry.size.width, height: geometry.size.height)
+                            .allowsHitTesting(router.presentedTool == nil)
+                            .accessibilityHidden(router.presentedTool != nil)
                             .transition(.identity)
                             .zIndex(1)
                     }

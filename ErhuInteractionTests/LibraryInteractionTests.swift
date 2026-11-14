@@ -37,6 +37,8 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertTrue(app.buttons["appMenu.soundCapsule"].waitForExistence(timeout: 5))
         app.buttons["appMenu.soundCapsule"].tap()
         XCTAssertTrue(close.waitForExistence(timeout: 10))
+        XCTAssertEqual(app.buttons.matching(identifier: "appSection.library").count, 1,
+                       "Only the tool's shared bar is accessible while it covers the player")
         close.tap()
         XCTAssertTrue(app.buttons["nowPlayingTitle"].isHittable, "Closing a tool returns to the full player that opened it")
         app.buttons["appSection.library"].tap()
