@@ -303,7 +303,8 @@ private struct PlayerBackgroundSettingsGroup: View {
             var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
             guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a) else { return }
             var appearance = settings.playerBackground
-            appearance.gradientColor = 0xFF000000 | UInt32(r * 255) << 16 | UInt32(g * 255) << 8 | UInt32(b * 255)
+            func byte(_ component: CGFloat) -> UInt32 { UInt32((min(max(component, 0), 1) * 255).rounded()) }
+            appearance.gradientColor = 0xFF000000 | byte(r) << 16 | byte(g) << 8 | byte(b)
             settings.playerBackground = appearance
         })
     }

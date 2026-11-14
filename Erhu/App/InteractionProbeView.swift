@@ -148,6 +148,13 @@ private struct SongsInteractionProbe: View {
             do {
                 let folder = LibraryPaths.musicFolder.appendingPathComponent("__songs-ui-fixture", isDirectory: true)
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+                if !offscreenReveal {
+                    // Keep the large-library fixture isolated from subsequent small-library tests.
+                    for url in try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+                    where url.lastPathComponent.hasPrefix("Y scroll fixture ") || url.lastPathComponent == "ZZZ offscreen song.m4a" {
+                        try FileManager.default.removeItem(at: url)
+                    }
+                }
                 let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
                 let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 44_100)!
                 buffer.frameLength = buffer.frameCapacity
@@ -165,10 +172,10 @@ private struct SongsInteractionProbe: View {
                 }
                 if offscreenReveal {
                     for index in 0..<32 {
-                        let url = folder.appendingPathComponent(String(format: "A scroll fixture %02d.m4a", index))
+                        let url = folder.appendingPathComponent(String(format: "Y scroll fixture %02d.m4a", index))
                         if !FileManager.default.fileExists(atPath: url.path) {
                             try FileManager.default.copyItem(at: folder.appendingPathComponent("History fixture one.m4a"), to: url)
-                            var tags = TagWriteRequest(); tags.title = String(format: "A scroll fixture %02d", index)
+                            var tags = TagWriteRequest(); tags.title = String(format: "Y scroll fixture %02d", index)
                             try TagWriter.write(tags, to: url)
                         }
                     }
