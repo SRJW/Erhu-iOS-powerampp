@@ -303,8 +303,12 @@ struct NowPlayingView: View {
         let inner = width * PlayerLayoutMetrics.innerDiameterW
         let main = width * PlayerLayoutMetrics.playDiameterW
         // Stable slots keep every centre fixed while the main circle animates in size.
-        let slots = [outer, inner, main, inner, outer]
-        let gaps = (0..<4).map { width * (centres[$0 + 1] - centres[$0]) - (slots[$0] + slots[$0 + 1]) / 2 }
+        let slots: [CGFloat] = [outer, inner, main, inner, outer]
+        let gaps: [CGFloat] = (0..<4).map { index -> CGFloat in
+            let separation: CGFloat = centres[index + 1] - centres[index]
+            let radii: CGFloat = (slots[index] + slots[index + 1]) / 2
+            return width * separation - radii
+        }
         return HStack(spacing: 0) {
             transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: outer, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
                 .frame(width: outer)
