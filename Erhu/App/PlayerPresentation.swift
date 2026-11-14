@@ -242,9 +242,10 @@ struct PlayerBackdropFade: ViewModifier {
 }
 
 struct MiniArtworkVisibility: ViewModifier {
+    var enabled = true
     @Environment(PlayerDragState.self) private var drag
     func body(content: Content) -> some View {
-        content.opacity(drag.isPresented ? 1 - PlayerCoverGeometry.chromeOpacity(drag.progress) : 1)
+        content.opacity(enabled && drag.isPresented ? 1 - PlayerCoverGeometry.chromeOpacity(drag.progress) : 1)
     }
 }
 

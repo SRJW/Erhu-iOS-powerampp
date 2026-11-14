@@ -5,6 +5,7 @@ struct MiniPlayer: View {
     let song: Song
     let onOpen: () -> Void
     @Environment(PlayerController.self) private var player
+    @Environment(AppRouter.self) private var router
     @Environment(\.palette) private var palette
 
     var body: some View {
@@ -16,7 +17,7 @@ struct MiniPlayer: View {
                         .frame(width: ArtworkSize.miniPlayer, height: ArtworkSize.miniPlayer)
                         .clipShape(RoundedRectangle(cornerRadius: Radius.small, style: .continuous))
                         .playerArtworkFrame(expanded: false)
-                        .modifier(MiniArtworkVisibility())
+                        .modifier(MiniArtworkVisibility(enabled: router.presentedTool == nil))
                         .accessibilityLabel("Album artwork")
                     VStack(alignment: .leading, spacing: 1) {
                         Text(song.title).font(.subheadline.weight(.semibold)).foregroundStyle(palette.onSurface).lineLimit(1)
