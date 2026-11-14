@@ -14,7 +14,8 @@ final class SongFileDetailsTests: XCTestCase {
         for (name, codec) in [("aac", kAudioFormatMPEG4AAC), ("alac", kAudioFormatAppleLossless)] {
             let url = folder.appendingPathComponent(name + ".m4a")
             do {
-                let file = try AVAudioFile(forWriting: url, settings: [AVFormatIDKey: codec, AVSampleRateKey: 44_100, AVNumberOfChannelsKey: 1])
+                let file = try AVAudioFile(forWriting: url, settings: [AVFormatIDKey: codec, AVSampleRateKey: 44_100,
+                                                                     AVNumberOfChannelsKey: 1, AVEncoderBitDepthHintKey: 16])
                 try file.write(from: buffer)
             }
             XCTAssertEqual(AudioFormatInfo.read(url, fileSize: 0).codec, name.uppercased())
