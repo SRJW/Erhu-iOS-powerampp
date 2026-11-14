@@ -152,6 +152,7 @@ struct RootView: View {
             case .transitionStudio(let collection): TransitionStudioView(collection: collection).tracksLibraryScrolling(usesUIKit: true)
             }
         }
+        .toolbar(.visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: router.presentedTool == nil ? chromeHeight : 0) }
     }
 
