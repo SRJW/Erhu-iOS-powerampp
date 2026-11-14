@@ -67,8 +67,12 @@ struct NowPlayingView: View {
                 }
                 .foregroundStyle(.white)
             } else {
-                EmptyState(message: "Nothing is playing. Pick a song from your library.", systemImage: "music.note")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                ZStack {
+                    EmptyState(message: "Nothing is playing. Pick a song from your library.", systemImage: "music.note")
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    referenceNavigation(width: geometry.size.width)
+                        .position(x: geometry.size.width / 2, y: geometry.size.height * 0.94)
+                }
             }
         }
         .ignoresSafeArea()
