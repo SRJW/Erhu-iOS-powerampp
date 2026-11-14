@@ -22,6 +22,7 @@ enum PlayerLayoutMetrics {
     static let subtitleScale: CGFloat = 0.95
     static let timeBadgeW: CGFloat = 0.106
     static let timeTextScale: CGFloat = 0.92
+    static let timeMinimumScale: CGFloat = 0.6
     static let timeBadgeHeight: CGFloat = 27
     static let technicalTextScale: CGFloat = 0.92
     static let technicalSeparator = " "

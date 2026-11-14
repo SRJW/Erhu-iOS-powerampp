@@ -495,6 +495,7 @@ private struct ProgressSection<Controls: View>: View {
         Text(formatDuration(ms))
             .font(.system(size: 14 * PlayerLayoutMetrics.timeTextScale, weight: .bold).monospacedDigit())
             .foregroundStyle(.white)
+            .lineLimit(1).minimumScaleFactor(PlayerLayoutMetrics.timeMinimumScale)
             .frame(width: screenWidth * PlayerLayoutMetrics.timeBadgeW, height: PlayerLayoutMetrics.timeBadgeHeight)
             .background(.black, in: Capsule())
     }
