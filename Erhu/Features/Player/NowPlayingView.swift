@@ -38,14 +38,14 @@ struct NowPlayingView: View {
                         .position(x: width / 2, y: height * 0.275)
                     Button { reveal(song, album: false) } label: {
                         Text(song.title)
-                        .font(.custom(PlayerButtonConstants.titleFont, size: PlayerButtonConstants.titleSize))
+                        .font(.custom(PlayerButtonConstants.titleFont, size: PlayerButtonConstants.titleSize * PlayerLayoutMetrics.titleScale))
                         .lineLimit(1).minimumScaleFactor(0.75)
                     }
                         .accessibilityIdentifier("nowPlayingTitle")
                         .frame(width: width - 32).position(x: width / 2, y: height * 0.60)
                     Button { reveal(song, album: true) } label: {
                         Text(song.artist + PlayerButtonConstants.metadataSeparator + song.album)
-                        .font(.custom(PlayerButtonConstants.subtitleFont, size: PlayerButtonConstants.subtitleSize))
+                        .font(.custom(PlayerButtonConstants.subtitleFont, size: PlayerButtonConstants.subtitleSize * PlayerLayoutMetrics.subtitleScale))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .multilineTextAlignment(.center)
@@ -53,16 +53,16 @@ struct NowPlayingView: View {
                         .accessibilityIdentifier("nowPlayingAlbum")
                         .frame(width: width - 32).position(x: width / 2, y: height * 0.633)
                     referenceOptions(song, state: state, width: width)
-                        .frame(width: width, height: 48).position(x: width / 2, y: height * 0.675)
-                    ProgressSection(song: song) { controls(state, width: width) }
+                        .frame(width: width, height: 48).position(x: width / 2, y: height * PlayerLayoutMetrics.secondaryCentreH)
+                    ProgressSection(song: song, screenWidth: width) { controls(state, width: width) }
                         .frame(width: width - 20, height: height * 0.18)
-                        .position(x: width / 2, y: height * 0.79)
+                        .position(x: width / 2, y: height * PlayerLayoutMetrics.transportCentreH)
                     Button { showsAudioDetails = true } label: {
-                        Text(audioSummary(song)).font(.custom("AvenirNext-Bold", size: 10.5))
+                        Text(audioSummary(song)).font(.custom("AvenirNext-Bold", size: 10.5 * PlayerLayoutMetrics.technicalTextScale))
                             .lineLimit(1).minimumScaleFactor(0.75)
                     }
                     .frame(width: width - 24).position(x: width / 2, y: height * 0.895)
-                    referenceNavigation.frame(width: width, height: 44)
+                    referenceNavigation(width: width).frame(width: width, height: 44)
                         .position(x: width / 2, y: height * 0.94)
                 }
                 .foregroundStyle(.white)
@@ -211,7 +211,7 @@ struct NowPlayingView: View {
         }
     }
 
-    private var menu: some View {
+    private func menu(width: CGFloat) -> some View {
         let song = player.state.currentSong
         return Menu {
             Section("Track") {
@@ -249,6 +249,8 @@ struct NowPlayingView: View {
             }
         } label: {
             Image(systemName: PlayerButtonConstants.optionsSymbol)
+                .resizable().scaledToFit()
+                .frame(width: width * PlayerLayoutMetrics.secondaryIconW, height: width * PlayerLayoutMetrics.secondaryIconW)
                 .rotationEffect(.degrees(PlayerButtonConstants.optionsRotation))
                 .font(.system(size: PlayerButtonConstants.iconSize, weight: .black))
                 .foregroundStyle(.white.opacity(PlayerButtonConstants.iconOpacity))
@@ -275,30 +277,41 @@ struct NowPlayingView: View {
         ZStack {
             Button { actions.toggleFavorite(song) } label: {
                 Image(systemName: song.isFavorite ? "heart.fill" : "heart")
+                    .resizable().scaledToFit()
+                    .frame(width: width * PlayerLayoutMetrics.heartIconW, height: width * PlayerLayoutMetrics.heartIconW)
                     .font(.system(size: 25, weight: .bold)).frame(width: 44, height: 44)
             }
             .accessibilityLabel(song.isFavorite ? "Remove from favorites" : "Add to favorites")
-            .position(x: width * 0.12, y: 24)
-            PlayerShareButton(song: song)
-                .position(x: width * 0.31, y: 24)
-            menu.position(x: width * PlayerButtonConstants.centerFraction, y: 24)
-            ToggleIcon(systemImage: "shuffle", active: state.shuffleModeEnabled) {
+            .position(x: width * PlayerLayoutMetrics.secondaryCentresW[0], y: 24)
+            PlayerShareButton(song: song, iconWidth: width * PlayerLayoutMetrics.secondaryIconW)
+                .position(x: width * PlayerLayoutMetrics.secondaryCentresW[1], y: 24)
+            menu(width: width).position(x: width * PlayerLayoutMetrics.secondaryCentresW[2], y: 24)
+            ToggleIcon(systemImage: "shuffle", active: state.shuffleModeEnabled, iconWidth: width * PlayerLayoutMetrics.secondaryIconW) {
                 player.setShuffleModeEnabled(!state.shuffleModeEnabled)
-            }.accessibilityLabel("Shuffle").position(x: width * 0.69, y: 24)
-            ToggleIcon(systemImage: state.repeatMode == .one ? "repeat.1" : "repeat", active: state.repeatMode != .off) {
+            }.accessibilityLabel("Shuffle").position(x: width * PlayerLayoutMetrics.secondaryCentresW[3], y: 24)
+            ToggleIcon(systemImage: state.repeatMode == .one ? "repeat.1" : "repeat", active: state.repeatMode != .off, iconWidth: width * PlayerLayoutMetrics.secondaryIconW) {
                 player.cycleRepeatMode()
-            }.accessibilityLabel("Repeat").position(x: width * 0.88, y: 24)
+            }.accessibilityLabel("Repeat").position(x: width * PlayerLayoutMetrics.secondaryCentresW[4], y: 24)
         }
     }
 
     private func controls(_ state: PlaybackState, width: CGFloat) -> some View {
         let playIntent = state.isPlaying || state.status == .buffering
-        return HStack(spacing: 3) {
-            transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * PlaybackPreferences.seekSize, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
-            transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * PlaybackPreferences.skipSize, action: { player.skipToPreviousItem() })
-            transport(playIntent ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: playIntent ? "Pause" : "Play", size: width * (playIntent ? PlaybackPreferences.playingSize : PlaybackPreferences.playSize), action: { player.togglePlayPause() })
-            transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * PlaybackPreferences.skipSize, action: next)
-            transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * PlaybackPreferences.seekSize, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
+        return GeometryReader { geometry in
+            let inset = (width - geometry.size.width) / 2
+            let centres = PlayerLayoutMetrics.transportCentresW.map { width * $0 - inset }
+            ZStack {
+                transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * PlayerLayoutMetrics.outerDiameterW, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
+                    .position(x: centres[0], y: geometry.size.height / 2)
+                transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * PlayerLayoutMetrics.innerDiameterW, action: { player.skipToPreviousItem() })
+                    .position(x: centres[1], y: geometry.size.height / 2)
+                transport(playIntent ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: playIntent ? "Pause" : "Play", size: width * (playIntent ? PlayerLayoutMetrics.pauseDiameterW : PlayerLayoutMetrics.playDiameterW), action: { player.togglePlayPause() })
+                    .position(x: centres[2], y: geometry.size.height / 2)
+                transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * PlayerLayoutMetrics.innerDiameterW, action: next)
+                    .position(x: centres[3], y: geometry.size.height / 2)
+                transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * PlayerLayoutMetrics.outerDiameterW, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
+                    .position(x: centres[4], y: geometry.size.height / 2)
+            }.frame(width: geometry.size.width, height: geometry.size.height)
         }
         .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.75), value: playIntent)
     }
@@ -310,9 +323,13 @@ struct NowPlayingView: View {
                     HStack(spacing: -2) {
                         ForEach(0..<3) { _ in
                             Image(systemName: symbol == "seek.backward" ? "arrowtriangle.left.fill" : "arrowtriangle.right.fill")
-                                .font(.system(size: size * 0.25, weight: .black))
+                                .resizable().scaledToFit()
                         }
                     }
+                    .frame(width: size * PlayerLayoutMetrics.triangleWidthInCircle, height: size * PlayerLayoutMetrics.triangleWidthInCircle)
+                } else if symbol == "backward.fill" || symbol == "forward.fill" {
+                    Image(systemName: symbol).resizable().scaledToFit()
+                        .frame(width: size * PlayerLayoutMetrics.triangleWidthInCircle, height: size * PlayerLayoutMetrics.triangleWidthInCircle)
                 } else {
                     Image(systemName: symbol)
                         .contentTransition(reduceMotion ? .identity : .symbolEffect(.replace))
@@ -332,38 +349,47 @@ struct NowPlayingView: View {
         .accessibilityIdentifier(identifier)
     }
 
-    private var referenceNavigation: some View {
-        HStack {
-            Button { close(); router.select(.library) } label: { Image(systemName: "square.grid.2x2.fill") }
+    private func referenceNavigation(width: CGFloat) -> some View {
+        ZStack {
+            Button { close(); router.select(.library) } label: {
+                Image(systemName: "square.grid.2x2.fill")
+                    .frame(width: 48, height: 48).contentShape(Rectangle())
+            }
                 .accessibilityLabel("Library")
-            Spacer()
-            Button { showsEqualizer = true } label: { PlayerEqualizerGlyph() }
+                .position(x: width * PlayerLayoutMetrics.navigationCentresW[0], y: 24)
+            Button { showsEqualizer = true } label: {
+                PlayerEqualizerGlyph().scaleEffect(PlayerLayoutMetrics.navigationIconScale)
+                    .frame(width: 48, height: 48).contentShape(Rectangle())
+            }
                 .accessibilityLabel("Equalizer")
-            Spacer()
-            Button { close(); router.showsSearch = true } label: { Image(systemName: "magnifyingglass") }
+                .position(x: width * PlayerLayoutMetrics.navigationCentresW[1], y: 24)
+            Button { close(); router.showsSearch = true } label: {
+                Image(systemName: "magnifyingglass")
+                    .frame(width: 48, height: 48).contentShape(Rectangle())
+            }
                 .accessibilityLabel("Search")
-            Spacer()
+                .position(x: width * PlayerLayoutMetrics.navigationCentresW[2], y: 24)
             Button {
                 close()
                 router.open(Tool.settings)
             } label: {
-                PlayerQueueGlyph().font(.title3.weight(.semibold))
+                PlayerQueueGlyph().scaleEffect(PlayerLayoutMetrics.navigationIconScale)
                     .frame(width: PlayerButtonConstants.touchSize, height: PlayerButtonConstants.touchSize)
                     .contentShape(Rectangle())
             }
             .accessibilityLabel(PlayerButtonConstants.settingsLabel)
             .accessibilityIdentifier("nowPlayingSettings")
+            .position(x: width * PlayerLayoutMetrics.navigationCentresW[3], y: 24)
         }
-        .font(.system(size: 28, weight: .heavy))
+        .font(.system(size: 28 * PlayerLayoutMetrics.navigationIconScale, weight: .heavy))
         .foregroundStyle(.white.opacity(0.6))
-        .frame(height: 48)
-        .padding(.horizontal, 36)
+        .frame(width: width, height: 48)
     }
 
     private func audioSummary(_ song: Song) -> String {
         [song.sampleRate > 0 ? MediaFormats.sampleRateText(song.sampleRate) : nil,
          song.bitrate > 0 ? MediaFormats.bitrateText(song.bitrate) : nil,
-         song.url.pathExtension.uppercased()].compactMap { $0 }.joined(separator: "  ").uppercased()
+         song.url.pathExtension.uppercased()].compactMap { $0 }.joined(separator: PlayerLayoutMetrics.technicalSeparator).uppercased()
     }
 
     private func backdrop(_ song: Song?) -> some View {
@@ -376,13 +402,16 @@ struct NowPlayingView: View {
 private struct ToggleIcon: View {
     let systemImage: String
     let active: Bool
+    let iconWidth: CGFloat
     let action: () -> Void
     @Environment(\.palette) private var palette
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: systemImage).font(.system(size: 25, weight: .black))
-                .foregroundStyle(.white.opacity(active ? 1 : 0.5))
+            Image(systemName: systemImage).resizable().scaledToFit()
+                .frame(width: iconWidth, height: iconWidth)
+                .font(.system(size: 25, weight: .black))
+                .foregroundStyle(.white.opacity(active ? 1 : PlayerLayoutMetrics.idleOpacity))
                 .frame(width: 48, height: 48)
                 .background(Circle().fill(palette.primary.opacity(active ? 0.18 : 0)))
                 .contentShape(Circle())
@@ -394,6 +423,7 @@ private struct ToggleIcon: View {
 /// Real track waveform with transport controls overlaid and elapsed/duration badges.
 private struct ProgressSection<Controls: View>: View {
     let song: Song
+    let screenWidth: CGFloat
     @ViewBuilder let controls: () -> Controls
     @Environment(PlayerController.self) private var player
     @Environment(\.playerReduceMotion) private var reduceMotion
@@ -463,9 +493,9 @@ private struct ProgressSection<Controls: View>: View {
 
     private func timeBadge(_ ms: Int64) -> some View {
         Text(formatDuration(ms))
-            .font(.system(size: 14, weight: .bold).monospacedDigit())
+            .font(.system(size: 14 * PlayerLayoutMetrics.timeTextScale, weight: .bold).monospacedDigit())
             .foregroundStyle(.white)
-            .padding(.horizontal, 9).padding(.vertical, 5)
+            .frame(width: screenWidth * PlayerLayoutMetrics.timeBadgeW, height: PlayerLayoutMetrics.timeBadgeHeight)
             .background(.black, in: Capsule())
     }
 }

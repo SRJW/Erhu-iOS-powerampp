@@ -29,6 +29,7 @@ enum PlayerButtonConstants {
 
 struct PlayerShareButton: View {
     let song: Song
+    let iconWidth: CGFloat
     @Environment(LibraryActions.self) private var actions
     @State private var prepared: PreparedAudioShare?
     @State private var presenting = false
@@ -40,8 +41,10 @@ struct PlayerShareButton: View {
             let available = PreparedAudioShare.available(song.url) && !preparing
             Button { share() } label: {
                 Image(systemName: PlayerButtonConstants.shareSymbol)
-                    .font(.system(size: PlayerButtonConstants.iconSize, weight: .black))
-                    .foregroundStyle(.white.opacity(PlayerButtonConstants.iconOpacity))
+                    .resizable().scaledToFit()
+                    .frame(width: iconWidth, height: iconWidth * PlayerLayoutMetrics.shareHeightInWidth)
+                    .font(.system(size: iconWidth, weight: .bold))
+                    .foregroundStyle(.white)
                     .frame(width: PlayerButtonConstants.touchSize, height: PlayerButtonConstants.touchSize)
                     .contentShape(Rectangle())
             }
