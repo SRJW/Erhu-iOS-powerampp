@@ -1,5 +1,23 @@
 import Foundation
 
+enum SearchType: String, CaseIterable, Identifiable {
+    case all = "All", songs = "Songs", albums = "Albums", artists = "Artists", albumArtists = "Album Artists", folders = "Folders", playlists = "Playlists"
+    var id: String { rawValue }
+}
+
+struct LibrarySearchExtras: Sendable {
+    var albumArtists: [Artist] = []
+    var folders: [String] = []
+    var playlists: [Playlist] = []
+    static func matching(_ query: String, songs: [Song], albumArtists: [Artist], playlists: [Playlist]) -> Self {
+        guard !query.trimmed.isEmpty else { return Self() }
+        return Self(albumArtists: albumArtists.filter { SearchNormalizer.matches($0.name, query) },
+                    folders: Set(songs.map { ($0.path as NSString).deletingLastPathComponent })
+                        .filter { SearchNormalizer.matches($0, query) }.sorted(),
+                    playlists: playlists.filter { SearchNormalizer.matches($0.name, query) })
+    }
+}
+
 /// Results belong to the entity named by the query; related rows come from library relationships.
 struct LibrarySearchResults: Sendable {
     var artists: [Artist] = []

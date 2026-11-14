@@ -90,6 +90,7 @@ struct SongList: View {
     var selection: Binding<Set<Int64>>? = nil
     var showsFileDetails = false
     var onPlay: (() -> Void)? = nil
+    var onPlaySong: ((Song) -> Void)? = nil
     @Environment(LibraryActions.self) private var actions
     @Environment(PlayerController.self) private var player
     @Environment(AppRouter.self) private var router
@@ -121,6 +122,7 @@ struct SongList: View {
                     } else {
                         TrackRow(song: song, isCurrent: song.id == currentId, showTrackNumber: showTrackNumbers, displayTrackNumber: showTrackNumbers ? index + 1 : nil, showsFileDetails: showsFileDetails, actions: songActions) {
                             onPlay?()
+                            onPlaySong?(song)
                             actions.play(songs, startIndex: index, origin: origin, source: source)
                         }
                     }
