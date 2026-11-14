@@ -60,6 +60,22 @@ struct PanInteraction: UIViewRepresentable {
             }
             set { super.accessibilityFrame = newValue }
         }
+        // UIKit otherwise derives its hit region from the full transparent view,
+        // which also spans the transport controls below this accessible strip.
+        override var accessibilityPath: UIBezierPath? {
+            get {
+                guard configuration != nil else { return super.accessibilityPath }
+                return UIBezierPath(rect: accessibilityFrame)
+            }
+            set { super.accessibilityPath = newValue }
+        }
+        override var accessibilityActivationPoint: CGPoint {
+            get {
+                guard configuration != nil else { return super.accessibilityActivationPoint }
+                return CGPoint(x: accessibilityFrame.midX, y: accessibilityFrame.midY)
+            }
+            set { super.accessibilityActivationPoint = newValue }
+        }
         override func accessibilityIncrement() { configuration?.increment() }
         override func accessibilityDecrement() { configuration?.decrement() }
     }
