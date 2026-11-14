@@ -138,7 +138,7 @@ struct RootView: View {
             case .playlist(let id): PlaylistDetailView(playlistId: id)
             case .radio(let seed): RadioStationView(seed: seed)
             case .shelf(let shelf): LibraryShelfView(shelf: shelf)
-            case .allSongs: AllSongsView().navigationBarBackButtonHidden().toolbar { categoryBack }
+            case .allSongs: AllSongsView().id(router.allSongsRevealID).navigationBarBackButtonHidden().toolbar { categoryBack }
             case .category(let category):
                 Group {
                     switch category {

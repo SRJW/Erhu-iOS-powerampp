@@ -1,6 +1,44 @@
 import XCTest
 
 final class LibraryInteractionTests: XCTestCase {
+    @MainActor func testLibraryVisibilityPersistsAndPlayerTitleRevealsUnfilteredAllSongs() {
+        let app = launch("songs")
+        let page = app.scrollViews["songsPage"]
+        XCTAssertTrue(page.waitForExistence(timeout: 30))
+        app.buttons["appSection.library"].tap()
+        app.buttons["Library options"].tap()
+        app.buttons["customizeLibrary"].tap()
+        let albumsSwitch = app.switches["libraryCategoryVisible.albums"]
+        XCTAssertTrue(albumsSwitch.waitForExistence(timeout: 10))
+        app.buttons["Reset"].tap()
+        albumsSwitch.tap()
+        app.buttons["Done"].tap()
+        XCTAssertFalse(app.buttons["libraryCategory.albums"].exists)
+        app.terminate(); app.launch()
+        XCTAssertTrue(page.waitForExistence(timeout: 30))
+        app.buttons["appSection.library"].tap()
+        XCTAssertFalse(app.buttons["libraryCategory.albums"].exists, "Hidden sections survive a full relaunch")
+        app.buttons["libraryCategory.songs"].tap()
+        let song = page.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "History fixture one")).firstMatch
+        XCTAssertTrue(song.waitForExistence(timeout: 20))
+        song.tap()
+        page.buttons["sectionSearchButton"].tap()
+        let field = page.textFields["sectionSearchField"]
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        dismissKeyboardIntroduction(in: app)
+        field.tap(); field.typeText("No matching track\n")
+        app.buttons["openNowPlaying"].tap()
+        let title = app.buttons["nowPlayingTitle"]
+        XCTAssertTrue(title.waitForExistence(timeout: 10))
+        let currentTitle = title.label
+        title.tap()
+        XCTAssertTrue(page.waitForExistence(timeout: 10))
+        let revealed = page.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", currentTitle)).firstMatch
+        XCTAssertTrue(revealed.waitForExistence(timeout: 10))
+        XCTAssertTrue(revealed.isHittable, "The title clears existing filters and scrolls to its row in All Songs")
+        XCTAssertFalse(page.textFields["sectionSearchField"].exists)
+    }
+
     /// The fresh iOS simulator can show its one-time QuickPath introduction over the keyboard.
     @MainActor private func dismissKeyboardIntroduction(in app: XCUIApplication) {
         let proceed = app.buttons["Continue"]

@@ -117,6 +117,7 @@ jobs:
       run: |
         if [ "${{ inputs.scope }}" = 'library-only' ]; then
           test_filters=(
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLibraryVisibilityPersistsAndPlayerTitleRevealsUnfilteredAllSongs
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testUnifiedNavigationKeepsSearchWhenToolsCloseAndAppReturns
@@ -128,6 +129,7 @@ jobs:
           )
           if [ "${{ inputs.scope }}" = 'full-player' ]; then
             test_filters+=(
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLibraryVisibilityPersistsAndPlayerTitleRevealsUnfilteredAllSongs
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion

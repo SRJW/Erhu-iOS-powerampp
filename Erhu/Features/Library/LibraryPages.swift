@@ -10,6 +10,7 @@ struct LibraryOverviewView: View {
     @Environment(LibraryStore.self) private var library
     @State private var releases = ReleaseChecker.shared
     @AppStorage("library.overview.sectionOrder") private var storedOrder = "songs,albums,artists,playlists,mostPlayed,recentlyPlayed,recentlyAdded,favorites,folders,albumArtists,radio"
+    @AppStorage("library.overview.hiddenSections") private var hiddenSections = ""
     @State private var showsOrder = false
     @State private var editingOrder: [LibraryCategory] = []
     var body: some View {
@@ -21,7 +22,11 @@ struct LibraryOverviewView: View {
                             .padding(Spacing.lg)
                     }
                 }
-                ForEach(LibraryCategory.ordered(storedOrder)) { category in
+                if LibraryCategory.visible(order: storedOrder, hidden: hiddenSections).isEmpty {
+                    Text(LibraryCustomizationText.empty).foregroundStyle(.secondary).padding(.horizontal, Spacing.gutter)
+                    Button(LibraryCustomizationText.action, action: customize).padding(.horizontal, Spacing.gutter)
+                }
+                ForEach(LibraryCategory.visible(order: storedOrder, hidden: hiddenSections)) { category in
                     Button { router.open(category == .songs ? .allSongs : .category(category)) } label: {
                         HStack(spacing: Spacing.lg) {
                             Image(systemName: category.icon).font(.title2).frame(width: 36)
@@ -39,9 +44,8 @@ struct LibraryOverviewView: View {
                 Menu {
                     Button("Import music", systemImage: "plus") { router.showsImporter = true }
                     Button("Wi-Fi Transfer", systemImage: "wifi") { router.open(Tool.wifiTransfer) }
-                    Button("Reorder categories", systemImage: "arrow.up.arrow.down") {
-                        editingOrder = LibraryCategory.ordered(storedOrder); showsOrder = true
-                    }
+                    Button(LibraryCustomizationText.action, systemImage: "slider.horizontal.3", action: customize)
+                        .accessibilityIdentifier("customizeLibrary")
                 } label: { Image(systemName: "ellipsis").rotationEffect(.degrees(90)).frame(width: 44, height: 44) }
                 .accessibilityLabel("Library options")
             }
@@ -49,22 +53,45 @@ struct LibraryOverviewView: View {
         .sheet(isPresented: $showsOrder) {
             NavigationStack {
                 List {
-                    ForEach(editingOrder) { Text($0.title) }
+                    Section {
+                        ForEach(editingOrder) { category in
+                            Toggle(isOn: visibility(of: category)) { Label(category.title, systemImage: category.icon) }
+                                .toggleStyle(.switch)
+                                .accessibilityIdentifier("libraryCategoryVisible.\(category.rawValue)")
+                        }
                         .onMove { source, destination in
                             editingOrder.move(fromOffsets: source, toOffset: destination)
                             storedOrder = editingOrder.map(\.rawValue).joined(separator: ",")
                         }
+                    } footer: { Text(LibraryCustomizationText.instructions) }
                 }
                 .environment(\.editMode, .constant(.active))
-                .navigationTitle("Library order")
+                .navigationTitle(LibraryCustomizationText.action)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Reset") { editingOrder = LibraryCategory.allCases; storedOrder = editingOrder.map(\.rawValue).joined(separator: ",") }
+                        Button("Reset") {
+                            editingOrder = LibraryCategory.allCases
+                            storedOrder = editingOrder.map(\.rawValue).joined(separator: ",")
+                            hiddenSections = ""
+                        }
                     }
                     ToolbarItem(placement: .confirmationAction) { Button("Done") { showsOrder = false } }
                 }
             }
         }
+    }
+
+    private func customize() {
+        editingOrder = LibraryCategory.ordered(storedOrder)
+        showsOrder = true
+    }
+
+    private func visibility(of category: LibraryCategory) -> Binding<Bool> {
+        Binding(get: { !LibraryCategory.hidden(hiddenSections).contains(category) }, set: { visible in
+            var hidden = LibraryCategory.hidden(hiddenSections)
+            if visible { hidden.remove(category) } else { hidden.insert(category) }
+            hiddenSections = hidden.map(\.rawValue).sorted().joined(separator: ",")
+        })
     }
 }
 

@@ -47,6 +47,21 @@ enum LibraryCategory: String, CaseIterable, Identifiable {
         }
         return result + allCases.filter { !result.contains($0) }
     }
+
+    static func hidden(_ stored: String) -> Set<Self> {
+        Set(stored.split(separator: ",").compactMap { Self(rawValue: String($0)) })
+    }
+
+    static func visible(order: String, hidden: String) -> [Self] {
+        let excluded = Self.hidden(hidden)
+        return ordered(order).filter { !excluded.contains($0) }
+    }
+}
+
+enum LibraryCustomizationText {
+    static let action = "Customize Library"
+    static let instructions = "Drag to reorder. Turn off sections to hide them."
+    static let empty = "All sections are hidden. Choose which sections appear in Library."
 }
 
 /// One action arrangement for all library categories and search.

@@ -2,6 +2,19 @@ import XCTest
 @testable import Erhu
 
 final class LibraryCategoryTests: XCTestCase {
+    func testHidingDoesNotLoseSavedOrderAndHiddenSectionsCanBeRestored() {
+        let order = "albums,songs,playlists"
+        let hidden = "albums,radio,albums,retired"
+        XCTAssertEqual(LibraryCategory.hidden(hidden), [.albums, .radio])
+        let visible = LibraryCategory.visible(order: order, hidden: hidden)
+        XCTAssertEqual(Array(visible.prefix(2)), [.songs, .playlists])
+        XCTAssertFalse(visible.contains(.albums))
+        XCTAssertFalse(visible.contains(.radio))
+        XCTAssertEqual(LibraryCategory.visible(order: order, hidden: "").first, .albums)
+        let allHidden = LibraryCategory.allCases.map(\.rawValue).joined(separator: ",")
+        XCTAssertTrue(LibraryCategory.visible(order: order, hidden: allHidden).isEmpty)
+    }
+
     func testOldCategoryOrderRetainsEveryCategoryExactlyOnce() {
         let migrated = LibraryCategory.ordered("playlists,favorites,artists,songs,vybe,songs")
         XCTAssertEqual(Array(migrated.prefix(4)), [.playlists, .favorites, .artists, .songs])

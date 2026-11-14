@@ -110,6 +110,8 @@ final class AppRouter {
     /// The song whose tags are being edited by hand.
     var songForTagEdit: Song?
     var songReveal: SongRevealRequest?
+    /// A title tap must reveal an unfiltered All Songs view even when that route is already open.
+    var allSongsRevealID = UUID()
     var highlightedSongID: Int64?
     var showsNewPlaylist = false
 
@@ -183,13 +185,12 @@ final class AppRouter {
         guard let current = library.songs.first(where: { $0.id == song.id }),
               PreparedAudioShare.available(current.url) else { return false }
         let destination: Route
-        if album, !current.album.trimmed.isEmpty, current.album != unknownAlbum,
+        if !album {
+            allSongsRevealID = UUID()
+            destination = .allSongs
+        } else if !current.album.trimmed.isEmpty, current.album != unknownAlbum,
            library.album(current.albumId) != nil {
             destination = .album(current.albumId)
-        } else if !album, case .playlist(let id) = source,
-                  library.playlist(id) != nil,
-                  (try? library.database.playlistEntries(id).contains(where: { $0.song.id == current.id })) == true {
-            destination = .playlist(id)
         } else {
             destination = .songFolder((current.path as NSString).deletingLastPathComponent)
         }

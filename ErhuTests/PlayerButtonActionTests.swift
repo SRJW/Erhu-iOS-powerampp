@@ -17,7 +17,7 @@ final class PlayerButtonActionTests: XCTestCase {
         return (library, try XCTUnwrap(library.songs.first), folder)
     }
 
-    @MainActor func testTitleRevealsPlaylistAndAlbumLineRevealsAlbum() throws {
+    @MainActor func testTitleAlwaysRevealsAllSongsAndAlbumLineStillRevealsAlbum() throws {
         let (library, song, folder) = try fixture()
         defer { try? FileManager.default.removeItem(at: folder) }
         let playlist = try library.database.createPlaylist(name: "Test", songIds: [song.id])
@@ -26,21 +26,25 @@ final class PlayerButtonActionTests: XCTestCase {
         router.showsNowPlaying = true
         XCTAssertTrue(router.revealSong(song, album: false, source: .playlist(playlist), library: library))
         XCTAssertEqual(router.section, .library)
-        XCTAssertEqual(router.songReveal?.destination, .playlist(playlist))
+        XCTAssertEqual(router.songReveal?.destination, .allSongs)
         XCTAssertEqual(router.songReveal?.songID, song.id)
         XCTAssertFalse(router.showsNowPlaying)
+        let firstReveal = router.allSongsRevealID
+        XCTAssertTrue(router.revealSong(song, album: false, source: .album(song.albumId), library: library))
+        XCTAssertEqual(router.songReveal?.destination, .allSongs)
+        XCTAssertNotEqual(router.allSongsRevealID, firstReveal, "A repeat title tap must reset any existing All Songs filters")
         XCTAssertTrue(router.revealSong(song, album: true, source: .playlist(playlist), library: library))
         XCTAssertEqual(router.songReveal?.destination, .album(song.albumId))
     }
 
-    @MainActor func testUnknownAlbumAndMissingPlaylistFallBackToContainingFolder() throws {
+    @MainActor func testUnknownAlbumFallsBackToFolderButTitleStillUsesAllSongs() throws {
         let (library, song, folder) = try fixture(album: unknownAlbum)
         defer { try? FileManager.default.removeItem(at: folder) }
         let router = AppRouter()
         XCTAssertTrue(router.revealSong(song, album: true, source: .library, library: library))
         XCTAssertEqual(router.songReveal?.destination, .songFolder(folder.lastPathComponent))
         XCTAssertTrue(router.revealSong(song, album: false, source: .playlist(9999), library: library))
-        XCTAssertEqual(router.songReveal?.destination, .songFolder(folder.lastPathComponent))
+        XCTAssertEqual(router.songReveal?.destination, .allSongs)
     }
 
     @MainActor func testDeletedFileReturnsToLibraryRootWithoutStaleHighlight() throws {
