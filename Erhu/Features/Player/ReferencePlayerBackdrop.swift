@@ -8,6 +8,7 @@ private struct ArtworkSlideFrame: Identifiable {
 }
 
 struct ReferencePlayerBackdrop: View {
+    @Environment(AppSettings.self) private var settings
     let song: Song?
     @Binding var artworkDrag: Double
     @Environment(PlayerController.self) private var player
@@ -36,7 +37,7 @@ struct ReferencePlayerBackdrop: View {
     private var visibleDirection: Int { frames.moving ? frames.direction : dragDirection }
 
     var body: some View {
-        PlayerFullBleedBackground(dominant: base, secondaryDominant: target, blend: blend) {
+        PlayerFullBleedBackground(dominant: base, secondaryDominant: target, blend: blend, appearance: settings.playerBackground) {
             GeometryReader { geometry in
                 ZStack {
                     // Keep the same two layer slots when a drag becomes a committed skip.

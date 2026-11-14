@@ -271,6 +271,7 @@ private struct AppearanceSettingsView: View {
                     ForEach(AppTypeface.allCases) { font in Text(font.label).fontDesign(font.design).tag(font) }
                 }.padding(Spacing.lg)
             }
+            PlayerBackgroundSettingsGroup()
             Text("For system appearance and transparency options, open iPhone Settings → Accessibility → Display & Text Size. Liquid Glass options also depend on your iOS version.")
                 .font(.footnote).foregroundStyle(.secondary)
             Text("Import colours from an Android theme ZIP or its manifest.json.")
@@ -289,6 +290,36 @@ private struct AppearanceSettingsView: View {
             }
         }
         .navigationTitle("Themes & Appearance")
+    }
+}
+
+private struct PlayerBackgroundSettingsGroup: View {
+    @Environment(AppSettings.self) private var settings
+    private func value(_ key: WritableKeyPath<PlayerBackgroundSettings, Double>) -> Binding<Double> {
+        Binding(get: { settings.playerBackground[keyPath: key] }, set: {
+            var appearance = settings.playerBackground
+            appearance[keyPath: key] = $0
+            settings.playerBackground = appearance
+        })
+    }
+    var body: some View {
+        SettingsGroup(PlayerBackgroundControls.title) {
+            VStack(spacing: Spacing.lg) {
+                slider(PlayerBackgroundControls.fade, key: \.fadeStart, range: PlayerBackgroundControls.unitRange)
+                slider(PlayerBackgroundControls.blur, key: \.blur, range: PlayerBackgroundControls.blurRange, percent: false)
+                slider(PlayerBackgroundControls.details, key: \.details, range: PlayerBackgroundControls.unitRange)
+                slider(PlayerBackgroundControls.intensity, key: \.intensity, range: PlayerBackgroundControls.unitRange)
+                slider(PlayerBackgroundControls.saturation, key: \.saturation, range: PlayerBackgroundControls.saturationRange)
+                Button(PlayerBackgroundControls.reset) { settings.playerBackground = PlayerBackgroundSettings() }
+                    .frame(minHeight: 44)
+            }.padding(Spacing.lg)
+        }
+    }
+    private func slider(_ title: String, key: WritableKeyPath<PlayerBackgroundSettings, Double>, range: ClosedRange<Double>, percent: Bool = true) -> some View {
+        VStack(alignment: .leading) {
+            LabeledContent(title, value: percent ? "\(Int(settings.playerBackground[keyPath: key] * 100))%" : "\(Int(settings.playerBackground[keyPath: key]))")
+            Slider(value: value(key), in: range).accessibilityLabel(title)
+        }
     }
 }
 

@@ -15,6 +15,7 @@ final class AppSettings {
         var introductionCompleted = false
         var typeface: AppTypeface = .system
         var visualizer = VisualizerSettings()
+        var playerBackground = PlayerBackgroundSettings()
         /// An imported theme in use instead of [theme], by id.
         var customThemeId: String?
         var importedThemes: [ImportedTheme] = []
@@ -31,6 +32,7 @@ final class AppSettings {
             introductionCompleted = try c.decodeIfPresent(Bool.self, forKey: .introductionCompleted) ?? false
             typeface = (try? c.decodeIfPresent(AppTypeface.self, forKey: .typeface)) ?? .system
             visualizer = (try? c.decodeIfPresent(VisualizerSettings.self, forKey: .visualizer)) ?? VisualizerSettings()
+            playerBackground = (try? c.decodeIfPresent(PlayerBackgroundSettings.self, forKey: .playerBackground)) ?? PlayerBackgroundSettings()
             customThemeId = try? c.decodeIfPresent(String.self, forKey: .customThemeId)
             importedThemes = (try? c.decodeIfPresent([ImportedTheme].self, forKey: .importedThemes)) ?? []
         }
@@ -77,6 +79,11 @@ final class AppSettings {
     var visualizer: VisualizerSettings {
         get { stored.visualizer }
         set { update { $0.visualizer = newValue } }
+    }
+
+    var playerBackground: PlayerBackgroundSettings {
+        get { stored.playerBackground }
+        set { update { $0.playerBackground = newValue } }
     }
 
     /// The imported theme in use, if any.

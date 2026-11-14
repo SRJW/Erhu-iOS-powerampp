@@ -6,6 +6,7 @@ struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
     let dominant: Color
     var secondaryDominant: Color? = nil
     var blend = 0.0
+    var appearance = PlayerBackgroundSettings()
     @ViewBuilder var artwork: () -> Artwork
 
     var animatableData: Double {
@@ -44,18 +45,27 @@ struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
                             ], startPoint: .top, endPoint: .bottom)
                         }
                 }
+                if appearance.details > 0 {
+                    artwork()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                        .blur(radius: appearance.blur)
+                        .opacity(appearance.details * 0.45)
+                }
+                Color.black.opacity(1 - appearance.intensity)
                 artwork()
                     .frame(width: geometry.size.width, height: geometry.size.height * 0.55)
                     .clipped()
                     .mask {
                         LinearGradient(stops: [.init(color: .white, location: 0),
-                                               .init(color: .white, location: 0.75),
+                                               .init(color: .white, location: appearance.fadeStart.clamped(0, 0.99)),
                                                .init(color: .clear, location: 1)],
                                        startPoint: .top, endPoint: .bottom)
                     }
                 LinearGradient(colors: [.black.opacity(0.40), .clear], startPoint: .top, endPoint: .bottom)
                     .frame(height: geometry.size.height * 0.12)
             }
+            .saturation(appearance.saturation)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
