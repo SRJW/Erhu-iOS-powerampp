@@ -2,9 +2,9 @@ import SwiftUI
 
 enum AppNavigationMetrics {
     static let duration = 0.3
-    static let stripHeight: CGFloat = 60
+    static let stripHeight: CGFloat = MiniPlayerMetrics.rowHeight + MiniPlayerMetrics.progressHeight
     static let buttonsHeight: CGFloat = 48
-    static let reservedHeight: CGFloat = 136
+    static let reservedHeight: CGFloat = stripHeight + buttonsHeight + 28
     static let menuWidth: CGFloat = 320
     static let menuBottom: CGFloat = 64
     static let emptyTitle = "No song loaded"

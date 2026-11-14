@@ -2,7 +2,8 @@ import SwiftUI
 
 /// Constants shared by the compact player's gestures and progress hit target.
 enum MiniPlayerMetrics {
-    static let rowHeight: CGFloat = 44
+    static let artworkVerticalInset: CGFloat = 6
+    static let rowHeight: CGFloat = ArtworkSize.miniPlayer + artworkVerticalInset * 2
     static let progressHeight: CGFloat = 16
     static let swipeThreshold: CGFloat = 48
     static let dragDistance: CGFloat = 12
