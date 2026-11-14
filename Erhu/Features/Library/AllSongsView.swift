@@ -41,7 +41,9 @@ struct AllSongsView: View {
         return library.songs.filter { ($0.path as NSString).deletingLastPathComponent == folderPath }
     }
     private var title: String {
-        folderPath.map { ($0 as NSString).lastPathComponent }.flatMap { $0.isEmpty ? nil : $0 } ?? category.title
+        guard let folderPath else { return category.title }
+        let name = (folderPath as NSString).lastPathComponent
+        return name.isEmpty ? "Music folder" : name
     }
     private var hasFilters: Bool { added != .any || !genre.isEmpty || mood != .all }
     private var request: SongBrowseRequest {
