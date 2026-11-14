@@ -243,10 +243,13 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertTrue(playlist.label.contains("1 song"), "The selected song was actually added")
         app.buttons["Cancel"].tap()
         page.buttons["songsDeleteSelected"].tap()
-        app.buttons["Cancel"].tap()
+        let deletion = app.alerts.firstMatch
+        XCTAssertTrue(deletion.waitForExistence(timeout: 10), "Deletion must present an explicit confirmation")
+        deletion.buttons["Cancel"].tap()
         XCTAssertTrue(first.exists, "Cancel must preserve the selected file and row")
         page.buttons["songsDeleteSelected"].tap()
-        app.buttons["Delete from device"].tap()
+        XCTAssertTrue(deletion.waitForExistence(timeout: 10))
+        deletion.buttons["Delete from device"].tap()
         let removed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in !first.exists && second.exists }, object: nil)
         XCTAssertEqual(XCTWaiter.wait(for: [removed], timeout: 10), .completed, "Only the confirmed selection is removed")
     }

@@ -88,7 +88,7 @@ struct AllSongsView: View {
         }
         .refreshable { library.scan() }
         .onChange(of: library.songs) { _, songs in selected.formIntersection(Set(songs.map(\.id))) }
-        .confirmationDialog("Delete \(countLabel(pendingDeletion.count, "song")) from device?", isPresented: $confirmsDeletion, titleVisibility: .visible) {
+        .alert("Delete \(countLabel(pendingDeletion.count, "song")) from device?", isPresented: $confirmsDeletion) {
             Button("Delete from device", role: .destructive) {
                 let deleted = actions.deleteFromDevice(pendingDeletion)
                 selected.subtract(deleted)
