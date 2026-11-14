@@ -297,22 +297,22 @@ struct NowPlayingView: View {
 
     private func controls(_ state: PlaybackState, width: CGFloat) -> some View {
         let playIntent = state.isPlaying || state.status == .buffering
-        return GeometryReader { geometry in
-            let inset = (width - geometry.size.width) / 2
-            let centres = PlayerLayoutMetrics.transportCentresW.map { width * $0 - inset }
-            ZStack {
+        let inset: CGFloat = 10 // Match the existing waveform's horizontal inset.
+        let rowHeight = width * PlayerLayoutMetrics.playDiameterW
+        let centres = PlayerLayoutMetrics.transportCentresW.map { width * $0 - inset }
+        return ZStack {
                 transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * PlayerLayoutMetrics.outerDiameterW, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
-                    .position(x: centres[0], y: geometry.size.height / 2)
+                    .position(x: centres[0], y: rowHeight / 2)
                 transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * PlayerLayoutMetrics.innerDiameterW, action: { player.skipToPreviousItem() })
-                    .position(x: centres[1], y: geometry.size.height / 2)
+                    .position(x: centres[1], y: rowHeight / 2)
                 transport(playIntent ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: playIntent ? "Pause" : "Play", size: width * (playIntent ? PlayerLayoutMetrics.pauseDiameterW : PlayerLayoutMetrics.playDiameterW), action: { player.togglePlayPause() })
-                    .position(x: centres[2], y: geometry.size.height / 2)
+                    .position(x: centres[2], y: rowHeight / 2)
                 transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * PlayerLayoutMetrics.innerDiameterW, action: next)
-                    .position(x: centres[3], y: geometry.size.height / 2)
+                    .position(x: centres[3], y: rowHeight / 2)
                 transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * PlayerLayoutMetrics.outerDiameterW, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
-                    .position(x: centres[4], y: geometry.size.height / 2)
-            }.frame(width: geometry.size.width, height: geometry.size.height)
+                    .position(x: centres[4], y: rowHeight / 2)
         }
+        .frame(width: width - inset * 2, height: rowHeight)
         .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.75), value: playIntent)
     }
 
@@ -467,6 +467,7 @@ private struct ProgressSection<Controls: View>: View {
                 }
                 // Transport must react to scrub completion even when the waveform clock is paused.
                 controls()
+                    .zIndex(1)
                     .opacity(previewMs == nil ? 1 : 0)
                     .allowsHitTesting(previewMs == nil)
                     .accessibilityHidden(previewMs != nil)
