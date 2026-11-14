@@ -51,7 +51,13 @@ struct SongActionItems: View {
 enum SongRowText {
     static func fileDetails(_ song: Song) -> String {
         let ext = (song.path as NSString).pathExtension.lowercased()
-        let format = ext.isEmpty ? (song.codec?.lowercased() ?? "audio") : ext
+        let codec = song.codec?.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() ?? ""
+        let format: String
+        if codec == "ALAC" || codec == "AAC" || codec.hasPrefix("HE-AAC") {
+            format = ext.isEmpty ? codec : "\(codec) · \(ext)"
+        } else {
+            format = ext.isEmpty ? (codec.isEmpty ? "audio" : codec) : ext
+        }
         return (song.durationMs > 0 ? formatDuration(song.durationMs) : "–:–") + " | " + format
     }
     static func accessibilityLabel(_ song: Song, includingFileDetails: Bool) -> String {

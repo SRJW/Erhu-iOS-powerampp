@@ -216,7 +216,7 @@ final class LibraryInteractionTests: XCTestCase {
         let second = page.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "History fixture two")).firstMatch
         XCTAssertTrue(first.waitForExistence(timeout: 20))
         XCTAssertTrue(first.label.contains("Fixture artist"))
-        XCTAssertTrue(first.label.contains("0:02 | m4a"), "Songs expose duration and real container format")
+        XCTAssertTrue(first.label.contains("0:02 |") && first.label.contains("m4a"), "Songs expose duration and real container format")
         let screenshot = XCTAttachment(screenshot: app.screenshot())
         screenshot.name = "songs-layout-and-file-information"; screenshot.lifetime = .keepAlways; add(screenshot)
         search.tap()

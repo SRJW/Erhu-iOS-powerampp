@@ -12,6 +12,11 @@ private actor ReleaseHTTP: HTTPClient {
 
 @main struct ReleaseChecks {
     @MainActor static func main() async throws {
+        let resigned: [String: Any] = ["ErhuReleaseTag": "v0.1.0-amp.80", "CFBundleShortVersionString": "1.0.1",
+                                       "CFBundleVersion": "1", "AmpBuildNumber": "80"]
+        precondition(AppBuildVersion.version(in: resigned) == "0.1.0-amp.80")
+        precondition(AppBuildVersion.build(in: resigned) == "80")
+        precondition(AppBuildVersion.version(in: ["ErhuReleaseTag": "$(ERHU_RELEASE_TAG)", "AmpMarketingVersion": "0.1.0"]) == "0.1.0")
         let download = URL(string: "https://github.com/SRJW/amp/releases/download/v0.1.0-amp.41/amp.ipa")!
         let update = AppRelease(id: 41, tag_name: "v0.1.0-amp.41", name: "amp", body: nil,
                                 html_url: URL(string: "https://github.com/SRJW/amp/releases/tag/v0.1.0-amp.41")!,

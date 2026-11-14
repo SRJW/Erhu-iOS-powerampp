@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ErhuReleaseTag</key>
 	<string>$(ERHU_RELEASE_TAG)</string>
+	<key>AmpMarketingVersion</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>AmpBuildNumber</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>UTImportedTypeDeclarations</key>
 	<array>
 		<dict>

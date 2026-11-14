@@ -1,6 +1,21 @@
 import Foundation
 import Observation
 
+/// The release stamp belongs to our build and survives stores rewriting the standard version keys.
+enum AppBuildVersion {
+    static func release(in info: [String: Any]) -> String? {
+        guard let tag = info["ErhuReleaseTag"] as? String, ReleaseVersion(tag) != nil else { return nil }
+        return tag
+    }
+    static func version(in info: [String: Any]) -> String {
+        if let tag = release(in: info) { return tag.hasPrefix("v") ? String(tag.dropFirst()) : tag }
+        return info["AmpMarketingVersion"] as? String ?? info["CFBundleShortVersionString"] as? String ?? "Development"
+    }
+    static func build(in info: [String: Any]) -> String {
+        info["AmpBuildNumber"] as? String ?? info["CFBundleVersion"] as? String ?? "–"
+    }
+}
+
 struct ReleaseVersion: Comparable, Equatable {
     let numbers: [Int]
     let suffix: [String]

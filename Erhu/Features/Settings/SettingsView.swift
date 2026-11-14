@@ -432,8 +432,8 @@ private struct AboutSettingsView: View {
                     }
                     .padding(.vertical, Spacing.sm)
                 }.padding(Spacing.lg).frame(maxWidth: .infinity, alignment: .leading)
-                LabeledContent("Version", value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "–").padding(Spacing.lg)
-                LabeledContent("Build", value: Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "–").padding(Spacing.lg)
+                LabeledContent("Version", value: AppBuildVersion.version(in: Bundle.main.infoDictionary ?? [:])).padding(Spacing.lg)
+                LabeledContent("Build", value: AppBuildVersion.build(in: Bundle.main.infoDictionary ?? [:])).padding(Spacing.lg)
                 LabeledContent("Release", value: Bundle.main.infoDictionary?["ErhuReleaseTag"] as? String ?? "Development").padding(Spacing.lg)
                 Text("amp plays your local music with full-screen artwork, playlists, synced lyrics, an equalizer, Transition Studio and Home Screen widgets.")
                     .font(.footnote).foregroundStyle(.secondary).padding([.horizontal, .bottom], Spacing.lg)
