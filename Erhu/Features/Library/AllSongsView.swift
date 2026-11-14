@@ -71,6 +71,7 @@ struct AllSongsView: View {
                     } else { ProgressView().frame(maxWidth: .infinity).padding() }
                 }.padding(.top, Spacing.sm)
             }
+            .accessibilityIdentifier("songsPage")
         }
         .tracksLibraryScrolling()
         .navigationTitle("")
