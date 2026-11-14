@@ -3,7 +3,7 @@ import Observation
 
 /// The primary destinations, switched by the bottom bar (Search is the separate button beside it).
 enum LibrarySection: String, CaseIterable, Identifiable {
-    case home, albums, library
+    case home, albums, library, equalizer, search
     var id: String { rawValue }
 
     var label: String {
@@ -11,6 +11,8 @@ enum LibrarySection: String, CaseIterable, Identifiable {
         case .home: "Home"
         case .albums: "Albums"
         case .library: "Library"
+        case .equalizer: "Equalizer"
+        case .search: "Search"
         }
     }
 
@@ -19,6 +21,8 @@ enum LibrarySection: String, CaseIterable, Identifiable {
         case .home: "house"
         case .albums: "square.stack"
         case .library: "music.note.house"
+        case .equalizer: "slider.vertical.3"
+        case .search: "magnifyingglass"
         }
     }
 
@@ -27,6 +31,8 @@ enum LibrarySection: String, CaseIterable, Identifiable {
         case .home: "house.fill"
         case .albums: "square.stack.fill"
         case .library: "music.note.house.fill"
+        case .equalizer: "slider.vertical.3"
+        case .search: "magnifyingglass"
         }
     }
 }
@@ -95,9 +101,14 @@ final class AppRouter {
     var section: LibrarySection = .library
     var paths: [LibrarySection: NavigationPath] = Dictionary(uniqueKeysWithValues: LibrarySection.allCases.map { ($0, NavigationPath()) })
     var scrollToTopRequests: [LibrarySection: Int] = [:]
-    var showsSearch = false
+    var showsSearch: Bool {
+        get { section == .search }
+        set { if newValue { activate(.search) } }
+    }
     var showsDrawer = false
     var showsNowPlaying = false
+    var presentedTool: Tool?
+    var toolPath = NavigationPath()
     var songsForPlaylist: [Song]?
     var songForDetails: Song?
     /// The song whose tags are being edited by hand.
@@ -107,16 +118,33 @@ final class AppRouter {
     var showsNewPlaylist = false
 
     func open(_ route: Route) {
-        paths[section, default: NavigationPath()].append(route)
+        if presentedTool != nil { toolPath.append(route) }
+        else { paths[section, default: NavigationPath()].append(route) }
     }
 
     func open(_ tool: Tool) {
         showsDrawer = false
-        open(.tool(tool))
+        if tool == .equalizer { activate(.equalizer) }
+        else { toolPath = NavigationPath(); presentedTool = tool }
+    }
+
+    func activate(_ target: LibrarySection) {
+        presentedTool = nil
+        showsNowPlaying = false
+        showsDrawer = false
+        if target == .library { select(target) }
+        else { section = target }
+    }
+
+    func openPlayer() {
+        presentedTool = nil
+        showsDrawer = false
+        showsNowPlaying = true
     }
 
     /// A tab always opens its root. Reselecting it also scrolls that root back to the top.
     func select(_ target: LibrarySection) {
+        presentedTool = nil
         let reselecting = target == section
         paths[target] = NavigationPath()
         section = target

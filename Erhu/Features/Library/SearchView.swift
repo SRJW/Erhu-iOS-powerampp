@@ -83,7 +83,7 @@ struct SearchView: View {
 
     var body: some View {
         @Bindable var search = search
-        NavigationStack {
+        Group {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if search.query.trimmed.isEmpty {
@@ -105,7 +105,8 @@ struct SearchView: View {
                     .padding(.horizontal, Spacing.gutter).padding(.vertical, Spacing.sm)
             }
             .toolbar(.hidden, for: .navigationBar)
-            .onAppear { focused = true }
+            .onAppear { focused = router.section == .search }
+            .onChange(of: router.section) { _, section in focused = section == .search }
             .task(id: library.songs) { await search.run() }
             .modifier(ToolPageAppearance())
         }
@@ -222,7 +223,7 @@ struct SearchView: View {
 
     private func open(_ item: RecentSearchItem) {
         search.remember(item)
-        dismiss()
+        focused = false
         switch item {
         case .album(let album): router.open(.album(album.id))
         case .artist(let artist): router.open(.artist(artist.id))

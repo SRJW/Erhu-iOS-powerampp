@@ -21,10 +21,6 @@ struct RootView: View {
     @State private var chrome = LibraryChromeState()
     @State private var playerMotion = PlayerDragState()
     @State private var visualBudget = VisualWorkBudget.current
-    /// While a finger moves the side menu: how far it has pulled (positive opening, negative closing).
-    @State private var drawerDrag: CGFloat?
-    private static let drawerWidth: CGFloat = 300
-
     var body: some View {
         @Bindable var router = router
         @Bindable var library = library
@@ -36,14 +32,14 @@ struct RootView: View {
                     .allowsHitTesting(router.section == section)
                     .accessibilityHidden(router.section != section)
             }
-            if router.paths[router.section]?.isEmpty ?? true { drawerEdge }
-            LibraryBottomChrome(chrome: chrome).zIndex(2)
+            AppBottomBar().zIndex(2)
             if let message = actions.message, !router.showsNowPlaying {
                 LibraryChromeToast(text: message, id: actions.messageID, hasSong: player.state.currentSong != nil)
                     .zIndex(2)
             }
-            drawer.zIndex(3)
         }
+        .accessibilityHidden(router.showsNowPlaying || router.presentedTool != nil)
+        .allowsHitTesting(!router.showsNowPlaying && router.presentedTool == nil)
         .overlay {
             GeometryReader { geometry in
                 ZStack {
@@ -60,6 +56,11 @@ struct RootView: View {
             .ignoresSafeArea()
             .allowsHitTesting(playerMotion.isPresented)
         }
+        .overlay {
+            if let tool = router.presentedTool { toolScreen(tool).transition(.opacity) }
+        }
+        .overlay { if router.showsDrawer { AppMenu().transition(.opacity) } }
+        .animation(reduceMotion ? nil : .easeInOut(duration: AppNavigationMetrics.duration), value: router.presentedTool)
         .animation(reduceMotion ? .linear(duration: 0.12) : .easeInOut(duration: 0.28), value: router.section)
         .animation(.spring(response: 0.3, dampingFraction: 0.85), value: router.showsDrawer)
         .coordinateSpace(name: PlayerArtworkSpace.root)
@@ -75,7 +76,6 @@ struct RootView: View {
         .onChange(of: router.section) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
         .onChange(of: router.showsSearch) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
         .onChange(of: router.paths[router.section]?.count) { _, _ in chrome.expand(reduceMotion: reduceMotion) }
-        .sheet(isPresented: $router.showsSearch) { SearchView() }
         .routerSheets(active: !router.showsNowPlaying)
         .alert("New playlist", isPresented: $router.showsNewPlaylist) { NewPlaylistAlert() }
         .fileImporter(isPresented: $showsImporter, allowedContentTypes: [.audio, UTType(importedAs: "org.xiph.ogg")], allowsMultipleSelection: true) { result in
@@ -118,13 +118,13 @@ struct RootView: View {
             sectionRoot(section)
                 .navigationTitle(section == .albums ? "" : section == .home ? "amp" : section.label)
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button { router.showsDrawer = true } label: { Image(systemName: "line.3.horizontal") }
-                            .accessibilityLabel("Menu")
-                    }
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button { showsImporter = true } label: { Image(systemName: "plus") }
-                            .accessibilityLabel("Add music")
+                        Menu {
+                            Button("Import music", systemImage: "plus") { showsImporter = true }
+                            Button("Home") { router.select(.home) }
+                            Button("Albums") { router.select(.albums) }
+                        } label: { Image(systemName: "ellipsis") }
+                            .accessibilityLabel("Library options")
                     }
                 }
                 .navigationDestination(for: Route.self) { route in destination(route) }
@@ -139,6 +139,8 @@ struct RootView: View {
         case .home: HomeView()
         case .albums: AlbumsView()
         case .library: LibraryOverviewView()
+        case .equalizer: EqualizerView()
+        case .search: SearchView()
         }
     }
 
@@ -158,82 +160,31 @@ struct RootView: View {
             case .transitionStudio(let collection): TransitionStudioView(collection: collection).tracksLibraryScrolling(usesUIKit: true)
             }
         }
-        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: chromeHeight) }
+        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: router.presentedTool == nil ? chromeHeight : 0) }
     }
 
-    private var chromeHeight: CGFloat { player.state.currentSong == nil ? 72 : 136 }
+    private var chromeHeight: CGFloat { AppNavigationMetrics.reservedHeight }
 
-    /// A swipe in from the left edge opens the side menu (on a section's first page; deeper pages
-    /// keep the edge for going back).
-    private var drawerEdge: some View {
-        HStack(spacing: 0) {
-            Color.clear
-                .frame(width: 22)
-                .contentShape(Rectangle())
-                .gesture(DragGesture(minimumDistance: 8)
-                    .onChanged { value in drawerDrag = max(value.translation.width, 0) }
-                    .onEnded { value in settleDrawer(open: value.translation.width > 100 || value.predictedEndTranslation.width > 220) })
-            Spacer(minLength: 0)
-        }
-        .frame(maxHeight: .infinity)
-        .ignoresSafeArea(edges: .vertical)
-    }
-
-    /// How much of the side menu shows (0 closed … its width open): it follows the finger, then settles.
-    private var drawerShown: CGFloat {
-        if router.showsDrawer { return Self.drawerWidth + min(drawerDrag ?? 0, 0) }
-        return min(max(drawerDrag ?? 0, 0), Self.drawerWidth)
-    }
-
-    private func settleDrawer(open: Bool) {
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
-            router.showsDrawer = open
-            drawerDrag = nil
-        }
-    }
-
-    private var drawer: some View {
-        let shown = max(drawerShown, 0)
-        return ZStack(alignment: .leading) {
-            Color.black.opacity(0.35 * Double(shown / Self.drawerWidth)).ignoresSafeArea()
-                .onTapGesture { settleDrawer(open: false) }
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text("amp").font(.largeTitle.weight(.bold)).padding(.horizontal, Spacing.lg).padding(.vertical, Spacing.lg)
-                drawerItem("Library", icon: "books.vertical") {
-                    router.showsDrawer = false
-                    router.paths[router.section] = NavigationPath()
+    private func toolScreen(_ tool: Tool) -> some View {
+        @Bindable var router = router
+        return NavigationStack(path: $router.toolPath) {
+            ToolView(tool: tool)
+                .navigationDestination(for: Route.self) { route in
+                    destination(route).toolbar { closeTool }
                 }
-                ForEach(Tool.available) { tool in
-                    drawerItem(tool.label, icon: tool.icon) { router.open(tool) }
-                }
-                Spacer()
-            }
-            .frame(width: Self.drawerWidth)
-            .frame(maxHeight: .infinity)
-            .background(palette.surface.ignoresSafeArea())
-            .offset(x: shown - Self.drawerWidth)
-            .gesture(DragGesture(minimumDistance: 8)
-                .onChanged { value in drawerDrag = min(value.translation.width, 0) }
-                .onEnded { value in settleDrawer(open: !(value.translation.width < -100 || value.predictedEndTranslation.width < -220)) })
+                .toolbar { closeTool }
         }
-        .allowsHitTesting(shown > 0)
-        .accessibilityHidden(shown == 0)
+        .safeAreaInset(edge: .bottom, spacing: 0) { AppBottomBar() }
+        .background(palette.background.ignoresSafeArea())
     }
 
-    private func drawerItem(_ label: String, icon: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: Spacing.lg) {
-                Image(systemName: icon).frame(width: 24)
-                Text(label).font(.body.weight(.medium))
-                Spacer()
-            }
-            .foregroundStyle(palette.onSurface)
-            .padding(.horizontal, Spacing.lg)
-            .frame(height: 52)
-            .contentShape(Rectangle())
+    @ToolbarContentBuilder private var closeTool: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button { router.presentedTool = nil } label: { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                .accessibilityLabel("Close tool").accessibilityIdentifier("closeTool")
         }
-        .buttonStyle(.plain)
     }
+
 }
 
 /// Only this small overlay observes the animated chrome height, not the library screen tree.
@@ -245,7 +196,7 @@ private struct LibraryChromeToast: View {
 
     var body: some View {
         LibraryActionToast(text: text, id: id)
-            .padding(.bottom, LibraryChromeGeometry(width: 0, fraction: chrome.fraction, hasSong: hasSong).height + Spacing.xs + Spacing.md)
+            .padding(.bottom, AppNavigationMetrics.reservedHeight)
     }
 }
 

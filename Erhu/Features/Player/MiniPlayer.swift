@@ -22,7 +22,7 @@ struct MiniPlayer: View {
                         .accessibilityLabel("Album artwork")
                     VStack(alignment: .leading, spacing: 1) {
                         Text(song.title).font(.subheadline.weight(.semibold)).foregroundStyle(palette.onSurface).lineLimit(1)
-                        Text(song.artist).font(.caption).foregroundStyle(palette.onSurfaceVariant).lineLimit(1)
+                        Text(song.subtitle).font(.caption).foregroundStyle(palette.onSurfaceVariant).lineLimit(1)
                     }
                     Spacer(minLength: 0)
                 }

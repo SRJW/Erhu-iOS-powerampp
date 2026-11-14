@@ -369,40 +369,7 @@ struct NowPlayingView: View {
     }
 
     private func referenceNavigation(width: CGFloat) -> some View {
-        ZStack {
-            Button { close(); router.select(.library) } label: {
-                Image(systemName: "square.grid.2x2.fill")
-                    .frame(width: 48, height: 48).contentShape(Rectangle())
-            }
-                .accessibilityLabel("Library")
-                .position(x: width * PlayerLayoutMetrics.navigationCentresW[0], y: 24)
-            Button { showsEqualizer = true } label: {
-                PlayerEqualizerGlyph().scaleEffect(PlayerLayoutMetrics.navigationIconScale)
-                    .frame(width: 48, height: 48).contentShape(Rectangle())
-            }
-                .accessibilityLabel("Equalizer")
-                .position(x: width * PlayerLayoutMetrics.navigationCentresW[1], y: 24)
-            Button { close(); router.showsSearch = true } label: {
-                Image(systemName: "magnifyingglass")
-                    .frame(width: 48, height: 48).contentShape(Rectangle())
-            }
-                .accessibilityLabel("Search")
-                .position(x: width * PlayerLayoutMetrics.navigationCentresW[2], y: 24)
-            Button {
-                close()
-                router.open(Tool.settings)
-            } label: {
-                PlayerQueueGlyph().scaleEffect(PlayerLayoutMetrics.navigationIconScale)
-                    .frame(width: PlayerButtonConstants.touchSize, height: PlayerButtonConstants.touchSize)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel(PlayerButtonConstants.settingsLabel)
-            .accessibilityIdentifier("nowPlayingSettings")
-            .position(x: width * PlayerLayoutMetrics.navigationCentresW[3], y: 24)
-        }
-        .font(.system(size: 28 * PlayerLayoutMetrics.navigationIconScale, weight: .heavy))
-        .foregroundStyle(.white.opacity(0.6))
-        .frame(width: width, height: 48)
+        AppNavigationButtons(width: width, inPlayer: true)
     }
 
     private func audioSummary(_ song: Song) -> String {
