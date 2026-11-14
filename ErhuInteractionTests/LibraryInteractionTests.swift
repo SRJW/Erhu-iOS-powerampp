@@ -10,7 +10,8 @@ final class LibraryInteractionTests: XCTestCase {
         app.buttons["customizeLibrary"].tap()
         let albumsSwitch = app.switches["libraryCategoryVisible.albums"]
         XCTAssertTrue(albumsSwitch.waitForExistence(timeout: 10))
-        app.buttons["Reset"].tap()
+        // The list must already be populated, without touching Reset or another toolbar action.
+        if albumsSwitch.value as? String == "0" { albumsSwitch.tap() }
         albumsSwitch.tap()
         app.buttons["Done"].tap()
         XCTAssertFalse(app.buttons["libraryCategory.albums"].exists)
@@ -37,6 +38,57 @@ final class LibraryInteractionTests: XCTestCase {
         XCTAssertTrue(revealed.waitForExistence(timeout: 10))
         XCTAssertTrue(revealed.isHittable, "The title clears existing filters and scrolls to its row in All Songs")
         XCTAssertFalse(page.textFields["sectionSearchField"].exists)
+    }
+
+    @MainActor func testPlayerTitleScrollsToAnOffscreenSong() {
+        let app = launch("songs-reveal")
+        let page = app.scrollViews["songsPage"]
+        XCTAssertTrue(page.waitForExistence(timeout: 30))
+        let target = page.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "ZZZ offscreen song")).firstMatch
+        for _ in 0..<14 {
+            if target.exists && target.isHittable { break }
+            page.swipeUp()
+        }
+        XCTAssertTrue(target.exists && target.isHittable)
+        target.tap()
+        for _ in 0..<10 { page.swipeDown() }
+        XCTAssertFalse(target.exists && target.isHittable, "The song starts outside the visible viewport")
+        app.buttons["openNowPlaying"].tap()
+        let title = app.buttons["nowPlayingTitle"]
+        XCTAssertTrue(title.waitForExistence(timeout: 10))
+        XCTAssertEqual(title.label, "ZZZ offscreen song")
+        title.tap()
+        let revealed = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            target.exists && target.isHittable
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [revealed], timeout: 15), .completed,
+                       "Opening All Songs must scroll down to the exact current file")
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "all-songs-revealed-offscreen-track"; screenshot.lifetime = .keepAlways; add(screenshot)
+    }
+
+    @MainActor func testMiniPlayerScrubsAndSwipesWithoutOpeningThePlayer() {
+        let app = launch("player")
+        let mini = app.buttons["openNowPlaying"]
+        XCTAssertTrue(mini.waitForExistence(timeout: 30))
+        let progress = app.otherElements["miniPlayerProgress"]
+        XCTAssertTrue(progress.waitForExistence(timeout: 10))
+        progress.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.5))
+            .press(forDuration: 0.05, thenDragTo: progress.coordinate(withNormalizedOffset: CGVector(dx: 0.6, dy: 0.5)))
+        let sought = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            guard let value = progress.value as? String, let elapsed = value.components(separatedBy: " of ").first else { return false }
+            let parts = elapsed.split(separator: ":").compactMap { Int($0) }
+            return parts.count == 2 && parts[0] * 60 + parts[1] >= 65
+        }, object: nil)
+        XCTAssertEqual(XCTWaiter.wait(for: [sought], timeout: 10), .completed)
+        XCTAssertFalse(app.buttons["nowPlayingTitle"].exists)
+        mini.swipeLeft()
+        XCTAssertTrue(app.staticTexts["Second player track"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["nowPlayingTitle"].exists)
+        mini.swipeRight()
+        XCTAssertTrue(app.staticTexts["Player presentation regression"].waitForExistence(timeout: 10))
+        mini.tap()
+        XCTAssertTrue(app.buttons["nowPlayingTitle"].waitForExistence(timeout: 10))
     }
 
     /// The fresh iOS simulator can show its one-time QuickPath introduction over the keyboard.

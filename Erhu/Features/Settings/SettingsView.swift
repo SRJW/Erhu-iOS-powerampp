@@ -1,5 +1,6 @@
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 enum SettingsPageRoute: String, Hashable { case appearance, visualizer, playback, library, metadata, about }
 
@@ -52,7 +53,7 @@ private struct SettingsPage<Content: View>: View {
         ScrollView {
             VStack(spacing: 26) { content }
                 .padding(Spacing.lg)
-                .padding(.bottom, Spacing.lg)
+                .padding(.bottom, AppNavigationMetrics.reservedHeight + Spacing.lg)
         }
         .modifier(ToolPageAppearance())
         .navigationBarTitleDisplayMode(.inline)
@@ -294,6 +295,18 @@ private struct AppearanceSettingsView: View {
 
 private struct PlayerBackgroundSettingsGroup: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(PlayerController.self) private var player
+    @Environment(\.playbackPalette) private var palette
+
+    private var gradientColor: Binding<Color> {
+        Binding(get: { Color(argb: settings.playerBackground.gradientColor) }, set: { color in
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a) else { return }
+            var appearance = settings.playerBackground
+            appearance.gradientColor = 0xFF000000 | UInt32(r * 255) << 16 | UInt32(g * 255) << 8 | UInt32(b * 255)
+            settings.playerBackground = appearance
+        })
+    }
     private func value(_ key: WritableKeyPath<PlayerBackgroundSettings, Double>) -> Binding<Double> {
         Binding(get: { settings.playerBackground[keyPath: key] }, set: {
             var appearance = settings.playerBackground
@@ -304,6 +317,14 @@ private struct PlayerBackgroundSettingsGroup: View {
     var body: some View {
         SettingsGroup(PlayerBackgroundControls.title) {
             VStack(spacing: Spacing.lg) {
+                if let song = player.state.currentSong {
+                    PlayerFullBleedBackground(dominant: palette.primary, appearance: settings.playerBackground) {
+                        SongArtworkView(song: song, maxPixels: 600)
+                    }
+                    .frame(height: 180).clipShape(RoundedRectangle(cornerRadius: Radius.medium))
+                }
+                slider(PlayerBackgroundControls.gradient, key: \.gradient, range: PlayerBackgroundControls.unitRange)
+                ColorPicker(PlayerBackgroundControls.gradientColor, selection: gradientColor, supportsOpacity: false)
                 slider(PlayerBackgroundControls.fade, key: \.fadeStart, range: PlayerBackgroundControls.unitRange)
                 slider(PlayerBackgroundControls.blur, key: \.blur, range: PlayerBackgroundControls.blurRange, percent: false)
                 slider(PlayerBackgroundControls.details, key: \.details, range: PlayerBackgroundControls.unitRange)
@@ -550,6 +571,7 @@ struct PlaybackSettingsView: View {
             var global = transitions.config.global
             if seconds == 0 {
                 global.defaultChoice = .off
+                if global.manualMode == .custom { global.manualMode = .off }
             } else {
                 var spec = global.defaultChoice.specOrNil ?? TransitionSpec()
                 spec.durationMs = Int(seconds * 1000)
@@ -564,13 +586,46 @@ struct PlaybackSettingsView: View {
         SettingsPage {
             SettingsGroup("Crossfade") {
                 VStack(alignment: .leading, spacing: Spacing.md) {
+                    Picker("Automatic song changes", selection: Binding(
+                        get: { transitions.config.global.automaticMode ?? .all },
+                        set: { mode in var global = transitions.config.global; global.automaticMode = mode; transitions.setGlobal(global) })) {
+                        ForEach(AutomaticCrossfadeMode.allCases, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    Picker("Manual song changes", selection: Binding(
+                        get: { transitions.config.global.manualMode ?? (transitions.config.global.defaultChoice.specOrNil == nil ? .off : .custom) },
+                        set: { mode in
+                            var global = transitions.config.global
+                            global.manualMode = mode
+                            if mode == .custom, global.defaultChoice.specOrNil == nil {
+                                if global.automaticMode == nil { global.automaticMode = .off }
+                                global.defaultChoice = .custom(TransitionSpec())
+                            }
+                            if mode != .off { global.masterEnabled = true }
+                            transitions.setGlobal(global)
+                        })) {
+                        ForEach(ManualCrossfadeMode.allCases.filter { $0 != .linked }, id: \.self) { Text($0.label).tag($0) }
+                    }
+                    Text("Crossfade length").font(.subheadline.weight(.semibold))
                     Text(crossfade.wrappedValue == 0 ? "Off" : String(format: "%.1f seconds", crossfade.wrappedValue))
                         .monospacedDigit()
                     Slider(value: crossfade, in: 0...max(PlaybackPreferences.crossfadeRange.upperBound, crossfade.wrappedValue), step: PlaybackPreferences.crossfadeStep)
                         .accessibilityLabel("Crossfade duration")
                         .accessibilityIdentifier("crossfadeDuration")
-                    Text("Blends song changes while playing and automatic track endings. Album and playlist transition overrides are kept. Paused changes stay paused.")
+                    if transitions.config.global.manualMode == .short {
+                        LabeledContent("Short manual crossfade", value: "\(transitions.config.global.shortManualDurationMs ?? 500) ms")
+                        Slider(value: Binding(
+                            get: { Double(transitions.config.global.shortManualDurationMs ?? 500) },
+                            set: { duration in
+                                var global = transitions.config.global
+                                global.shortManualDurationMs = Int(duration)
+                                transitions.setGlobal(global)
+                            }), in: 500...2_000, step: 100)
+                            .accessibilityLabel("Short manual crossfade duration")
+                    }
+                    Text("Automatic and manual changes can fade independently. Album and playlist transition overrides are kept. Paused changes stay paused.")
                         .font(.footnote).foregroundStyle(.secondary)
+                    Button("Restore crossfade defaults") { transitions.setGlobal(GlobalTransitionSettings()) }
+                        .frame(minHeight: 44)
                 }.padding(Spacing.lg)
             }
             SettingsGroup("Waveform") {

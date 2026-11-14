@@ -113,6 +113,9 @@ struct RootView: View {
     private func sectionStack(_ section: LibrarySection) -> some View {
         NavigationStack(path: router.binding(for: section)) {
             sectionRoot(section)
+                .foregroundStyle(palette.onSurface)
+                .background(palette.background.ignoresSafeArea())
+                .toolbarBackground(palette.background, for: .navigationBar)
                 .navigationTitle(section.label)
                 .navigationDestination(for: Route.self) { route in destination(route) }
                 .safeAreaInset(edge: .bottom) { Color.clear.frame(height: chromeHeight) }
@@ -152,6 +155,9 @@ struct RootView: View {
             case .transitionStudio(let collection): TransitionStudioView(collection: collection).tracksLibraryScrolling(usesUIKit: true)
             }
         }
+        .foregroundStyle(palette.onSurface)
+        .background(palette.background.ignoresSafeArea())
+        .toolbarBackground(palette.background, for: .navigationBar)
         .toolbar(.visible, for: .navigationBar)
         .safeAreaInset(edge: .bottom) { Color.clear.frame(height: router.presentedTool == nil ? chromeHeight : 0) }
     }

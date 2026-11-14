@@ -8,6 +8,7 @@ struct NowPlayingView: View {
     @Environment(LibraryActions.self) private var actions
     @Environment(AppRouter.self) private var router
     @Environment(LibraryStore.self) private var library
+    @Environment(AppSettings.self) private var settings
     @Environment(\.palette) private var palette
     @Environment(\.playerReduceMotion) private var reduceMotion
     @State private var artworkDrag = 0.0
@@ -335,6 +336,8 @@ struct NowPlayingView: View {
         .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.75), value: playIntent)
     }
 
+    private var artworkControls: Bool { settings.customTheme == nil && settings.theme == .artwork }
+
     private func transport(_ symbol: String, identifier: String, label: String, size: CGFloat, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Group {
@@ -356,9 +359,10 @@ struct NowPlayingView: View {
                 }
             }
                 .font(.system(size: size * 0.43, weight: .black))
-                .foregroundStyle(.white)
+                .foregroundStyle(artworkControls ? palette.onFilledButton : .white)
                 .frame(width: size, height: size)
-                .background(.black, in: Circle())
+                .background(artworkControls ? palette.filledButton : .black, in: Circle())
+                .overlay { if artworkControls { Circle().stroke(.black.opacity(0.5), lineWidth: 1) } }
                 .frame(minWidth: symbol.hasPrefix("seek.") ? PlayerButtonConstants.seekTouchSize : PlayerButtonConstants.touchSize,
                        minHeight: PlayerButtonConstants.touchSize)
                 .contentShape(Rectangle())
@@ -430,9 +434,9 @@ private struct ProgressSection<Controls: View>: View {
         let duration = max(state.durationMs > 0 ? state.durationMs : song.durationMs, 1)
         GeometryReader { geometry in
             ZStack {
-                TimelineView(.animation(minimumInterval: 1.0 / 30,
+                TimelineView(.animation(minimumInterval: 1.0 / 60,
                                         paused: !state.isPlaying || previewMs != nil || playerInMotion)) { _ in
-                    let position = player.currentPositionMs()
+                    let position = player.displayPositionMs()
                     WaveformSeekBar(levels: levelsSongID == song.id ? levels : nil, positionMs: position,
                                     durationMs: duration, bookmarks: bookmarks,
                                     loop: state.abLoop?.songId == song.id ? state.abLoop : nil,

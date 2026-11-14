@@ -32,13 +32,16 @@ struct PlayerSongReveal<Content: View>: View {
                 .task(id: readyRequest) {
                 guard let request = readyRequest else { return }
                 defer {
-                    if router.songReveal?.id == request.id {
+                    if !Task.isCancelled, router.songReveal?.id == request.id {
                         router.highlightedSongID = nil
                         router.songReveal = nil
                     }
                 }
                 do {
                     // Let the destination and its asynchronously loaded rows finish layout.
+                    try await Task.sleep(for: .seconds(AppNavigationMetrics.duration + PlayerButtonConstants.revealDelaySeconds))
+                    proxy.scrollTo(Self.anchor(request.songID), anchor: .center)
+                    // A lazy row can refine its height when artwork and metadata arrive.
                     try await Task.sleep(for: .seconds(PlayerButtonConstants.revealDelaySeconds))
                     proxy.scrollTo(Self.anchor(request.songID), anchor: .center)
                     router.highlightedSongID = request.songID

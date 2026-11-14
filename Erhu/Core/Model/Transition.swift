@@ -548,9 +548,46 @@ enum TransitionChoice: Equatable, Codable {
 
 /// The app-wide part. [masterEnabled] off disables every automatic transition. [defaultChoice] is
 /// off or custom, never inherit. Nothing crossfades until a collection is set up.
+enum AutomaticCrossfadeMode: String, CaseIterable, Codable {
+    case all, off, shuffled
+    var label: String {
+        switch self { case .all: "All songs"; case .off: "No fading"; case .shuffled: "Shuffled songs" }
+    }
+    func allows(shuffled: Bool) -> Bool { self == .all || (self == .shuffled && shuffled) }
+}
+
+enum ManualCrossfadeMode: String, CaseIterable, Codable {
+    case linked, off, short, custom
+    var label: String {
+        switch self {
+        case .linked: "Same as automatic"
+        case .off: "No fading"
+        case .short: "Short crossfade"
+        case .custom: "Crossfade"
+        }
+    }
+}
+
 struct GlobalTransitionSettings: Equatable, Codable {
     var masterEnabled = true
     var defaultChoice: TransitionChoice = .off
+    // Optional fields retain the previous behaviour when decoding an existing configuration.
+    var automaticMode: AutomaticCrossfadeMode?
+    var manualMode: ManualCrossfadeMode?
+    var shortManualDurationMs: Int?
+
+    var manualSpec: TransitionSpec? {
+        guard masterEnabled else { return nil }
+        switch manualMode ?? .linked {
+        case .off: return nil
+        case .linked: return defaultChoice.specOrNil
+        case .custom: return defaultChoice.specOrNil
+        case .short:
+            var spec = TransitionSpec()
+            spec.durationMs = min(max(shortManualDurationMs ?? 500, 500), 2_000)
+            return spec
+        }
+    }
 }
 
 /// Everything the resolver needs. Collections and pairs missing from the maps inherit.

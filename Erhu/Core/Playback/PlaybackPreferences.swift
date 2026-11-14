@@ -1,5 +1,14 @@
 import Foundation
 
+enum PlaybackVisualPosition {
+    /// Never let a stalled render clock run a visual playhead beyond the next buffer.
+    static let maximumInterpolation = 0.1
+    static func interpolated(_ position: Int64, elapsed: Double, duration: Int64) -> Int64 {
+        let delta = elapsed.isFinite ? min(max(elapsed, 0), maximumInterpolation) : 0
+        return min(max(position + Int64(delta * 1000), 0), max(duration, 0))
+    }
+}
+
 enum PlayerWaveformMode: String, CaseIterable, Identifiable {
     case fullTrack, scrolling
     var id: String { rawValue }

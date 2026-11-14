@@ -353,6 +353,12 @@ final class PlayerController {
         return position.positionMs
     }
 
+    func displayPositionMs() -> Int64 {
+        guard state.isPlaying, let position = engine.displayPosition(),
+              position.entryId == state.currentEntry?.id else { return currentPositionMs() }
+        return position.positionMs
+    }
+
     private func scheduleLoop(at positionMs: Int64, _ onReached: @escaping () -> Void) -> Cancellable {
         loopTarget = (positionMs, onReached)
         return Cancellable { [weak self] in self?.loopTarget = nil }
@@ -413,7 +419,7 @@ final class PlayerController {
         if playing && (!state.isPlaying || !engine.isRunning) { activateAudioSession() }
         do {
             try engine.play(entryId: entry.id, url: entry.song.url, positionMs: positionMs, startPlaying: playing,
-                            handoffSpec: transitions.config.global.masterEnabled ? transitions.config.global.defaultChoice.specOrNil : nil)
+                            handoffSpec: transitions.config.global.manualSpec)
             setPosition(positionMs)
             state.durationMs = entry.song.durationMs
             if playing { consecutiveErrors = 0 }
@@ -610,7 +616,9 @@ final class PlayerController {
         }
         let nextIndex = PlayOrder.next(after: state.currentIndex, count: state.queue.count, repeatMode: state.repeatMode, userSkip: true) ?? -1
         let next = state.queue.indices.contains(nextIndex) ? state.queue[nextIndex] : nil
-        let spec = next.flatMap { transitions.resolve(outgoing: current.origin, incoming: $0.origin).spec }
+        let resolved = next.map { transitions.resolve(outgoing: current.origin, incoming: $0.origin) }
+        let automaticAllowed = (transitions.config.global.automaticMode ?? .all).allows(shuffled: state.shuffleModeEnabled)
+        let spec = resolved.flatMap { automaticAllowed || $0.source != .globalDefault ? $0.spec : nil }
         let info = BoundaryInfo(
             spec: spec, nextIndex: nextIndex, repeatMode: state.repeatMode, abLoopEnabled: state.abLoop?.enabled == true,
             outgoingDurationMs: current.song.durationMs, incomingDurationMs: next?.song.durationMs ?? 0

@@ -7,10 +7,26 @@ struct PlayerBackgroundSettings: Codable, Equatable {
     var details = 0.0
     var intensity = 1.0
     var saturation = 1.0
+    var gradient = 0.0
+    var gradientColor: UInt32 = 0xFF000000
+
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        fadeStart = try c.decodeIfPresent(Double.self, forKey: .fadeStart) ?? 0.75
+        blur = try c.decodeIfPresent(Double.self, forKey: .blur) ?? 24
+        details = try c.decodeIfPresent(Double.self, forKey: .details) ?? 0
+        intensity = try c.decodeIfPresent(Double.self, forKey: .intensity) ?? 1
+        saturation = try c.decodeIfPresent(Double.self, forKey: .saturation) ?? 1
+        gradient = try c.decodeIfPresent(Double.self, forKey: .gradient) ?? 0
+        gradientColor = try c.decodeIfPresent(UInt32.self, forKey: .gradientColor) ?? 0xFF000000
+    }
 }
 
 enum PlayerBackgroundControls {
     static let title = "Player artwork & background"
+    static let gradient = "Background gradient"
+    static let gradientColor = "Gradient colour"
     static let fade = "Artwork fade"
     static let blur = "Background blur"
     static let details = "Background details"

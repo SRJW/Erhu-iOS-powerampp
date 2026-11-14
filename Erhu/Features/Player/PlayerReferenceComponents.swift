@@ -53,6 +53,8 @@ struct PlayerFullBleedBackground<Artwork: View>: View, Animatable {
                             .blur(radius: appearance.blur)
                             .opacity(appearance.details * 0.45)
                     }
+                    LinearGradient(colors: [.clear, Color(argb: appearance.gradientColor)], startPoint: .top, endPoint: .bottom)
+                        .opacity(appearance.gradient)
                     Color.black.opacity(1 - appearance.intensity)
                 }.saturation(appearance.saturation)
                 artwork()

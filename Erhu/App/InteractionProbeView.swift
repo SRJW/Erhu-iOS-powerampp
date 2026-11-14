@@ -16,8 +16,8 @@ struct InteractionProbeView: View {
         Group {
             if page == "player" || page == "player-reduced-motion" || page == "player-artwork" {
                 PlayerInteractionProbe(reduceMotion: page == "player-reduced-motion", withArtwork: page == "player-artwork")
-            } else if page == "songs" {
-                SongsInteractionProbe()
+            } else if page == "songs" || page == "songs-reveal" {
+                SongsInteractionProbe(offscreenReveal: page == "songs-reveal")
             } else if page == "search" {
                 Button("Open search") { router.showsSearch = true }
                     .accessibilityIdentifier("openSearchProbe")
@@ -121,6 +121,7 @@ private struct PlayerInteractionProbe: View {
 }
 /// A real, owned-file library fixture for search persistence, selection and confirmed deletion.
 private struct SongsInteractionProbe: View {
+    var offscreenReveal = false
     @Environment(PlayerController.self) private var player
     @Environment(AppSettings.self) private var settings
     @Environment(AppRouter.self) private var router
@@ -161,6 +162,25 @@ private struct SongsInteractionProbe: View {
                     var tags = TagWriteRequest()
                     tags.title = name; tags.artist = "Fixture artist"; tags.album = "Fixture album"
                     try TagWriter.write(tags, to: url)
+                }
+                if offscreenReveal {
+                    for index in 0..<32 {
+                        let url = folder.appendingPathComponent(String(format: "A scroll fixture %02d.m4a", index))
+                        if !FileManager.default.fileExists(atPath: url.path) {
+                            try FileManager.default.copyItem(at: folder.appendingPathComponent("History fixture one.m4a"), to: url)
+                            var tags = TagWriteRequest(); tags.title = String(format: "A scroll fixture %02d", index)
+                            try TagWriter.write(tags, to: url)
+                        }
+                    }
+                    let url = folder.appendingPathComponent("ZZZ offscreen song.m4a")
+                    do {
+                        let file = try AVAudioFile(forWriting: url, settings: [AVFormatIDKey: kAudioFormatAppleLossless,
+                            AVSampleRateKey: 44_100.0, AVNumberOfChannelsKey: 1, AVEncoderBitDepthHintKey: 16])
+                        for _ in 0..<120 { try file.write(from: buffer) }
+                    }
+                    var tags = TagWriteRequest(); tags.title = "ZZZ offscreen song"
+                    try TagWriter.write(tags, to: url)
+                    UserDefaults.standard.set(LibrarySort.title.rawValue, forKey: "library.songs.sort")
                 }
                 _ = try LibraryScanner(database: library.database).scan()
                 if !(try library.database.playlists()).contains(where: { $0.name == "Songs UI playlist" }) {

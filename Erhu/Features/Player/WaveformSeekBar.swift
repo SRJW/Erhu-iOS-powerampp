@@ -142,9 +142,14 @@ struct WaveformSeekBar: View {
                 let x = CGFloat(i) * step
                 let height = max(CGFloat(level) * size.height * (referenceStyle ? 0.75 : 1), 2)
                 let rect = CGRect(x: x, y: (size.height - height) / 2, width: barWidth, height: height)
-                let color: Color = referenceStyle ? .white.opacity(x + barWidth / 2 <= playedX ? 0.25 : 0.70)
-                    : (x + barWidth / 2 <= playedX ? palette.primary : palette.onSurfaceVariant.opacity(0.35))
-                context.fill(Path(roundedRect: rect, cornerRadius: barWidth / 2), with: .color(color))
+                let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
+                context.fill(path, with: .color(referenceStyle ? .white.opacity(0.70) : palette.onSurfaceVariant.opacity(0.35)))
+                // Clip at the exact playhead, including the partially played bar. Updating
+                // whole bars made static mode look as though it jumped every few seconds.
+                var played = context
+                played.clip(to: Path(CGRect(x: 0, y: 0, width: max(playedX, 0), height: size.height)))
+                played.blendMode = .copy
+                played.fill(path, with: .color(referenceStyle ? .white.opacity(0.25) : palette.primary))
             }
         }
         for ms in bookmarks {

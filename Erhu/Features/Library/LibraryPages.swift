@@ -12,7 +12,6 @@ struct LibraryOverviewView: View {
     @AppStorage("library.overview.sectionOrder") private var storedOrder = "songs,albums,artists,playlists,mostPlayed,recentlyPlayed,recentlyAdded,favorites,folders,albumArtists,radio"
     @AppStorage("library.overview.hiddenSections") private var hiddenSections = ""
     @State private var showsOrder = false
-    @State private var editingOrder: [LibraryCategory] = []
     var body: some View {
         LibraryRootScrollView {
             VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -54,12 +53,13 @@ struct LibraryOverviewView: View {
             NavigationStack {
                 List {
                     Section {
-                        ForEach(editingOrder) { category in
+                        ForEach(LibraryCategory.ordered(storedOrder)) { category in
                             Toggle(isOn: visibility(of: category)) { Label(category.title, systemImage: category.icon) }
                                 .toggleStyle(.switch)
                                 .accessibilityIdentifier("libraryCategoryVisible.\(category.rawValue)")
                         }
                         .onMove { source, destination in
+                            var editingOrder = LibraryCategory.ordered(storedOrder)
                             editingOrder.move(fromOffsets: source, toOffset: destination)
                             storedOrder = editingOrder.map(\.rawValue).joined(separator: ",")
                         }
@@ -69,11 +69,13 @@ struct LibraryOverviewView: View {
                 .navigationTitle(LibraryCustomizationText.action)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Reset") {
-                            editingOrder = LibraryCategory.allCases
-                            storedOrder = editingOrder.map(\.rawValue).joined(separator: ",")
-                            hiddenSections = ""
-                        }
+                        Menu {
+                            Button("Restore defaults") {
+                                storedOrder = LibraryCategory.allCases.map(\.rawValue).joined(separator: ",")
+                                hiddenSections = ""
+                            }
+                        } label: { Image(systemName: "ellipsis") }
+                        .accessibilityLabel("Customization options")
                     }
                     ToolbarItem(placement: .confirmationAction) { Button("Done") { showsOrder = false } }
                 }
@@ -82,7 +84,6 @@ struct LibraryOverviewView: View {
     }
 
     private func customize() {
-        editingOrder = LibraryCategory.ordered(storedOrder)
         showsOrder = true
     }
 
@@ -130,7 +131,7 @@ struct SongList: View {
                 EmptyState(message: emptyMessage, systemImage: emptyIcon)
             }
             ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
-                Group {
+                VStack(spacing: 0) {
                     if let selection {
                         Button {
                             if selection.wrappedValue.contains(song.id) { selection.wrappedValue.remove(song.id) }
@@ -154,8 +155,10 @@ struct SongList: View {
                         }
                     }
                 }
+                .modifier(PlayerRevealedSong(songID: song.id))
                 .id("amp-song-\(song.id)")
             }
         }
+        .scrollTargetLayout()
     }
 }

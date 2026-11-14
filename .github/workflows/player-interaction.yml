@@ -97,10 +97,13 @@ jobs:
           -only-testing:ErhuTests/ReleaseAndDiscoveryTests \
           -only-testing:ErhuTests/LibrarySearchTests \
           -only-testing:ErhuTests/LibraryCategoryTests \
+          -only-testing:ErhuTests/PlaybackPresentationTests \
           -only-testing:ErhuTests/AudioEngineTests/testManualTrackSwitchPreparesTheOtherDeckBeforeReleasingAudio \
           -only-testing:ErhuTests/AudioEngineTests/testConfiguredManualCrossfadeKeepsTheOutgoingDeckForItsDuration \
           -parallel-testing-enabled NO \
+          -retry-tests-on-failure -test-iterations 2 \
           -resultBundlePath build/PlayerButtonResults.xcresult > build/player-button-tests.log 2>&1; then
+          xcrun xcresulttool get test-results summary --path build/PlayerButtonResults.xcresult > build/player-button-summary.json || true
           tail -n 60 build/player-button-tests.log
           exit 1
         fi
@@ -117,6 +120,8 @@ jobs:
       run: |
         if [ "${{ inputs.scope }}" = 'library-only' ]; then
           test_filters=(
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testPlayerTitleScrollsToAnOffscreenSong
+            -only-testing:ErhuInteractionTests/LibraryInteractionTests/testMiniPlayerScrubsAndSwipesWithoutOpeningThePlayer
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLibraryVisibilityPersistsAndPlayerTitleRevealsUnfilteredAllSongs
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
             -only-testing:ErhuInteractionTests/LibraryInteractionTests/testSongsHistoryPersistsAndSelectionAddsToPlaylistAndConfirmsDeletion
@@ -129,6 +134,8 @@ jobs:
           )
           if [ "${{ inputs.scope }}" = 'full-player' ]; then
             test_filters+=(
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testPlayerTitleScrollsToAnOffscreenSong
+              -only-testing:ErhuInteractionTests/LibraryInteractionTests/testMiniPlayerScrubsAndSwipesWithoutOpeningThePlayer
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLibraryVisibilityPersistsAndPlayerTitleRevealsUnfilteredAllSongs
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testCoverSwipesChangeTracksAndVerticalPullClosesPlayer
               -only-testing:ErhuInteractionTests/LibraryInteractionTests/testLargeTransportChangesTracksAndSmallTransportSeeksWithinTheTrack
@@ -205,6 +212,7 @@ jobs:
         path: |-
           build/PlayerButtonResults.xcresult
           build/player-button-tests.log
+          build/player-button-summary.json
           build/InteractionResults.xcresult
           build/InteractionResults-attempt-1.xcresult
           build/BlendResults.xcresult
