@@ -298,21 +298,32 @@ struct NowPlayingView: View {
     private func controls(_ state: PlaybackState, width: CGFloat) -> some View {
         let playIntent = state.isPlaying || state.status == .buffering
         let inset: CGFloat = 10 // Match the existing waveform's horizontal inset.
-        let rowHeight = width * PlayerLayoutMetrics.playDiameterW
-        let centres = PlayerLayoutMetrics.transportCentresW.map { width * $0 - inset }
-        return ZStack {
-                transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: width * PlayerLayoutMetrics.outerDiameterW, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
-                    .position(x: centres[0], y: rowHeight / 2)
-                transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: width * PlayerLayoutMetrics.innerDiameterW, action: { player.skipToPreviousItem() })
-                    .position(x: centres[1], y: rowHeight / 2)
-                transport(playIntent ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: playIntent ? "Pause" : "Play", size: width * (playIntent ? PlayerLayoutMetrics.pauseDiameterW : PlayerLayoutMetrics.playDiameterW), action: { player.togglePlayPause() })
-                    .position(x: centres[2], y: rowHeight / 2)
-                transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: width * PlayerLayoutMetrics.innerDiameterW, action: next)
-                    .position(x: centres[3], y: rowHeight / 2)
-                transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: width * PlayerLayoutMetrics.outerDiameterW, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
-                    .position(x: centres[4], y: rowHeight / 2)
+        let centres = PlayerLayoutMetrics.transportCentresW
+        let outer = width * PlayerLayoutMetrics.outerDiameterW
+        let inner = width * PlayerLayoutMetrics.innerDiameterW
+        let main = width * PlayerLayoutMetrics.playDiameterW
+        // Stable slots keep every centre fixed while the main circle animates in size.
+        let slots = [outer, inner, main, inner, outer]
+        let gaps = (0..<4).map { width * (centres[$0 + 1] - centres[$0]) - (slots[$0] + slots[$0 + 1]) / 2 }
+        return HStack(spacing: 0) {
+            transport("seek.backward", identifier: "nowPlayingRewind", label: "Rewind 10 seconds", size: outer, action: { player.seek(to: max(0, player.currentPositionMs() - 10_000)) })
+                .frame(width: outer)
+            Spacer(minLength: 0).frame(width: gaps[0])
+            transport("backward.fill", identifier: "nowPlayingPreviousTrack", label: "Previous track", size: inner, action: { player.skipToPreviousItem() })
+                .frame(width: inner)
+            Spacer(minLength: 0).frame(width: gaps[1])
+            transport(playIntent ? "pause.fill" : "play.fill", identifier: "nowPlayingPlayPause", label: playIntent ? "Pause" : "Play", size: width * (playIntent ? PlayerLayoutMetrics.pauseDiameterW : PlayerLayoutMetrics.playDiameterW), action: { player.togglePlayPause() })
+                .frame(width: main, height: main)
+            Spacer(minLength: 0).frame(width: gaps[2])
+            transport("forward.fill", identifier: "nowPlayingNextTrack", label: "Next track", size: inner, action: next)
+                .frame(width: inner)
+            Spacer(minLength: 0).frame(width: gaps[3])
+            transport("seek.forward", identifier: "nowPlayingForward", label: "Forward 10 seconds", size: outer, action: { player.seek(to: min(state.durationMs, player.currentPositionMs() + 10_000)) })
+                .frame(width: outer)
         }
-        .frame(width: width - inset * 2, height: rowHeight)
+        .padding(.leading, width * centres[0] - outer / 2 - inset)
+        .padding(.trailing, width * (1 - centres[4]) - outer / 2 - inset)
+        .frame(width: width - inset * 2, height: main)
         .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.75), value: playIntent)
     }
 
